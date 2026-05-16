@@ -120,6 +120,8 @@ async function runOnce(args: string[], opts: SpawnGBrainOpts): Promise<GBrainRes
 }
 
 // Convenience for query — returns stdout text or throws on non-zero.
+// Used by the onboarding warm-up (ONBD-05) for retrieval-only behavior.
+// DO NOT modify the defaults here — the warm-up explicitly uses --no-expand.
 export async function query(
   tenantId: string,
   question: string,
@@ -136,4 +138,32 @@ export async function query(
     );
   }
   return r.stdout.trim();
+}
+
+/**
+ * think — chat answer synthesis via `gbrain think --model haiku`.
+ *
+ * Returns the full GBrainResult so the caller can inspect code + stdout + stderr.
+ * Does NOT throw on non-zero exit; the caller (Route Handler) handles that to
+ * emit the correct SSE error frame.
+ *
+ * Why `--model haiku`?
+ *   `gbrain think` defaults to Opus (`tier: 'deep'`) which hangs minute-scale
+ *   on demo-class queries. `--model haiku` produces a clean answer with full
+ *   [dir/slug] citations in ~30s. Verified in Phase 1 #4 retest.
+ *   (CONTEXT.md "Performance Tuning", 2026-05-16)
+ *
+ * Default `model`: "haiku". Pass a different value only for research/evaluation.
+ * Default `timeoutMs`: 30_000ms (matches CHAT-06 requirement).
+ */
+export async function think(
+  tenantId: string,
+  question: string,
+  opts?: { model?: string; timeoutMs?: number },
+): Promise<GBrainResult> {
+  const model = opts?.model ?? "haiku";
+  return spawnGBrain(["think", question, "--model", model], {
+    tenantId,
+    timeoutMs: opts?.timeoutMs ?? 30_000,
+  });
 }
