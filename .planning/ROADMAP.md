@@ -68,7 +68,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Operator runs `scripts/panic-reset.sh` from the terminal and the entire demo state (all tenants, caches, ports) resets in under 15 seconds without rebuilding the seed.
   4. Operator runs 3 consecutive end-to-end demos (onboarding → dashboard → 1 chat question → reset → repeat) back-to-back on the demo laptop with no errors, no state leakage between runs, and identical anomaly findings each time.
   5. `docs/DEMO-SCRIPT.md` exists with the 3-minute spoken script and names "graph", "timeline", and "skill" out loud at least 3 times each; a `git tag demo-final` is created with a panic-recovery pointer in the README.
-**Plans:** TBD
+**Plans:** 5 plans across 3 waves
+- [ ] 03-01-PLAN.md — lib/insights/ pure-TS parsers (top-vendors, pnl, anomalies) + in-process cache + boot pre-warm (INSI-02, INSI-03, INSI-04, INSI-06, DEMO-03)
+- [ ] 03-02-PLAN.md — GET /api/tenants/[id]/insights batch endpoint (INSI-01 server)
+- [ ] 03-03-PLAN.md — Insight cards UI (TopVendors, PnL, Anomalies) + InsightCardsRow + mount above ChatSurface (INSI-01 client, INSI-02..05)
+- [ ] 03-04-PLAN.md — Reset endpoint + abort tracker + press-and-hold ResetButton + scripts/panic-reset.sh (DEMO-01, DEMO-02)
+- [ ] 03-05-PLAN.md — docs/DEMO-SCRIPT.md (3-min script) + README "Panic recovery" section (DEMO-04, DEMO-05, DEMO-06)
 **UI hint:** yes
 
 ## Progress
@@ -80,7 +85,7 @@ Phases execute in numeric order: 1 → 2 → 3
 |-------|----------------|--------|-----------|
 | 1. Brain Spine + Synthetic Seed | 0/6 | Not started | - |
 | 2. Onboarding Theater + Chat | 0/6 | Not started | - |
-| 3. Insight Cards + Demo Readiness | 0/TBD | Not started | - |
+| 3. Insight Cards + Demo Readiness | 0/5 | Not started | - |
 
 ---
 
