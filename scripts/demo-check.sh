@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# HARN-02: pre-flight check before seeding or running the demo.
+# HARN-02 (relaxed per CONTEXT.md spec adjustment): pre-flight check before seeding or running the demo.
 # Exits non-zero if any of these are missing/broken:
 #   - `gbrain` CLI on PATH and reports a version
 #   - `gbrain doctor --fast` passes
 #   - OPENAI_API_KEY is set (gbrain needs it for embeddings + hybrid search)
-#   - ANTHROPIC_API_KEY is set (gbrain needs it for query expansion + chat)
 #   - ./brains/ is writable
+# Warns (does NOT fail) if:
+#   - ANTHROPIC_API_KEY is missing — query synthesis returns placeholder, but
+#     embeddings + graph + import + anomaly detector all still work. Add the
+#     key to ~/.zshenv when credits arrive and the warning silently disappears.
 
 set -uo pipefail
 
@@ -49,12 +52,13 @@ else
   FAIL=1
 fi
 
-# 4. ANTHROPIC_API_KEY
+# 4. ANTHROPIC_API_KEY (warn-only per CONTEXT.md spec adjustment)
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
   green "  [ok] ANTHROPIC_API_KEY set (${#ANTHROPIC_API_KEY} chars)"
 else
-  red   "  [FAIL] ANTHROPIC_API_KEY is unset — required for gbrain query expansion + chat"
-  FAIL=1
+  yellow "  [warn] ANTHROPIC_API_KEY missing — gbrain query synthesis will return a"
+  yellow "         placeholder; embeddings + graph + import + anomaly detector still"
+  yellow "         work. Add to ~/.zshenv when credits arrive — no code change needed."
 fi
 
 # 5. brains/ is writable

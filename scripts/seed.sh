@@ -27,9 +27,13 @@ if ! command -v gbrain >/dev/null 2>&1; then
   exit 1
 fi
 
-if [ -z "${OPENAI_API_KEY:-}" ] || [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "OPENAI_API_KEY and ANTHROPIC_API_KEY must both be set; aborting." >&2
+if [ -z "${OPENAI_API_KEY:-}" ]; then
+  echo "OPENAI_API_KEY must be set (embeddings require it); aborting." >&2
   exit 1
+fi
+if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
+  echo "⚠ ANTHROPIC_API_KEY unset — proceeding. Embeddings + import + anomaly detector will succeed;" >&2
+  echo "  any 'gbrain query' call returns the placeholder until you add the key to ~/.zshenv." >&2
 fi
 
 log "Wiping ${BRAIN_HOME} for a clean rebuild"
