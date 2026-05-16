@@ -139,60 +139,65 @@ Explicit exclusions. Each has a reason documented to prevent re-adding under hac
 
 ## Traceability
 
-Empty initially. Populated by the roadmapper in the next step.
+Populated by `/gsd:roadmap` on 2026-05-16. Every v1 requirement maps to exactly one phase; no orphans, no duplicates.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| HARN-01 | Phase ? | Pending |
-| HARN-02 | Phase ? | Pending |
-| HARN-03 | Phase ? | Pending |
-| HARN-04 | Phase ? | Pending |
-| HARN-05 | Phase ? | Pending |
-| HARN-06 | Phase ? | Pending |
-| DATA-01 | Phase ? | Pending |
-| DATA-02 | Phase ? | Pending |
-| DATA-03 | Phase ? | Pending |
-| DATA-04 | Phase ? | Pending |
-| DATA-05 | Phase ? | Pending |
-| DATA-06 | Phase ? | Pending |
-| DATA-07 | Phase ? | Pending |
-| DATA-08 | Phase ? | Pending |
-| DATA-09 | Phase ? | Pending |
-| DATA-10 | Phase ? | Pending |
-| DATA-11 | Phase ? | Pending |
-| ONBD-01 | Phase ? | Pending |
-| ONBD-02 | Phase ? | Pending |
-| ONBD-03 | Phase ? | Pending |
-| ONBD-04 | Phase ? | Pending |
-| ONBD-05 | Phase ? | Pending |
-| ONBD-06 | Phase ? | Pending |
-| ONBD-07 | Phase ? | Pending |
-| ONBD-08 | Phase ? | Pending |
-| CHAT-01 | Phase ? | Pending |
-| CHAT-02 | Phase ? | Pending |
-| CHAT-03 | Phase ? | Pending |
-| CHAT-04 | Phase ? | Pending |
-| CHAT-05 | Phase ? | Pending |
-| CHAT-06 | Phase ? | Pending |
-| INSI-01 | Phase ? | Pending |
-| INSI-02 | Phase ? | Pending |
-| INSI-03 | Phase ? | Pending |
-| INSI-04 | Phase ? | Pending |
-| INSI-05 | Phase ? | Pending |
-| INSI-06 | Phase ? | Pending |
-| DEMO-01 | Phase ? | Pending |
-| DEMO-02 | Phase ? | Pending |
-| DEMO-03 | Phase ? | Pending |
-| DEMO-04 | Phase ? | Pending |
-| DEMO-05 | Phase ? | Pending |
-| DEMO-06 | Phase ? | Pending |
+| HARN-01 | Phase 1 | Pending |
+| HARN-02 | Phase 1 | Pending |
+| HARN-03 | Phase 1 | Pending |
+| HARN-04 | Phase 1 | Pending |
+| HARN-05 | Phase 1 | Pending |
+| HARN-06 | Phase 1 | Pending |
+| DATA-01 | Phase 1 | Pending |
+| DATA-02 | Phase 1 | Pending |
+| DATA-03 | Phase 1 | Pending |
+| DATA-04 | Phase 1 | Pending |
+| DATA-05 | Phase 1 | Pending |
+| DATA-06 | Phase 1 | Pending |
+| DATA-07 | Phase 1 | Pending |
+| DATA-08 | Phase 1 | Pending |
+| DATA-09 | Phase 1 | Pending |
+| DATA-10 | Phase 1 | Pending |
+| DATA-11 | Phase 1 | Pending |
+| ONBD-01 | Phase 2 | Pending |
+| ONBD-02 | Phase 2 | Pending |
+| ONBD-03 | Phase 2 | Pending |
+| ONBD-04 | Phase 2 | Pending |
+| ONBD-05 | Phase 2 | Pending |
+| ONBD-06 | Phase 2 | Pending |
+| ONBD-07 | Phase 2 | Pending |
+| ONBD-08 | Phase 2 | Pending |
+| CHAT-01 | Phase 2 | Pending |
+| CHAT-02 | Phase 2 | Pending |
+| CHAT-03 | Phase 2 | Pending |
+| CHAT-04 | Phase 2 | Pending |
+| CHAT-05 | Phase 2 | Pending |
+| CHAT-06 | Phase 2 | Pending |
+| INSI-01 | Phase 3 | Pending |
+| INSI-02 | Phase 3 | Pending |
+| INSI-03 | Phase 3 | Pending |
+| INSI-04 | Phase 3 | Pending |
+| INSI-05 | Phase 3 | Pending |
+| INSI-06 | Phase 3 | Pending |
+| DEMO-01 | Phase 3 | Pending |
+| DEMO-02 | Phase 3 | Pending |
+| DEMO-03 | Phase 3 | Pending |
+| DEMO-04 | Phase 3 | Pending |
+| DEMO-05 | Phase 3 | Pending |
+| DEMO-06 | Phase 3 | Pending |
 
 **Coverage:**
 - v1 requirements: 42 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 42 ⚠️ (to be resolved by `/gsd:roadmap`)
+- Mapped to phases: 42 (100%)
+- Unmapped: 0
+
+**Phase distribution:**
+- Phase 1 (Brain Spine + Synthetic Seed): 17 requirements (HARN-01..06, DATA-01..11)
+- Phase 2 (Onboarding Theater + Chat): 14 requirements (ONBD-01..08, CHAT-01..06)
+- Phase 3 (Insight Cards + Demo Readiness): 11 requirements (INSI-01..06, DEMO-01..06)
 
 ---
 
 *Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 after initial definition*
+*Last updated: 2026-05-16 after roadmap traceability population*
