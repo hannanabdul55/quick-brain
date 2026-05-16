@@ -1,7 +1,7 @@
-import { computeTopVendors } from "./top-vendors.js";
-import { computePnl } from "./pnl.js";
-import { computeAnomalies } from "./anomalies.js";
-import type { InsightBundle } from "./types.js";
+import { computeTopVendors } from "./top-vendors.ts";
+import { computePnl } from "./pnl.ts";
+import { computeAnomalies } from "./anomalies.ts";
+import type { InsightBundle } from "./types.ts";
 
 /**
  * In-process insight bundle cache, keyed by tenantId.
