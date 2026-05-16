@@ -10,11 +10,11 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 ## Current Position
 
 Phase: 1 of 3 (Brain Spine + Synthetic Seed)
-Plan: 0 of TBD in current phase
-Status: Ready to plan
-Last activity: 2026-05-16 — Roadmap created (3 phases, 42 v1 requirements mapped, coarse granularity)
+Plan: 0 of 6 plans executed
+Status: PAUSED — blocked on API keys before execute
+Last activity: 2026-05-16 — Smart discuss + planner done (6 plans, 5 waves, 17/17 reqs); halted before execute pending OPENAI_API_KEY + ANTHROPIC_API_KEY
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20% (discuss + plan complete; execute paused)
 
 ## Performance Metrics
 
@@ -56,7 +56,26 @@ None yet.
 
 ### Blockers/Concerns
 
-None yet. Phase 1 doubles as critical-path spike — if `gbrain graph-query`, `gbrain orphans`, or the "what was weird" smoke gate fails, replan before any UI work.
+**ACTIVE (2026-05-16):** Phase 1 execute is blocked on API keys.
+- `OPENAI_API_KEY` — not set. Required for gbrain embeddings + vector search.
+- `ANTHROPIC_API_KEY` — not set. Required for `gbrain think`/`gbrain query` answer synthesis (verified in `~/Git repos/gbrain/src/core/think/index.ts:225`: returns placeholder `(no LLM available — set ANTHROPIC_API_KEY or pass 'client')` without it).
+- Without both: Phase 1's smoke gate (DATA-10, success criterion #4) cannot pass — `gbrain query "what was weird about last month?"` returns the placeholder, not an answer.
+
+**Resume instructions** when keys are available:
+1. Add to `~/.zshenv` (NOT `~/.zshrc` — non-interactive subshells only source zshenv):
+   ```
+   export OPENAI_API_KEY="sk-..."
+   export ANTHROPIC_API_KEY="sk-ant-..."
+   ```
+2. Run: `/gsd-autonomous --only 1` to resume Phase 1 from execute.
+
+**Already-completed operator setup (do not redo):**
+- `bun 1.3.14` installed at `~/.bun/bin/bun` (path added to `~/.zshrc`)
+- `gbrain 0.35.1` installed via `git clone ~/Git repos/gbrain && bun install && bun link`
+- `brains/` directory writable in repo
+- Phase 1 CONTEXT.md + 6 PLAN.md files committed (52fed6c, e7b4388)
+
+Note: Phase 1 doubles as critical-path spike — if `gbrain graph-query`, `gbrain orphans`, or the "what was weird" smoke gate fails on resume, replan before any UI work.
 
 ## Deferred Items
 
@@ -68,6 +87,7 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-16 (roadmap creation)
-Stopped at: ROADMAP.md + STATE.md + REQUIREMENTS.md traceability written
-Resume file: None
+Last session: 2026-05-16 (smart discuss + planner for Phase 1)
+Stopped at: Phase 1 plans committed; halted before `/gsd-execute-phase 01` pending API keys
+Resume file: `.planning/phases/01-brain-spine-synthetic-seed/01-CONTEXT.md` + the 6 `01-NN-PLAN.md` files
+Resume command: `/gsd-autonomous --only 1` (after exporting OPENAI + ANTHROPIC keys to `~/.zshenv`)
