@@ -48,7 +48,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Total wall-clock from form submit to interactive dashboard at `/dash/<tenantId>` is consistently between 30 and 60 seconds across 3 consecutive measurements on the demo laptop.
   4. Operator on the dashboard sees three hardcoded suggested-question chips, clicks "What was weird about last month?", and within ~30 seconds receives a markdown response with visible `[Source: ...]` citations naming all three planted anomalies.
   5. A query exceeding 30 seconds aborts cleanly and shows a graceful error message in the chat instead of hanging; the brain says "I don't have data on that" rather than guessing when asked about topics outside the synthetic dataset.
-**Plans:** TBD
+**Plans:** 6 plans across 4 waves
+- [ ] 02-01-PLAN.md — Scaffold Next.js 15 + shadcn primitives + landing CTA + onboarding form skeleton (ONBD-01, ONBD-02, ONBD-08)
+- [ ] 02-02-PLAN.md — POST /api/tenants Route Handler + createTenant domain (zod, cp -r seed, register, <2s) (ONBD-03)
+- [ ] 02-03-PLAN.md — GET /api/tenants/[id]/onboard SSE + 5-stage orchestrator + gbrain --no-expand warm-up (ONBD-04, ONBD-05, ONBD-07)
+- [ ] 02-04-PLAN.md — /onboard page full client flow: form → POST → EventSource → progress → redirect → error retry (ONBD-02, ONBD-04, ONBD-06, ONBD-07, ONBD-08)
+- [ ] 02-05-PLAN.md — /dash/[id] dashboard + chat surface UI (3 hardcoded chips, message list, scroll area, input) (CHAT-01, CHAT-04)
+- [ ] 02-06-PLAN.md — POST /api/tenants/[id]/chat SSE + react-markdown renderer + query() helper patched to --no-expand default (CHAT-02, CHAT-03, CHAT-05, CHAT-06)
 **UI hint:** yes
 
 ### Phase 3: Insight Cards + Demo Readiness
@@ -73,7 +79,7 @@ Phases execute in numeric order: 1 → 2 → 3
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Brain Spine + Synthetic Seed | 0/6 | Not started | - |
-| 2. Onboarding Theater + Chat | 0/TBD | Not started | - |
+| 2. Onboarding Theater + Chat | 0/6 | Not started | - |
 | 3. Insight Cards + Demo Readiness | 0/TBD | Not started | - |
 
 ---
