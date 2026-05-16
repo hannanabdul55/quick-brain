@@ -13,9 +13,13 @@ export function withTenantLock<T>(tenantId: string, task: () => Promise<T>): Pro
   const previous = queues.get(tenantId) ?? Promise.resolve();
   const next = previous.then(task, task);
   queues.set(tenantId, next);
+  // .finally() returns a NEW promise that mirrors `next`'s rejection. The
+  // caller can .catch on the returned `next` — but the finally-chain is
+  // orphan, so swallow its rejection to prevent unhandledRejection events
+  // when the caller's task throws. The caller still sees the rejection on `next`.
   next.finally(() => {
     if (queues.get(tenantId) === next) queues.delete(tenantId);
-  });
+  }).catch(() => {});
   return next;
 }
 

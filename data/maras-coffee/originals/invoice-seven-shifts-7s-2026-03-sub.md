@@ -9,9 +9,9 @@ category: Opex — SaaS
 tags: [invoice, seven-shifts]
 ---
 
-Compiled truth: Invoice 7S-2026-03-SUB from [[seven-shifts]] dated 2026-03-12 for $29.00. Line item: 7shifts scheduling subscription, monthly. Category: Opex — SaaS. Paid from the operating account; see [[bank-statement-2026-03]] for the reconciling debit.
+Compiled truth: Invoice 7S-2026-03-SUB from [[companies/seven-shifts]] dated 2026-03-12 for $29.00. Line item: 7shifts scheduling subscription, monthly. Category: Opex — SaaS. Paid from the operating account; see [[bank-statement-2026-03]] for the reconciling debit.
 
 ---
 
-- 2026-03-12: Invoice 7S-2026-03-SUB from [[seven-shifts]] for $29.00 (7shifts scheduling subscription, monthly)
+- 2026-03-12: Invoice 7S-2026-03-SUB from [[companies/seven-shifts]] for $29.00 (7shifts scheduling subscription, monthly)
 - 2026-03-12: Auto-imported by QuickBrain

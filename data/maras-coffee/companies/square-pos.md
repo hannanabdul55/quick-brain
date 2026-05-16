@@ -1,12 +1,11 @@
 ---
 type: company
 title: Square POS
-slug: square-pos
 category: payments-pos
 tags: [vendor, pos, payments, saas, subscription]
 ---
 
-Compiled truth: Square POS is the point-of-sale and card-processing system used by [[mara-okafor]] at the front register. Subscription tier "Plus" is billed monthly at $79.00 USD. Card processing fees are charged daily and reconciled into a single monthly fee summary. Square is also the source of daily revenue summaries that flow into the monthly P&L.
+Compiled truth: Square POS is the point-of-sale and card-processing system used by [[people/mara-okafor]] at the front register. Subscription tier "Plus" is billed monthly at $79.00 USD. Card processing fees are charged daily and reconciled into a single monthly fee summary. Square is also the source of daily revenue summaries that flow into the monthly P&L.
 
 ---
 

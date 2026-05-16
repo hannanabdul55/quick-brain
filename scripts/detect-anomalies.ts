@@ -163,7 +163,10 @@ type BankDebit = { vendor: string; date: string; amount: number; sourceSlug: str
 const debits: BankDebit[] = [];
 for (const stmt of bankStatements) {
   for (const line of stmt.body.split("\n")) {
-    const m = line.match(/^-\s+(\d{4}-\d{2}-\d{2}):\s+\$([0-9,]+\.\d{2})\s+debit\s+—.*\[\[([a-z0-9-]+)\]\]/);
+    // Accept both bare `[[vendor]]` and path-prefixed `[[companies/vendor]]` wikilinks.
+    // gbrain's WIKILINK_RE requires `dir/slug` form for graph extraction, but the
+    // detector only cares about the bare vendor slug for grouping.
+    const m = line.match(/^-\s+(\d{4}-\d{2}-\d{2}):\s+\$([0-9,]+\.\d{2})\s+debit\s+—.*\[\[(?:companies\/)?([a-z0-9-]+)\]\]/);
     if (!m) continue;
     debits.push({
       date: m[1]!,
@@ -261,45 +264,46 @@ await mkdir(CONCEPTS, { recursive: true });
 const summaryBullets: string[] = [];
 for (const h of lastMonthHikes) {
   summaryBullets.push(
-    `- ${h.curMonth}-01: [[${h.vendor}]] invoices jumped from $${usd(h.prevTotal)} in ${monthLabel(h.prevMonth)} to $${usd(h.curTotal)} in ${monthLabel(h.curMonth)} — a +${h.pctChange.toFixed(1)}% increase ($${usd(h.dollarDelta)} more this month)`,
+    `- ${h.curMonth}-01: [[companies/${h.vendor}]] invoices jumped from $${usd(h.prevTotal)} in ${monthLabel(h.prevMonth)} to $${usd(h.curTotal)} in ${monthLabel(h.curMonth)} — a +${h.pctChange.toFixed(1)}% increase ($${usd(h.dollarDelta)} more this month)`,
   );
 }
 for (const d of lastMonthDuplicates) {
   summaryBullets.push(
-    `- ${d.dates[0]}: [[${d.vendor}]] charged $${usd(d.amount)} twice in ${monthLabel(ym(d.dates[0]!))} (on ${d.dates.join(" and ")}); only one charge was expected — see [[${d.sourceSlug}]]`,
+    `- ${d.dates[0]}: [[companies/${d.vendor}]] charged $${usd(d.amount)} twice in ${monthLabel(ym(d.dates[0]!))} (on ${d.dates.join(" and ")}); only one charge was expected — see [[${d.sourceSlug}]]`,
   );
 }
 for (const g of ghosts) {
   summaryBullets.push(
-    `- ${lastMonth}-31: [[${g.vendor}]] billed $${usd(g.monthlyTotal)} this month and has been billing for ${g.monthsActive}+ months, but the last meaningful vendor activity on [[${g.vendor}]] was ${g.lastEvent} (${g.ageDays} days ago) — likely a forgotten recurring subscription`,
+    `- ${lastMonth}-31: [[companies/${g.vendor}]] billed $${usd(g.monthlyTotal)} this month and has been billing for ${g.monthsActive}+ months, but the last meaningful vendor activity on [[companies/${g.vendor}]] was ${g.lastEvent} (${g.ageDays} days ago) — likely a forgotten recurring subscription`,
   );
 }
 
 const summaryPlain = [
-  `In ${monthLabel(lastMonth)}, three anomalies were detected in [[mara-okafor]]'s books:`,
+  `In ${monthLabel(lastMonth)}, three anomalies were detected in [[people/mara-okafor]]'s books:`,
   ...lastMonthHikes.map(
     (h) =>
-      `(1) a +${h.pctChange.toFixed(1)}% price hike from [[${h.vendor}]] — spend rose from $${usd(h.prevTotal)} to $${usd(h.curTotal)}`,
+      `(1) a +${h.pctChange.toFixed(1)}% price hike from [[companies/${h.vendor}]] — spend rose from $${usd(h.prevTotal)} to $${usd(h.curTotal)}`,
   ),
   ...lastMonthDuplicates.map(
     (d) =>
-      `(2) a duplicate $${usd(d.amount)} charge from [[${d.vendor}]] on ${d.dates.join(" and ")}`,
+      `(2) a duplicate $${usd(d.amount)} charge from [[companies/${d.vendor}]] on ${d.dates.join(" and ")}`,
   ),
   ...ghosts.map(
     (g) =>
-      `(3) a ghost recurring charge from [[${g.vendor}]] at $${usd(g.monthlyTotal)}/mo with no vendor activity in ${g.ageDays} days`,
+      `(3) a ghost recurring charge from [[companies/${g.vendor}]] at $${usd(g.monthlyTotal)}/mo with no vendor activity in ${g.ageDays} days`,
   ),
 ].join(" ");
 
+// gbrain derives slug from the file path; do NOT set `slug:` in frontmatter
+// (mismatch with the path-derived slug causes the page to be skipped on import).
 const summary = `---
 type: concept
 title: ${monthLabel(lastMonth)} Anomaly Summary
-slug: ${lastMonth}-anomaly-summary
 date: ${lastMonth}-31
 tags: [anomaly, summary, ${lastMonth}, weird]
 ---
 
-Compiled truth: This page enumerates everything weird, unusual, or unexpected detected in [[mara-okafor]]'s books for ${monthLabel(lastMonth)} (also known as "last month"). ${summaryPlain}
+Compiled truth: This page enumerates everything weird, unusual, or unexpected detected in [[people/mara-okafor]]'s books for ${monthLabel(lastMonth)} (also known as "last month"). ${summaryPlain}
 
 ---
 
@@ -327,19 +331,18 @@ for (const [vendor, vendorDebits] of debitsByVendor) {
   const tag = ageDays >= GHOST_THRESHOLD_DAYS ? " ⚠ GHOST" : "";
 
   recurringBullets.push(
-    `- ${recent}-31: [[${vendor}]] — $${usd(recentTotal)} in ${monthLabel(recent)}, active across ${months.length} months; last meaningful vendor event ${lastEvent} (${ageDays} days ago)${tag}`,
+    `- ${recent}-31: [[companies/${vendor}]] — $${usd(recentTotal)} in ${monthLabel(recent)}, active across ${months.length} months; last meaningful vendor event ${lastEvent} (${ageDays} days ago)${tag}`,
   );
 }
 
 const recurringPage = `---
 type: concept
 title: Recurring Charges Audit
-slug: recurring-charges
 date: ${lastMonth}-31
 tags: [recurring, subscriptions, audit, saas]
 ---
 
-Compiled truth: Every vendor that debited [[mara-okafor]]'s operating account in two or more distinct months, with the most recent monthly total and the age of the last meaningful vendor event on the company timeline. Vendors flagged ⚠ GHOST have no vendor activity in the last ${GHOST_THRESHOLD_DAYS} days — candidates for cancellation.
+Compiled truth: Every vendor that debited [[people/mara-okafor]]'s operating account in two or more distinct months, with the most recent monthly total and the age of the last meaningful vendor event on the company timeline. Vendors flagged ⚠ GHOST have no vendor activity in the last ${GHOST_THRESHOLD_DAYS} days — candidates for cancellation.
 
 ---
 

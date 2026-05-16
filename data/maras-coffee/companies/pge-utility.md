@@ -1,12 +1,11 @@
 ---
 type: company
 title: PG&E Utility
-slug: pge-utility
 category: utilities
 tags: [vendor, utility, electric, gas]
 ---
 
-Compiled truth: PG&E provides electricity and natural gas service to the 412 3rd Street storefront for [[mara-okafor]]. Two separate invoices arrive each month, one for electric service and one for gas service. Combined monthly cost varies seasonally; January-March 2026 averaged $610 (electric) + $185 (gas) per month.
+Compiled truth: PG&E provides electricity and natural gas service to the 412 3rd Street storefront for [[people/mara-okafor]]. Two separate invoices arrive each month, one for electric service and one for gas service. Combined monthly cost varies seasonally; January-March 2026 averaged $610 (electric) + $185 (gas) per month.
 
 ---
 

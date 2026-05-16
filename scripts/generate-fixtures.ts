@@ -172,11 +172,11 @@ category: ${inv.category.replaceAll(":", " -")}
 tags: [invoice, ${inv.vendor}]
 ---
 
-Compiled truth: Invoice ${inv.invoiceNum} from [[${inv.vendor}]] dated ${inv.date} for $${usd(inv.amount)}. Line item: ${inv.description}. Category: ${inv.category}. Paid from the operating account; see [[bank-statement-${inv.date.slice(0, 7)}]] for the reconciling debit.
+Compiled truth: Invoice ${inv.invoiceNum} from [[companies/${inv.vendor}]] dated ${inv.date} for $${usd(inv.amount)}. Line item: ${inv.description}. Category: ${inv.category}. Paid from the operating account; see [[bank-statement-${inv.date.slice(0, 7)}]] for the reconciling debit.
 
 ---
 
-- ${inv.date}: Invoice ${inv.invoiceNum} from [[${inv.vendor}]] for $${usd(inv.amount)} (${inv.description})
+- ${inv.date}: Invoice ${inv.invoiceNum} from [[companies/${inv.vendor}]] for $${usd(inv.amount)} (${inv.description})
 - ${inv.date}: Auto-imported by QuickBrain
 `;
   writeFileSync(fileFor(inv), body, "utf8");
@@ -192,7 +192,7 @@ function statementForMonth(month: string): { date: string; debits: StatementLine
     debits.push({
       day: inv.date.slice(-2),
       amount: inv.amount,
-      memo: `${inv.description} — [[${inv.vendor}]]`,
+      memo: `${inv.description} — [[companies/${inv.vendor}]]`,
     });
   }
 
@@ -200,7 +200,7 @@ function statementForMonth(month: string): { date: string; debits: StatementLine
     debits.push({
       day: "11",
       amount: 79.0,
-      memo: `Square POS Plus subscription — [[square-pos]] (DUPLICATE of 2026-03-04 charge)`,
+      memo: `Square POS Plus subscription — [[companies/square-pos]] (DUPLICATE of 2026-03-04 charge)`,
     });
   }
 
@@ -215,7 +215,7 @@ function statementForMonth(month: string): { date: string; debits: StatementLine
     credits.push({
       day: d,
       amount: amt,
-      memo: `Weekly card-batch deposit — [[square-pos]]`,
+      memo: `Weekly card-batch deposit — [[companies/square-pos]]`,
     });
   });
 
@@ -243,16 +243,17 @@ for (const month of ["2026-01", "2026-02", "2026-03"]) {
     timeZone: "UTC",
   });
 
+  // gbrain derives slug from the file path; do NOT set `slug:` in frontmatter
+  // (mismatch with the path-derived slug causes the page to be skipped on import).
   const body = `---
 type: bank-statement
 title: Bank Statement — ${monthName}
-slug: bank-statement-${month}
 date: ${month}-${s.debits.at(-1)?.day ?? "28"}
 account: Main Operating
 tags: [bank, statement, ${month}]
 ---
 
-Compiled truth: Operating-account statement for ${monthName}. ${s.debits.length} debits totaling $${usd(totalDebits)} and ${s.credits.length} credits totaling $${usd(totalCredits)}. Vendors paid: [[beanstalk-roasters]], [[square-pos]], [[seven-shifts]], [[landlord-llc]], [[pge-utility]]. Source of revenue: card-batch deposits from [[square-pos]].
+Compiled truth: Operating-account statement for ${monthName}. ${s.debits.length} debits totaling $${usd(totalDebits)} and ${s.credits.length} credits totaling $${usd(totalCredits)}. Vendors paid: [[companies/beanstalk-roasters]], [[companies/square-pos]], [[companies/seven-shifts]], [[companies/landlord-llc]], [[companies/pge-utility]]. Source of revenue: card-batch deposits from [[companies/square-pos]].
 
 ---
 
@@ -277,15 +278,15 @@ function closeForMonth(month: string) {
 
   const dupNote =
     month === "2026-03"
-      ? "\n- 2026-03-31: Note — operating account shows TWO [[square-pos]] subscription debits in March ($79 on 2026-03-04 and $79 on 2026-03-11). Only one should have been charged."
+      ? "\n- 2026-03-31: Note — operating account shows TWO [[companies/square-pos]] subscription debits in March ($79 on 2026-03-04 and $79 on 2026-03-11). Only one should have been charged."
       : "";
 
   const beanNote =
     month === "2026-03"
-      ? "\n- 2026-03-31: Note — [[beanstalk-roasters]] invoices in March total $1,830.00, up from $1,500.00 in February (+22%) due to the 2026-02-22 price-update notice"
+      ? "\n- 2026-03-31: Note — [[companies/beanstalk-roasters]] invoices in March total $1,830.00, up from $1,500.00 in February (+22%) due to the 2026-02-22 price-update notice"
       : "";
 
-  const ghostNote = `\n- ${month}-31: Note — [[seven-shifts]] continues to bill ($43.00/month combined) with no recent product usage by [[mara-okafor]]`;
+  const ghostNote = `\n- ${month}-31: Note — [[companies/seven-shifts]] continues to bill ($43.00/month combined) with no recent product usage by [[people/mara-okafor]]`;
 
   const monthName = new Date(`${month}-01T00:00:00Z`).toLocaleString("en-US", {
     month: "long",
@@ -296,20 +297,19 @@ function closeForMonth(month: string) {
   const body = `---
 type: monthly-close
 title: Monthly Close — ${monthName}
-slug: monthly-close-${month}
 date: ${month}-31
 month: ${month}
 tags: [close, ledger, ${month}]
 ---
 
-Compiled truth: Monthly close for ${monthName} for [[mara-okafor]] / Mara's Coffee. Revenue $${usd(revenue)} (card-batch deposits via [[square-pos]]). COGS $${usd(cogs)} (beans from [[beanstalk-roasters]]). Operating expenses $${usd(opex)} ([[square-pos]] subscription + fees, [[seven-shifts]] SaaS, [[landlord-llc]] rent + CAM, [[pge-utility]] electric + gas). Net $${usd(net)}.
+Compiled truth: Monthly close for ${monthName} for [[people/mara-okafor]] / Mara's Coffee. Revenue $${usd(revenue)} (card-batch deposits via [[companies/square-pos]]). COGS $${usd(cogs)} (beans from [[companies/beanstalk-roasters]]). Operating expenses $${usd(opex)} ([[companies/square-pos]] subscription + fees, [[companies/seven-shifts]] SaaS, [[companies/landlord-llc]] rent + CAM, [[companies/pge-utility]] electric + gas). Net $${usd(net)}.
 
 ---
 
 - ${month}-31: Month-end close for ${monthName}
 - ${month}-31: Revenue $${usd(revenue)}
-- ${month}-31: COGS $${usd(cogs)} ([[beanstalk-roasters]])
-- ${month}-31: Opex $${usd(opex)} ([[square-pos]] + [[seven-shifts]] + [[landlord-llc]] + [[pge-utility]])
+- ${month}-31: COGS $${usd(cogs)} ([[companies/beanstalk-roasters]])
+- ${month}-31: Opex $${usd(opex)} ([[companies/square-pos]] + [[companies/seven-shifts]] + [[companies/landlord-llc]] + [[companies/pge-utility]])
 - ${month}-31: Net $${usd(net)}${beanNote}${dupNote}${ghostNote}
 `;
   writeFileSync(resolve(ORIGINALS, `monthly-close-${month}.md`), body, "utf8");

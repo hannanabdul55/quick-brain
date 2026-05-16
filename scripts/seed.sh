@@ -55,6 +55,9 @@ gbrain config set models.default sonnet
 log "gbrain import ${DATA_DIR} (no embed)"
 gbrain import "${DATA_DIR}" --no-embed
 
+log "gbrain extract all --source db (wikilinks + timeline → graph edges)"
+gbrain extract all --source db
+
 log "gbrain embed --stale"
 gbrain embed --stale
 
