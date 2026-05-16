@@ -11,7 +11,8 @@
     "demo-check": "bash scripts/demo-check.sh",
     "detect-anomalies": "bun scripts/detect-anomalies.ts",
     "concurrent-smoke": "bun scripts/concurrent-smoke.ts",
-    "mutex-smoke": "bun scripts/mutex-smoke.ts"
+    "mutex-smoke": "bun scripts/mutex-smoke.ts",
+    "panic-reset": "bash scripts/panic-reset.sh"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
