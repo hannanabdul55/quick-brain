@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { AnomalyRow } from "./types.js";
+import type { AnomalyRow } from "./types.ts";
 
 /**
  * Source path mapping: for known vendors, use the originating document.

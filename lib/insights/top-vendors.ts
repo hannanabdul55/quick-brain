@@ -1,7 +1,7 @@
 import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { parseFrontmatter } from "./frontmatter.js";
-import type { TopVendorRow } from "./types.js";
+import { parseFrontmatter } from "./frontmatter.ts";
+import type { TopVendorRow } from "./types.ts";
 
 /**
  * Compute the top 5 vendors by total spend across Q1 2026

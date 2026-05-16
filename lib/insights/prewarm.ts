@@ -1,5 +1,5 @@
-import { SEED_TENANT_ID, FIXTURES_ROOT } from "../gbrain/paths.js";
-import { computeAndCache } from "./cache.js";
+import { SEED_TENANT_ID, FIXTURES_ROOT } from "../gbrain/paths.ts";
+import { computeAndCache } from "./cache.ts";
 
 /**
  * Singleton promise for the seed tenant pre-warm.

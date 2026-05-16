@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import type { PnlSnapshot } from "./types.js";
+import type { PnlSnapshot } from "./types.ts";
 
 type MonthlyCloseData = {
   revenue: number;
