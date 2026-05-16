@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Operator runs `GBRAIN_HOME=brains/seed gbrain graph-query beanstalk-roasters --depth 2` from the terminal and sees ≥3 neighbors (invoices, the price-hike email, the anomaly concept page).
   4. Operator runs `GBRAIN_HOME=brains/seed gbrain query "what was weird about last month?"` from the terminal and gets a coherent answer naming all 3 planted anomalies in a single response.
   5. Operator runs the same `gbrain query` concurrently against the same brain through `lib/gbrain/client.ts` and the calls serialize via the in-process mutex queue with no PGLite lock errors.
-**Plans:** TBD
+**Plans:** 6 plans across 5 waves
+- [ ] 01-01-PLAN.md — Bootstrap Next.js + Bun scaffolding, pre-declare all Phase 1 scripts, write scripts/demo-check.sh + README (HARN-01, HARN-02)
+- [ ] 01-02-PLAN.md — lib/gbrain/ harness: spawnGBrain + mutex + slug + tenants + typed errors (HARN-03..06)
+- [ ] 01-03-PLAN.md — Synthetic Mara's Coffee dataset + validate-dataset.ts (DATA-01..07)
+- [ ] 01-04-PLAN.md — Hand-rolled anomaly detector (3 rules + CLI writing concept pages) (DATA-08)
+- [ ] 01-05-PLAN.md — End-to-end scripts/seed.sh pipeline producing brains/seed/ (DATA-09, DATA-11)
+- [ ] 01-06-PLAN.md — Smoke gate orchestrator + concurrent-smoke + anomaly assertion (DATA-10)
 
 ### Phase 2: Onboarding Theater + Chat
 **Goal:** A non-technical operator can land on `/`, complete the onboarding flow, arrive on their dashboard within 60 seconds, and ask one of the three P0 questions — getting a real gbrain-backed answer with citations rendered as markdown.
@@ -66,7 +72,7 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Brain Spine + Synthetic Seed | 0/TBD | Not started | - |
+| 1. Brain Spine + Synthetic Seed | 0/6 | Not started | - |
 | 2. Onboarding Theater + Chat | 0/TBD | Not started | - |
 | 3. Insight Cards + Demo Readiness | 0/TBD | Not started | - |
 
