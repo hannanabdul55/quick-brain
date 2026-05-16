@@ -1,4 +1,4 @@
-export { spawnGBrain, query, type GBrainResult, type SpawnGBrainOpts } from "./client.ts";
+export { spawnGBrain, query, think, type GBrainResult, type SpawnGBrainOpts } from "./client.ts";
 export { onboard, type ProgressEvent, type Phase, type OnboardOpts } from "./onboard.ts";
 export {
   init as initTenants,
