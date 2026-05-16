@@ -8,3 +8,4 @@ brains/*
 !brains/.gitkeep
 *.log
 .DS_Store
+tsconfig.tsbuildinfo
