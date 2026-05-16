@@ -5,6 +5,7 @@ import type { InsightBundle } from "@/lib/insights/types"
 import { TopVendorsCard } from "./top-vendors-card"
 import { PnlCard } from "./pnl-card"
 import { AnomaliesCard } from "./anomalies-card"
+import { ResetButton } from "./reset-button"
 
 type RowState =
   | { kind: "loading" }
@@ -74,10 +75,18 @@ export function InsightCardsRow({ tenantId }: InsightCardsRowProps) {
         : { kind: "error" as const, message: rowState.message, onRetry: handleRetry }
 
   return (
-    <div className="max-w-3xl mx-auto py-4 px-4 grid grid-cols-1 md:grid-cols-3 gap-3">
-      <TopVendorsCard state={topVendorsState} />
-      <PnlCard state={pnlState} />
-      <AnomaliesCard state={anomaliesState} />
+    <div className="max-w-3xl mx-auto py-4 px-4">
+      <div className="flex justify-end mb-2">
+        <ResetButton
+          tenantId={tenantId}
+          onResetComplete={() => setReloadKey((k) => k + 1)}
+        />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <TopVendorsCard state={topVendorsState} />
+        <PnlCard state={pnlState} />
+        <AnomaliesCard state={anomaliesState} />
+      </div>
     </div>
   )
 }
