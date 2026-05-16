@@ -55,9 +55,14 @@ A non-technical operator lands on `/`, fills a 3-field form, watches a 30–45s 
   3. "What am I paying for every month that I shouldn't be?"
 - **"I don't have data" prompting (CHAT-05):** pass via a `--system-prompt` flag if gbrain supports it, else accept as a known gap (the dataset is fully scoped to Mara's Coffee — out-of-scope questions are rare in demo).
 
-### Performance Tuning
-- All chat queries use **`gbrain query --no-expand`** to skip the multi-call query expansion step. Phase 1 #4 retest shows that `gbrain query` WITH expansion takes ~3+ minutes (multiple Anthropic round-trips). Without expansion we expect ~10-20s, well within the 30s timeout. Onboarding warm-up also uses --no-expand.
-- Skip the model-config customization unless trivially required — `gbrain config set models.default sonnet` is set in Phase 1's `seed.sh`, so it's already applied to brains/seed/ and copied per-tenant.
+### Performance Tuning (UPDATED 2026-05-16 after Phase 1 #4 retest)
+
+**Critical insight from Phase 1 closeout:** `gbrain query` is **hybrid retrieval only — it does NOT synthesize**. The chat surface needs `gbrain think` for answer synthesis. Additionally, `gbrain think` defaults to Opus (`tier: 'deep'`) which hangs minute-scale on demo-class queries. The locked decision:
+
+- **Chat answer synthesis (CHAT-02):** `spawnGBrain(["think", question, "--model", "haiku"], { tenantId, timeoutMs: 30_000 })`. Returns markdown with `[dir/slug]` citations in ~30s using `claude-haiku-4-5-20251001`. Verified working in Phase 1 #4 retest.
+- **Onboarding warm-up (ONBD-05):** `spawnGBrain(["query", "Top vendors by total spend?", "--no-expand"], { tenantId, timeoutMs: 25_000 })`. Hybrid retrieval only (no Anthropic call), warms PGLite buffer + page cache. Fast (~1-3s).
+- **`gbrain config set models.default sonnet`** in seed.sh stays as-is but is essentially cosmetic — `think --model haiku` is the per-call override.
+- The `lib/gbrain/index.ts` `query()` helper from Phase 1 should be augmented with a new `think(tenantId, question, opts)` helper that defaults to `--model haiku`. Both call `spawnGBrain` directly.
 
 ### Claude's Discretion
 - Exact Tailwind classes, component composition, color palette (within shadcn defaults).

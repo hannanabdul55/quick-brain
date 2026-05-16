@@ -1,11 +1,11 @@
 ---
 phase: 01-brain-spine-synthetic-seed
-status: passed_with_deferred_item
+status: passed
 verified: 2026-05-16
 verifier: orchestrator
 must_haves_total: 5
-must_haves_passed: 4
-must_haves_deferred: 1
+must_haves_passed: 5
+must_haves_deferred: 0
 must_haves_failed: 0
 ---
 
@@ -76,12 +76,34 @@ $ GBRAIN_HOME=brains/seed gbrain graph-query companies/beanstalk-roasters --dept
 
 5 unique neighbors at depth ≤2: `mara-okafor` (depth 1) + all 4 other anchor vendors (depth 2). Exceeds the ≥3 threshold.
 
-### ⊘ Criterion 4 — `gbrain query "what was weird about last month?"` names all 3 anomalies — DEFERRED
+### ✓ Criterion 4 — synthesis names all 3 anomalies
 
-**Status:** Retrieval works perfectly; LLM synthesis is blocked on missing `ANTHROPIC_API_KEY`. Retrieval top-20 chunks confirm the right pages are being surfaced:
+**Status:** PASSED after ANTHROPIC_API_KEY was added AND the right gbrain command identified. The CLI dispatches we tried first hung due to a model-default mismatch — `gbrain query` returns hybrid retrieval (not synthesis), and `gbrain think` defaults to Opus (tier: 'deep') which times out on demo-class queries. The fix is `gbrain think --model haiku`:
 
 ```
-[0.8376] concepts/march-anomaly-summary       — names all 3 anomalies
+$ GBRAIN_HOME=brains/seed gbrain think "what was weird about last month?" --model haiku
+
+# what was weird about last month?
+
+## Answer
+Three anomalies were detected in March 2026 (last month) [concepts/march-anomaly-summary]:
+
+1. **Bean supplier price hike**: Beanstalk Roasters increased wholesale prices by 22.0% effective 2026-03-01 [companies/beanstalk-roasters]. Monthly coffee bean spending rose from $1,500.00 in February to $1,830.00 in March.
+
+2. **Duplicate POS subscription charge**: Square POS charged $79.00 twice in March—once on 2026-03-04 (the regular monthly charge) and again on 2026-03-11 [originals/email-square-receipt-2026-03-11].
+
+3. **Ghost recurring charge from scheduling SaaS**: Seven Shifts continues to auto-renew at $43.00/month despite no vendor activity in 126 days [companies/seven-shifts]. Mara stopped using the scheduling tool in November 2025 ... but the subscription has continued billing every month since.
+
+---
+Model: claude-haiku-4-5-20251001 | Pages: 40 | Takes: 0 | Graph: 0 | Citations: 5
+```
+
+All 3 planted anomalies named with correct details, citation markers `[dir/slug]` per gbrain conventions. Retrieval supplied 40 pages; synthesis used 5 citations. Runtime ~30s.
+
+**Original retrieval baseline (preserved for reference):**
+
+```
+[0.8376] concepts/march-anomaly-summary       — names all 3 anomalies (top hit)
 [0.5874] originals/monthly-close-2026-03
 [0.5654] originals/email-square-receipt-2026-03-11  — Square duplicate evidence
 [0.5511] originals/monthly-close-2026-02
@@ -89,9 +111,10 @@ $ GBRAIN_HOME=brains/seed gbrain graph-query companies/beanstalk-roasters --dept
 ... (7shifts invoices at ranks 11, 13, 15)
 ```
 
-With ANTHROPIC_API_KEY present, gbrain's `think` pipeline (verified at `~/Git repos/gbrain/src/core/think/index.ts:225`) would synthesize an answer from these chunks naming all 3 anomalies. Without it, the synthesis step spins (does not return the documented placeholder string in practice — 99% CPU hang observed).
-
-**To resume:** Add `export ANTHROPIC_API_KEY="..."` to `~/.zshenv`, then re-run `GBRAIN_HOME=brains/seed gbrain query "what was weird about last month?"`. Expected: a coherent paragraph naming Beanstalk price hike, Square duplicate, and 7shifts ghost subscription.
+**Lessons captured for Phase 2:**
+1. `gbrain query` is hybrid RETRIEVAL only — it doesn't synthesize. Phase 2's chat surface needs `gbrain think`.
+2. `gbrain think` defaults to Opus (tier: 'deep' in `gbrain/src/core/think/index.ts:158`). Opus 4.7 with 20K+ input tokens hangs at minute-scale latency. Phase 2 chat MUST pass `--model haiku` (or `--model sonnet`) for demo-class latency.
+3. Setting `gbrain config set models.default sonnet` does NOT override the deep-tier think default in 0.35.1. Must pass `--model` per-call OR set `gbrain config set models.think haiku`.
 
 ### ✓ Criterion 5 — Concurrent gbrain queries serialize via in-process mutex
 
