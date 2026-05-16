@@ -40,7 +40,17 @@ Out of scope: any web UI (`/`, `/onboard`, `/dash` — Phase 2), SSE streaming (
 - Internal structure of `lib/gbrain/tenants.ts` rebuild routine (just needs to satisfy HARN-05).
 - Layout of `scripts/seed.sh` shell vs `bun run seed` invocation (must satisfy DATA-09).
 - TypeScript anomaly rule thresholds (price hike % gate, recurring-charge "ghost" window) provided the planted anomalies are detected.
-- Exact wording / format of `scripts/demo-check.sh` error messages (just needs to exit non-zero per HARN-02).
+- Exact wording / format of `scripts/demo-check.sh` error messages.
+
+### Spec Adjustments (2026-05-16 — Anthropic credits pending)
+
+The operator does not yet have `ANTHROPIC_API_KEY` available. gbrain's `think`/`query` pipeline hard-requires it (`~/Git repos/gbrain/src/core/think/index.ts:225` returns the placeholder `(no LLM available — set ANTHROPIC_API_KEY or pass 'client')` when the env var is absent). Two spec adjustments apply for this execute run:
+
+1. **HARN-02 relaxation — `scripts/demo-check.sh`:** Hard-fail when `OPENAI_API_KEY` is missing (vector search is non-functional without it). **WARN, don't fail**, when `ANTHROPIC_API_KEY` is missing. The warn message must read: `⚠ ANTHROPIC_API_KEY missing — query synthesis will return placeholder; embeddings + graph still work`. The exit code is 0 when only Anthropic is missing, non-zero when OpenAI is missing or gbrain/doctor/brains-write checks fail. When Anthropic is later added, the warn line silently disappears — no script change needed.
+
+2. **DATA-10 / success criterion #4 — live-query smoke:** Plan 01-06 still runs `GBRAIN_HOME=brains/seed gbrain query "what was weird about last month?"`. We capture stdout verbatim and write it to the verification record. If stdout is the placeholder string, criterion #4 is marked `human-verify-pending: re-run when ANTHROPIC_API_KEY is set` rather than failed. Criteria 1, 2, 3, 5 must still pass on real (non-placeholder) output. This is recorded as a known deferred verification — not a build defect.
+
+These adjustments are scoped to Phase 1 only. Phase 2's chat surface and Phase 3's insight cards depend on a working `gbrain query`, so they remain hard-blocked on Anthropic.
 
 </decisions>
 
