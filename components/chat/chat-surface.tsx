@@ -7,6 +7,13 @@ import { MessageInput } from "./message-input"
 import { SuggestedChips } from "./suggested-chips"
 import { MarkdownRenderer } from "./markdown-renderer"
 
+function genMessageId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+}
+
 export interface ChatSurfaceProps {
   tenantId: string
   businessName?: string
@@ -23,7 +30,7 @@ export function ChatSurface({ tenantId, businessName }: ChatSurfaceProps) {
 
   async function send(question: string) {
     const userMessage: ChatMessage = {
-      id: crypto.randomUUID(),
+      id: genMessageId(),
       role: "user",
       content: question,
       createdAt: Date.now(),
@@ -78,7 +85,7 @@ export function ChatSurface({ tenantId, businessName }: ChatSurfaceProps) {
             try {
               const parsed = JSON.parse(dataLine) as { markdown: string }
               appendMessage({
-                id: crypto.randomUUID(),
+                id: genMessageId(),
                 role: "assistant",
                 content: parsed.markdown,
                 createdAt: Date.now(),
@@ -89,7 +96,7 @@ export function ChatSurface({ tenantId, businessName }: ChatSurfaceProps) {
             } catch {
               // malformed JSON — treat as error
               appendMessage({
-                id: crypto.randomUUID(),
+                id: genMessageId(),
                 role: "system-error",
                 content: "Received an unexpected response. Please try again.",
                 createdAt: Date.now(),
@@ -104,14 +111,14 @@ export function ChatSurface({ tenantId, businessName }: ChatSurfaceProps) {
             try {
               const parsed = JSON.parse(dataLine) as { message: string }
               appendMessage({
-                id: crypto.randomUUID(),
+                id: genMessageId(),
                 role: "system-error",
                 content: parsed.message,
                 createdAt: Date.now(),
               })
             } catch {
               appendMessage({
-                id: crypto.randomUUID(),
+                id: genMessageId(),
                 role: "system-error",
                 content: "An error occurred. Please try again.",
                 createdAt: Date.now(),
@@ -129,7 +136,7 @@ export function ChatSurface({ tenantId, businessName }: ChatSurfaceProps) {
     } catch (err) {
       const errorText = err instanceof Error ? err.message : String(err)
       appendMessage({
-        id: crypto.randomUUID(),
+        id: genMessageId(),
         role: "system-error",
         content: "Request failed: " + errorText,
         createdAt: Date.now(),
