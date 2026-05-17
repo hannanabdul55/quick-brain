@@ -10,39 +10,57 @@ The product is built as a YC hackathon entry for the gbrain "mom-and-pop SMB" pr
 
 A non-technical small-business owner can go from zero to a live, queryable gbrain in under 60 seconds and immediately see useful answers — without ever touching a terminal.
 
+## Current Milestone: v1.1 Beyond the Demo
+
+**Goal:** Move QuickBrain from a single-persona hackathon demo to a real-data SMB onboarding tool — replace the hand-rolled TS detector with a real gbrain skill, support persistent multi-tenant accounts via email magic-link auth, and ingest live QuickBooks Online data so a small business owner can answer questions over their own books.
+
+**Target features:**
+- Custom `smb-audit` gbrain skill (markdown + TypeScript) that runs as a gbrain minion at import time and writes the same `concepts/` anomaly pages — closing the hackathon's biggest deferred stretch (SKIL-01)
+- Email magic-link sign-in with persistent per-user tenants (PGLite-backed; no Postgres for the app layer)
+- QuickBooks Online OAuth 2.0 + Accounting API → markdown ingest pipeline that drops invoices, bills, and bank-statement-shaped transactions into a fresh per-tenant brain dir
+- Production-shaped wiring: encrypted OAuth token storage, structured error states across the onboarding stream, panic-reset that survives real-tenant rebuild
+
 ## Requirements
 
 ### Validated
 
 <!-- Shipped and confirmed valuable. -->
 
-(None yet — ship to validate)
+- [x] Onboarding flow: business-name + business-type form → triggers brain provisioning *(v1.0, Phase 2)*
+- [x] Per-tenant `gbrain init`-equivalent driven from the web app (`cp -r brains/seed/` strategy + real CLI shell-out) *(v1.0, Phase 2)*
+- [x] Synthetic coffee-shop dataset (~46 invoices/statements/emails) committed to repo with 3 planted anomalies *(v1.0, Phase 1)*
+- [x] Real `gbrain import` of the synthetic dataset during seed build, with visible SSE progress during onboarding *(v1.0, Phases 1–2)*
+- [x] Chat surface backed by real `gbrain think --model haiku` (CLI shell-out, no `gbrain serve --http`) *(v1.0, Phase 2)*
+- [x] Insight cards on the post-onboarding dashboard: top vendors, monthly P&L snapshot, anomalies flagged *(v1.0, Phase 3)*
+- [x] Demo-readiness: deterministic 60-second flow, reset button, three curated "wow" queries that always work *(v1.0, Phase 3)*
+- [x] Slide-free 3-minute demo script the operator can run from memory *(v1.0, Phase 3)*
 
 ### Active
 
 <!-- Current scope. Building toward these. Refined by REQUIREMENTS.md and roadmap. -->
 
-- [ ] Onboarding flow: business-name + business-type form → triggers brain provisioning
-- [ ] Per-tenant `gbrain init` driven from the web app (real CLI shell-out, real brain repo on disk)
-- [ ] Synthetic coffee-shop dataset (~50–100 invoices/statements/emails) committed to repo with planted anomalies
-- [ ] Real `gbrain import` of the synthetic dataset during onboarding, with visible progress
-- [ ] Chat surface backed by real `gbrain query` (via `gbrain serve --http` or direct CLI shell-out)
-- [ ] Insight cards on the post-onboarding dashboard: top vendors, monthly P&L snapshot, anomalies flagged
-- [ ] Demo-readiness: deterministic 60-second flow, reset button, one curated "wow" query that always works
-- [ ] Slide-free 3-minute demo script the operator can run from memory
+- [ ] Custom `smb-audit` gbrain skill replaces the hand-rolled TS anomaly detector and ships as part of the seed pipeline
+- [ ] Email magic-link sign-in (no password) with rate-limited send and short-lived signed link tokens
+- [ ] Persistent users + tenants: a logged-in user always lands on their own brain across sessions
+- [ ] QuickBooks Online OAuth flow with token refresh and per-tenant encrypted token storage
+- [ ] QBO Accounting API → markdown transformer producing `originals/` and `companies/` pages compatible with the existing seed schema
+- [ ] Live-data onboarding alternative: after sign-in, user can choose "Connect QuickBooks" instead of (or in addition to) the demo seed
 
 ### Out of Scope
 
 <!-- Explicit boundaries. Includes reasoning to prevent re-adding. -->
 
-- Multi-tenant auth / accounts — single-session demo, no login (would burn hours with zero demo payoff)
-- Live Gmail / QuickBooks / Stripe integration — synthetic dataset is faster and more deterministic for the demo
-- Mobile responsive design — demo runs on the operator's laptop projector
-- Custom gbrain skill authoring beyond what ships out of the box — `smb-audit` skill is a stretch goal, not v1
-- Production-grade deployment (auth, billing, isolation, observability) — this is a demo, not a SaaS
-- Replacement of QuickBooks or Xero — we're a *brain on top of* an SMB's existing data, not bookkeeping software
-- Native mobile apps
-- Any feature that breaks the 7.5-hour budget
+- Gmail / Stripe / Square live ingestion — same shape as QBO connector; ship QBO first, others land in a future milestone once the markdown-transformer pattern is proven
+- ML-based anomaly detection — the rule-based `smb-audit` skill produces identical user-visible output and is easier to demo and explain
+- Charts library (recharts, visx, chart.js) — typography + numbers carry the insight cards; charts are still time we don't need to spend
+- Multi-persona branching from a single account — one user, one tenant, one brain in v1.1
+- Mobile responsive design — desktop-first; mobile is its own design pass
+- Custom MCP client / `gbrain serve --http` integration — the CLI shell-out path is simpler and proven; revisit only if external MCP-aware tools need to connect to a user's brain
+- Replacement of QuickBooks / Xero — QuickBrain is a brain *on top of* SMB books, not the books themselves
+- Native mobile apps — web-first
+- Real PDF rendering / OCR — QBO data arrives structured; OCR is a separate workstream
+- Production billing, RBAC, enterprise SSO — out of scope for v1.1; revisit when there are paying users
+- Backups / disaster recovery beyond panic-reset — per-tenant brain dirs are reproducible from the QBO sync
 
 ## Context
 
@@ -90,7 +108,11 @@ A non-technical small-business owner can go from zero to a live, queryable gbrai
 | Synthetic dataset committed to repo (not live ingest) | Deterministic demo; no API plumbing time; planted anomalies under our control | — Pending |
 | Single-session demo, no auth or multi-tenancy | Auth is a 2h tax with zero demo payoff; per-tenant brain dirs simulate isolation | — Pending |
 | Brand = QuickBrain (matches repo name `quick-brain`) | On-the-nose ("your business, with a brain"); zero time spent on branding | — Pending |
-| Custom `smb-audit` gbrain skill = stretch goal, not v1 | Strongest possible prize story but unsafe at 7.5h; ship core path first, skill if time allows | — Pending |
+| Custom `smb-audit` gbrain skill = stretch goal, not v1 | Strongest possible prize story but unsafe at 7.5h; ship core path first, skill if time allows | Deferred to v1.1 |
+| Promote `smb-audit` skill to v1.1 Phase 4 | Hackathon shipped; modest scope, validates gbrain skill authoring path before any data-connector work | — Pending |
+| Email magic-link auth (no password) for v1.1 multi-tenant support | Required to attach QBO tokens to a stable user identity; cheapest auth that survives across sessions; no compliance burden vs SSO/OIDC | — Pending |
+| QuickBooks Online as the first live connector | Dominant SMB accounting tool; well-documented OAuth 2.0 + Accounting API; same target-schema shape as the synthetic seed (invoices/bills/bank lines → markdown) | — Pending |
+| Continue using PGLite + brain-dir-per-tenant for persistence | App-layer user/tenant state can live alongside gbrain's PGLite without a second database; matches v1.0's "no extra DB" pattern | — Pending |
 
 ## Evolution
 
@@ -110,4 +132,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after initialization*
+*Last updated: 2026-05-17 — milestone v1.1 "Beyond the Demo" initialized*
