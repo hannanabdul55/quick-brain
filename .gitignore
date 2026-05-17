@@ -6,6 +6,7 @@ next-env.d.ts
 .env.*.local
 brains/*
 !brains/.gitkeep
+docs/DEMO-SCRIPT.md
 *.log
 .DS_Store
 tsconfig.tsbuildinfo

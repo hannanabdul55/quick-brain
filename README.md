@@ -43,7 +43,7 @@ The honest pitch: **only the input data is synthetic. Everything downstream is r
    - **Anomalies flagged** (from *skill: recurring-charges*)
 4. Ask one of the three suggested questions in chat → ~30s later, a markdown answer with inline `[Source: dir/slug]` citations.
 
-That's the demo. See `docs/DEMO-SCRIPT.md` for the spoken 3-minute version.
+That's the demo.
 
 ## Run it yourself
 
@@ -109,9 +109,7 @@ If something breaks during a recording or rehearsal:
 
 1. **Soft reset** — on the dashboard, press-and-hold the **Reset** button for 2 seconds. Wipes the current tenant, re-copies `brains/seed/`, kills in-flight gbrain spawns, invalidates the insight cache. ~3s.
 2. **Hard reset** — `bun run panic-reset` then `bun run dev`. Kills the Next.js dev server, kills any orphan gbrain processes, wipes all non-seed tenants. Does NOT rebuild the seed brain. ~5s.
-3. **Nuclear reset** — `git checkout demo-final && bun install && bun run panic-reset && bun run dev`. `demo-final` is the operator-blessed frozen tag, cut after 3 clean rehearsals.
-
-Full pre-demo checklist and 3-minute spoken script: `docs/DEMO-SCRIPT.md`.
+3. **Nuclear reset** — `git checkout v1.0 && bun install && bun run panic-reset && bun run dev`. `v1.0` is the milestone-frozen tag.
 
 ## Acknowledgments
 
