@@ -93,7 +93,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Two different tenant brain dirs (the demo seed and a fresh empty brain) yield different anomaly counts on the insight card — confirming the `FIXTURES_ROOT` hardcoding is removed from `lib/insights/cache.ts::computeAndCache` and parsers read from the active tenant's `brains/<brainSlug>/brain-repo/` directory.
   4. Re-running the skill against the same brain dir a second time produces byte-identical concept pages with no duplicate bullet lines, confirming idempotent output (SKIL-06).
   5. `docs/brain-schema.md` exists, documents the canonical frontmatter contract (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency` plus skill output fields `severity`, `dollar_impact`, `anomaly_type`), and the `seed.sh` pipeline completes in under 10 seconds using the skill in place of the old detector script.
-**Plans:** TBD (target 4: skill scaffold + detector port; FIXTURES_ROOT refactor + parser updates; seed.sh integration; smoke gate + dashboard verification)
+**Plans:** 4 plans across 3 waves
+- [ ] 04-01-PLAN.md — Skill scaffold + detector port (4 anomaly rules) + docs/brain-schema.md (SKIL-01..06, SKIL-08)
+- [ ] 04-02-PLAN.md — FIXTURES_ROOT → sourceDir refactor + tenant isolation test (SKIL-09)
+- [ ] 04-03-PLAN.md — seed.sh integration + smoke gate + dashboard end-to-end (SKIL-07, SKIL-10)
+- [ ] 04-04-PLAN.md — Typecheck + lint + deprecation marker + v1.0 demo regression check
 **UI hint:** yes
 
 ### Phase 5: Email Magic-Link Auth + Persistent Tenants
