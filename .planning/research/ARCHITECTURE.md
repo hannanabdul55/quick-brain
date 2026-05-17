@@ -1,596 +1,652 @@
-# Architecture Research
+# Architecture Patterns — QuickBrain v1.1
 
-**Domain:** Single-operator demo shell wrapping a real CLI brain engine (gbrain) behind a Next.js web UI, with deterministic 60-second onboarding and chat.
-**Researched:** 2026-05-16
-**Confidence:** HIGH (gbrain CLI surface verified against official repo + INSTALL_FOR_AGENTS.md; Next.js streaming patterns verified against Next.js 15 docs)
-
----
-
-## TL;DR (for the time-boxed reader)
-
-- **One Next.js app**, App Router, Bun runtime. **No separate backend service.**
-- **Brain layer = real `gbrain` CLI** invoked via `child_process.spawn` from Next.js Route Handlers. **Do NOT use `gbrain serve --http`** for v1 — its OAuth 2.1 dance burns hours we don't have.
-- **Per-tenant isolation = per-tenant `GBRAIN_HOME`** env var pointing at `./brains/<tenantId>/` on disk. Verified pattern: `~/.gbrain` is the default, `GBRAIN_HOME` overrides it.
-- **Streaming = SSE via `ReadableStream` in a Route Handler.** Hand-rolled. No Vercel AI SDK for v1 — its protocol assumes LLM-shaped streams; our progress events are simpler.
-- **State = filesystem.** No DB in the web app. The brain directory IS the state. Reset = `rm -rf ./brains/<tenantId>/`.
-- **Insight cards = pre-run canned `gbrain query` calls on dashboard mount, cached in-memory.** Not streamed. Run them in parallel.
-- **Build order:** (1) gbrain shell harness → (2) onboarding flow with SSE → (3) chat → (4) insights → (5) reset + polish.
+**Domain:** SMB accounting brain shell — v1.1 integration architecture for smb-audit skill, magic-link auth, and QBO ingest
+**Researched:** 2026-05-17
+**Confidence:** HIGH on skill authoring path (verified via Context7/gbrain docs), HIGH on auth pattern (standard Next.js JWT/cookie), MEDIUM on QBO transformer contract (QBO API shape verified, markdown schema is our design)
 
 ---
 
-## Standard Architecture
+## Scope
 
-### System Overview
+This document covers only the three new v1.1 capabilities and how they integrate with the existing v1.0 codebase. The v1.0 architecture (spawn-per-request, per-tenant mutex, in-memory tenant Map, SSE streaming, filesystem-as-state) is preserved and extended — not re-designed.
+
+**v1.0 baseline (do not re-research):**
+- Routes: `/`, `/onboard`, `/dash/[id]`
+- API: `POST /api/tenants`, `GET /api/tenants/[id]/onboard` (SSE), `POST /api/tenants/[id]/chat` (SSE), `GET /api/tenants/[id]/insights`, `POST /api/tenants/[id]/reset`
+- `lib/gbrain/client.ts` — `spawnGBrain()`, `query()`, `think()`
+- `lib/gbrain/mutex.ts` — per-tenant Promise mutex via `withTenantLock()`
+- `lib/gbrain/tenants.ts` — in-memory `Map<tenantId, TenantRecord>` rebuilt from `./brains/*`
+- `lib/gbrain/paths.ts` — `brainHome()`, `seedBrainHome()`, `FIXTURES_ROOT`
+- `lib/gbrain/slug.ts` — `TENANT_SLUG_REGEX`, `assertTenantSlug()`
+- `lib/gbrain/abort-tracker.ts` — `registerAbortable()`, `abortTenant()`
+- `lib/insights/` — parsers reading `data/maras-coffee/` markdown + in-process cache
+- `scripts/detect-anomalies.ts` — hand-rolled TS anomaly detector writing `concepts/` pages
+- `scripts/seed.sh` — full seed pipeline
+
+---
+
+## Capability 1: Custom `smb-audit` gbrain Skill (Phase 4)
+
+### Key finding: gbrain has two distinct skill mechanisms
+
+gbrain distinguishes between:
+1. **Routing skills** — `SKILL.md` + TypeScript handlers that gbrain's router dispatches to on natural-language queries. These live **inside the gbrain install** under `skills/`. They are NOT the right mechanism for QuickBrain because they require modifying the upstream gbrain repo.
+2. **Shell jobs** — `gbrain jobs submit shell --params '{"cmd":"bun scripts/detect-anomalies.ts","cwd":"..."}'` executed by a Minions worker. This is exactly our existing `detect-anomalies.ts` elevated into gbrain's job queue.
+3. **Plugin handlers** — `MinionWorker` + `worker.register('smb-audit', async ctx => {...})` registered from outside the gbrain repo via `GBRAIN_PLUGIN_PATH`. This is the canonical "custom skill" path for downstream hosts. Requires running a long-lived worker process.
+
+**Decision: use gbrain's shell-job mechanism, not the plugin handler.** The plugin handler path requires a persistent `gbrain jobs work` daemon, which adds process lifecycle complexity we explicitly avoided for v1.0's CLI shell-out architecture. The shell-job approach (`GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --follow`) runs our existing TypeScript logic via gbrain's Minions queue — gbrain's job infrastructure tracks it, retries it, and surfaces it as a real gbrain skill. This satisfies the prize narrative ("gbrain's skill system runs the audit") without a daemon.
+
+The existing `scripts/detect-anomalies.ts` already writes `concepts/` pages in exactly the right format. Phase 4 is a structural refactor, not a logic rewrite.
+
+### Where the skill lives
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      Browser (operator's laptop)                       │
-│  ┌────────────┐    ┌──────────────┐    ┌──────────────────────────┐  │
-│  │   /        │    │  /onboard    │    │   /dash/[tenantId]       │  │
-│  │ Landing +  │    │  Form +      │    │   Chat UI +              │  │
-│  │ "Start"    │    │  SSE progress│    │   Insight cards +        │  │
-│  │            │    │  log         │    │   Reset button           │  │
-│  └─────┬──────┘    └──────┬───────┘    └────────────┬─────────────┘  │
-└────────┼──────────────────┼─────────────────────────┼────────────────┘
-         │                  │                         │
-         │   POST /api/tenants                        │
-         │   GET  /api/tenants/[id]/onboard (SSE)     │
-         │                  │   POST /api/tenants/[id]/chat (SSE)
-         │                  │   GET  /api/tenants/[id]/insights
-         │                  │   POST /api/tenants/[id]/reset
-         ▼                  ▼                         ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                    Next.js App (Bun runtime, localhost:3000)          │
-│  ┌────────────────────────────────────────────────────────────────┐  │
-│  │                    Route Handlers (App Router)                  │  │
-│  │   app/api/tenants/route.ts            (POST: create tenant)    │  │
-│  │   app/api/tenants/[id]/onboard/route.ts  (GET: SSE init+import)│  │
-│  │   app/api/tenants/[id]/chat/route.ts     (POST: SSE query)     │  │
-│  │   app/api/tenants/[id]/insights/route.ts (GET: cached queries) │  │
-│  │   app/api/tenants/[id]/reset/route.ts    (POST: wipe & restart)│  │
-│  └────────────────────────────┬───────────────────────────────────┘  │
-│                               │                                       │
-│  ┌────────────────────────────┴───────────────────────────────────┐  │
-│  │              lib/gbrain/                                        │  │
-│  │   client.ts        — spawn helpers, GBRAIN_HOME wiring         │  │
-│  │   onboard.ts       — orchestrates init → import → embed        │  │
-│  │   query.ts         — wraps `gbrain query` shell-out            │  │
-│  │   insights.ts      — canned queries + in-memory cache          │  │
-│  │   tenants.ts       — tenant registry (in-memory Map)           │  │
-│  └────────────────────────────┬───────────────────────────────────┘  │
-└───────────────────────────────┼───────────────────────────────────────┘
-                                │ child_process.spawn
-                                │ env: { GBRAIN_HOME, OPENAI_API_KEY, ANTHROPIC_API_KEY }
-                                │ cwd: ./brains/<tenantId>/
-                                ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│              gbrain CLI (real, unmodified, bun-linked globally)       │
-│   gbrain init     → creates GBRAIN_HOME/{config.json,brain.pglite,…} │
-│   gbrain import   → indexes ./fixtures/maras-coffee/**/*.md          │
-│   gbrain embed --stale  → vector embeddings (OpenAI API)             │
-│   gbrain query    → hybrid search → stdout response                  │
-└─────────────────────────────────┬────────────────────────────────────┘
-                                  │ reads/writes
-                                  ▼
-┌──────────────────────────────────────────────────────────────────────┐
-│                          Filesystem (repo)                            │
-│   ./brains/<tenantId>/                                                │
-│     ├─ brain.pglite       (embedded Postgres, vector + text index)   │
-│     ├─ config.json        (search mode, model routing)               │
-│     └─ brain-repo/        (markdown source of truth, git-tracked)    │
-│   ./fixtures/maras-coffee/                                            │
-│     ├─ invoices/*.md                                                 │
-│     ├─ vendor-emails/*.md                                            │
-│     ├─ bank-statements/*.md                                          │
-│     └─ MANIFEST.md         (planted anomalies index for dev)         │
-└──────────────────────────────────────────────────────────────────────┘
+quick-brain/
+├── skills/
+│   └── smb-audit/
+│       ├── SKILL.md          NEW — gbrain skill frontmatter + contract doc
+│       └── index.ts          NEW — skill entry point (thin wrapper; logic stays in lib/)
+├── lib/
+│   └── audit/
+│       ├── anomaly-detector.ts   MODIFIED — extracted from scripts/detect-anomalies.ts
+│       └── index.ts              NEW — exports for scripts + skill entry point
+└── scripts/
+    └── detect-anomalies.ts   MODIFIED — becomes a thin CLI wrapper calling lib/audit/
 ```
 
-### Component Responsibilities
+`skills/smb-audit/` lives at the repo root, NOT inside `brains/seed/.gbrain/skills/`. gbrain skill routing directories (`skills/`) are part of the gbrain **install** repo, not the brain content repo. Our skill is a host-side construct invoked as a shell job.
 
-| Component | Responsibility | Implementation |
-|-----------|----------------|----------------|
-| **Frontend pages** (`app/page.tsx`, `app/onboard/page.tsx`, `app/dash/[tenantId]/page.tsx`) | UI: form, SSE log, chat, cards, reset button | React Server Components + small Client Components for `EventSource`/streaming |
-| **Route Handlers** (`app/api/**/route.ts`) | HTTP boundary, SSE framing, request validation | Next.js 15 App Router, `runtime = 'nodejs'`, `dynamic = 'force-dynamic'` |
-| **gbrain client lib** (`lib/gbrain/`) | spawn wrapper, env injection, stdout/stderr line-parsing, tenant→path mapping | TS module, `node:child_process`, `node:fs/promises` |
-| **Tenant registry** (`lib/gbrain/tenants.ts`) | In-process Map of `tenantId → { name, type, brainHome, createdAt, status }` | Process-local `Map`; resets on server restart (acceptable for demo) |
-| **Insight cache** (`lib/gbrain/insights.ts`) | Pre-runs ~3 canned queries once per tenant, caches results | Process-local `Map<tenantId, InsightSet>`; invalidated on reset |
-| **gbrain CLI** | Real brain: `init`, `import`, `embed`, `query` | Unmodified upstream binary, `bun link`-installed globally |
-| **Brain directories** (`./brains/<tenantId>/`) | Per-tenant state: PGLite DB, config, markdown repo | Filesystem only; no DB in the web app |
-| **Synthetic fixtures** (`./fixtures/maras-coffee/`) | Pre-baked markdown corpus consumed by `gbrain import` | Committed to repo, ~50–100 files, planted anomalies |
+### SKILL.md frontmatter
+
+```yaml
+---
+name: smb-audit
+version: 1.0.0
+description: |
+  Scans originals/ invoices and bank-statement debits for three SMB anomaly
+  patterns: vendor price hike (>20% MoM), duplicate same-vendor charges within
+  7 days, and ghost recurring subscriptions (monthly debit, no company event
+  >90 days). Writes findings to concepts/march-anomaly-summary.md and
+  concepts/recurring-charges.md.
+triggers:
+  - "run smb audit"
+  - "scan for anomalies"
+  - "detect unusual charges"
+tools:
+  - read_file
+  - write_file
+mutating: true
+---
+```
+
+### Minion declaration in seed.sh (MODIFIED)
+
+```bash
+# After gbrain embed --stale:
+log "Submitting smb-audit as a gbrain shell job"
+GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell \
+  --params "{\"cmd\":\"bun ${REPO_ROOT}/skills/smb-audit/index.ts\",\"cwd\":\"${REPO_ROOT}\"}" \
+  --max-attempts 2 \
+  --timeout-ms 60000 \
+  --follow
+```
+
+The `--follow` flag blocks until the job completes, preserving the synchronous seed pipeline contract.
+
+### Relationship to existing `lib/insights/anomalies.ts`
+
+`lib/insights/anomalies.ts` reads the **already-written** `concepts/march-anomaly-summary.md` to populate the Anomalies insight card. It does NOT run detection — it parses output. This relationship is unchanged.
+
+After Phase 4 the pipeline is:
+- **Detection** → `lib/audit/anomaly-detector.ts` (extracted from `scripts/detect-anomalies.ts`) — writes `concepts/march-anomaly-summary.md` and `concepts/recurring-charges.md`
+- **Reading** → `lib/insights/anomalies.ts` — parses the written concept pages into `AnomalyRow[]`
+
+The insight card contract (what `InsightBundle.anomalies` contains) does not change.
+
+### Data flow: smb-audit skill
+
+```
+scripts/seed.sh
+  └─ gbrain jobs submit shell → skills/smb-audit/index.ts
+       └─ lib/audit/anomaly-detector.ts
+            ├─ reads data/maras-coffee/originals/*.md  (invoices, bank-statements)
+            ├─ reads data/maras-coffee/companies/*.md  (vendor pages)
+            └─ writes data/maras-coffee/concepts/march-anomaly-summary.md
+                       data/maras-coffee/concepts/recurring-charges.md
+
+                  ↓ (seed.sh continues)
+
+gbrain import data/maras-coffee/  [already ran before skill step]
+  → concept pages are already in the brain by the time gbrain embed runs
+
+                  ↓ (at runtime)
+
+GET /api/tenants/[id]/insights
+  └─ lib/insights/anomalies.ts → reads concepts/march-anomaly-summary.md
+       └─ AnomalyRow[] → InsightBundle.anomalies → insight card
+```
+
+Wait — there is an ordering issue. The seed pipeline currently runs `gbrain import` THEN `detect-anomalies`. The concept pages are written AFTER import, so they exist on disk but are NOT in the brain's PGLite index. Currently the insight card reads them directly from the filesystem (not from gbrain's index), so this works. In v1.1, the skill job runs AFTER import, same position. No ordering change needed.
+
+If we later want `gbrain query "what anomalies were found?"` to return the concept pages (i.e., the pages to be indexed in PGLite), we need to run a second `gbrain import data/maras-coffee/concepts/` after the skill. Add to seed.sh:
+
+```bash
+# After smb-audit job completes:
+log "gbrain import concepts/ (post-skill)"
+gbrain import "${DATA_DIR}/concepts/" --no-embed
+gbrain embed --stale
+```
+
+### New vs modified files — Phase 4
+
+| File | Status | Notes |
+|------|--------|-------|
+| `skills/smb-audit/SKILL.md` | NEW | gbrain skill declaration |
+| `skills/smb-audit/index.ts` | NEW | Shell entry point; calls `lib/audit/anomaly-detector.ts` |
+| `lib/audit/anomaly-detector.ts` | NEW | Logic extracted from `scripts/detect-anomalies.ts` |
+| `lib/audit/index.ts` | NEW | Re-exports |
+| `scripts/detect-anomalies.ts` | MODIFIED | Becomes thin CLI wrapper: `import { runDetection } from '../lib/audit'; runDetection(DATA_ROOT)` |
+| `scripts/seed.sh` | MODIFIED | Replace `bun scripts/detect-anomalies.ts` with `gbrain jobs submit shell` invocation; add post-skill import step |
+| `lib/insights/anomalies.ts` | UNCHANGED | Still reads the concept pages from filesystem |
+| `lib/insights/types.ts` | UNCHANGED | `AnomalyRow` contract unchanged |
 
 ---
 
-## Recommended Project Structure
+## Capability 2: Email Magic-Link Auth (Phase 5)
+
+### Auth boundary placement
+
+Auth lives in **Next.js Middleware** (`middleware.ts` at repo root). Middleware runs on the Edge runtime before any Route Handler or page — it reads the session cookie, verifies the JWT, and either allows the request or redirects to `/sign-in`.
+
+Protected routes: `/dash/:id`, `/api/tenants/*`, `/api/qbo/*`
+Public routes: `/`, `/sign-in`, `/api/auth/*`
+
+### Route map
+
+```
+/sign-in                           NEW page — email input form
+/api/auth/send-link   POST         NEW Route Handler — generate + email token, rate-limit
+/api/auth/verify      GET          NEW Route Handler — verify token, issue session cookie, redirect
+/api/auth/sign-out    POST         NEW Route Handler — clear session cookie
+middleware.ts                      NEW — JWT check on protected routes
+```
+
+### Session state propagation
+
+**HttpOnly cookie, SameSite=Lax, signed JWT.**
+
+- Token library: `jose` (Web Crypto API, works in both Node.js Route Handlers and Edge Middleware)
+- Cookie name: `qb_session`
+- JWT payload: `{ sub: userId, email, brainSlug, iat, exp }`
+- Session TTL: 7 days
+- Magic-link TTL: 15 minutes (short-lived, one-time-use)
+- Magic-link token: separate signed JWT with `{ purpose: 'magic-link', email, nonce, exp }` — the nonce is stored in the user record to enforce single-use
+
+No refresh tokens needed. Session re-issuance on magic-link click is the "refresh" mechanic.
+
+### Where users live
+
+**App-layer PGLite instance at `./data/app.pglite`** — a separate PGLite database owned by QuickBrain (not gbrain's brain database). This matches PROJECT.md's "PGLite-backed; no Postgres for the app layer" decision.
+
+Schema (minimal):
+```sql
+CREATE TABLE users (
+  id          TEXT PRIMARY KEY,   -- UUID v4
+  email       TEXT UNIQUE NOT NULL,
+  brain_slug  TEXT,               -- FK to brains/<slug>/ — set after first sign-in + onboard
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  magic_nonce TEXT               -- last-issued magic-link nonce (for single-use enforcement)
+);
+```
+
+The PGLite instance is a module-level singleton in `lib/db/app-db.ts`. It opens `./data/app.pglite` on first import, runs `CREATE TABLE IF NOT EXISTS`, and exports the connection.
+
+**Why not reuse gbrain's PGLite?** gbrain's brain database (at `brains/<tenantId>/brain.pglite`) is per-tenant, managed by gbrain. User records span tenants. A separate app-layer database is cleaner and avoids touching gbrain's schema.
+
+**Why not a JSON file?** Single-user demo plus multi-user v1.1 with QBO tokens — a structured DB is worth the 10-line setup, especially given PGLite's zero-install overhead.
+
+### Anonymous onboarding fate
+
+The existing anonymous `/onboard` flow is preserved as **demo mode**. Sign-in is opt-in:
+
+- `/` landing page: "Start your business brain" (anonymous, existing) + "Sign in" link (new)
+- `/onboard` anonymous path: unchanged; creates a tenant without a user record
+- `/dash/[id]` page: if a session cookie exists AND `user.brain_slug === id`, render the authenticated dashboard. If no session cookie, render the public demo dashboard (no reset, no QBO connect button)
+- The reset button and QBO connect button are **only** rendered for authenticated users whose `brain_slug` matches the current `tenantId`
+
+This preserves the YC demo's "no sign-in required" story while adding auth for real-user onboarding.
+
+### Identity model: tenantId vs userId
+
+v1.0's `TenantRecord` in `lib/gbrain/tenants.ts` uses `tenantId` as the key and identifies the brain directory. This is preserved.
+
+Users are tracked separately in the `users` table. The relationship is `user.brain_slug = tenantId`. There is no rename of `tenantId` to `userId` — the concepts are distinct.
+
+The per-tenant mutex in `lib/gbrain/mutex.ts` continues to key by `tenantId`. No change needed; user identity is resolved before the mutex is acquired.
+
+### Data flow: magic-link auth
+
+```
+[Browser /sign-in]
+  └─ POST /api/auth/send-link { email }
+       ├─ rate-limit check (max 3 tokens / 10 min per email, tracked in users table)
+       ├─ upsert user record by email
+       ├─ generate magic-link JWT (15 min, nonce stored in users.magic_nonce)
+       ├─ send email via nodemailer (SMTP config in .env.local)
+       └─ 200 { sent: true }
+
+[User clicks link in email]
+  └─ GET /api/auth/verify?token=<jwt>
+       ├─ verify JWT signature + expiry
+       ├─ look up user by email from JWT payload
+       ├─ compare nonce in JWT vs users.magic_nonce (single-use enforcement)
+       ├─ clear users.magic_nonce (invalidate link)
+       ├─ issue 7-day session cookie (qb_session)
+       └─ redirect to /dash/<brain_slug> if brain_slug set, else /onboard
+
+[Middleware on every protected request]
+  └─ read qb_session cookie
+       ├─ verify JWT (jose, Edge runtime)
+       ├─ attach { userId, email, brainSlug } to request headers
+       └─ pass through (or redirect /sign-in on failure)
+
+[POST /api/tenants — after auth]
+  └─ creates tenant + sets users.brain_slug = tenantId
+```
+
+### New vs modified files — Phase 5
+
+| File | Status | Notes |
+|------|--------|-------|
+| `middleware.ts` | NEW | Edge JWT check; protects `/dash/*`, `/api/tenants/*`, `/api/qbo/*` |
+| `lib/db/app-db.ts` | NEW | Module-level PGLite singleton; `data/app.pglite`; schema init |
+| `lib/db/users.ts` | NEW | `getUser()`, `upsertUser()`, `setMagicNonce()`, `clearMagicNonce()`, `setBrainSlug()` |
+| `lib/auth/tokens.ts` | NEW | `signMagicToken()`, `verifyMagicToken()`, `signSession()`, `verifySession()` using `jose` |
+| `lib/auth/rate-limit.ts` | NEW | In-memory or DB-backed rate limiter (3 tokens / 10 min per email) |
+| `app/sign-in/page.tsx` | NEW | Email input form |
+| `app/api/auth/send-link/route.ts` | NEW | POST: generate + email magic link |
+| `app/api/auth/verify/route.ts` | NEW | GET: verify token, set cookie, redirect |
+| `app/api/auth/sign-out/route.ts` | NEW | POST: clear cookie |
+| `app/api/tenants/route.ts` | MODIFIED | After tenant creation, call `users.setBrainSlug(userId, tenantId)` if authenticated |
+| `app/dash/[id]/page.tsx` | MODIFIED | Check session; conditionally render reset/QBO buttons for authenticated owner |
+| `app/page.tsx` | MODIFIED | Add "Sign in" link |
+| `lib/gbrain/tenants.ts` | UNCHANGED | `TenantRecord` shape unchanged |
+| `lib/gbrain/mutex.ts` | UNCHANGED | Still keyed by tenantId |
+
+---
+
+## Capability 3: QuickBooks Online Ingest (Phase 6)
+
+### OAuth flow routes
+
+```
+/api/qbo/connect      GET    NEW — build QBO auth URL (state=tenantId), redirect user to Intuit
+/api/qbo/callback     GET    NEW — receive auth code, exchange for tokens, store encrypted, redirect /dash/<tenantId>
+/api/qbo/disconnect   POST   NEW — revoke tokens, clear from user record
+/api/qbo/sync         POST   NEW — SSE stream: fetch QBO data → transform → import to brain
+```
+
+All QBO routes are auth-protected (middleware). `realmId` (QBO company ID) and tokens are stored in the users table.
+
+### Token storage
+
+Schema addition to users table:
+```sql
+ALTER TABLE users ADD COLUMN qbo_realm_id        TEXT;
+ALTER TABLE users ADD COLUMN qbo_access_token     TEXT;  -- AES-256-GCM encrypted
+ALTER TABLE users ADD COLUMN qbo_refresh_token    TEXT;  -- AES-256-GCM encrypted
+ALTER TABLE users ADD COLUMN qbo_token_expires_at TIMESTAMPTZ;
+```
+
+Encryption: `node:crypto` `createCipheriv('aes-256-gcm', QBO_ENCRYPTION_KEY, iv)`. Key from `QBO_ENCRYPTION_KEY` env var (32-byte hex string). The encrypted column stores `iv:ciphertext:authTag` as a base64 concatenation.
+
+The QBO access token expires in 1 hour; refresh token expires in 100 days. Refresh is triggered inline at the start of every `/api/qbo/sync` call.
+
+### Sync execution pattern
+
+**Inline SSE during a button-press**, matching the onboarding flow. No background daemon.
+
+The `/api/qbo/sync` Route Handler:
+1. Refreshes QBO access token if needed (inline)
+2. Fetches QBO entities: Invoices, Bills, Purchases (bank-feed transactions), Vendors
+3. Transforms each entity to a markdown file via `lib/qbo/transformer.ts`
+4. Writes transformed files to `brains/<tenantId>/brain-repo/originals/` and `brains/<tenantId>/brain-repo/companies/`
+5. Calls `gbrain import <brain-repo-dir>` via `spawnGBrain()` (through mutex)
+6. Calls `gbrain embed --stale` via `spawnGBrain()`
+7. Runs the smb-audit skill (via `spawnGBrain(['jobs', 'submit', 'shell', ...])`)
+8. Emits SSE progress events throughout
+9. Invalidates the insight cache for this tenant
+
+### Transformer contract
+
+Location: `lib/qbo/transformer.ts` — NEW file.
+
+```typescript
+// Input: QBO API response object for a single entity
+// Output: { path: string; content: string }
+
+type QboInvoice = { Id: string; TxnDate: string; TotalAmt: number; CustomerRef: { name: string }; Line: QboLineItem[]; ... }
+type QboVendor  = { Id: string; DisplayName: string; PrimaryPhone?: {...}; ... }
+type QboPayment = { Id: string; TxnDate: string; TotalAmt: number; VendorRef: { name: string }; ... }
+
+export function transformInvoice(inv: QboInvoice): { path: string; content: string }
+export function transformVendor(v: QboVendor): { path: string; content: string }
+export function transformPayment(p: QboPayment): { path: string; content: string }
+```
+
+Output paths follow the exact same schema as the synthetic seed data:
+- Invoices → `originals/invoice-<vendor-slug>-<date>.md`
+- Vendors → `companies/<vendor-slug>.md`
+- Bank transactions (Purchases) → `originals/bank-statement-<year-month>.md` (grouped by month)
+
+Each file follows the three-element seed format: YAML frontmatter (`type:`, `title:`, `tags:`, `date:`), "Compiled truth:" paragraph, `---`, timeline bullets with `[[wikilinks]]`.
+
+The transformer is **pure functions** — no I/O. The sync Route Handler does all file writing via `node:fs/promises`. This makes the transformer fully testable without gbrain.
+
+### Brain dir population: QBO vs seed scenarios
+
+Two scenarios when a user connects QBO:
+
+**Scenario A: User connects QBO at first sign-in (before any seed copy)**
+1. `/api/tenants` route is skipped — instead `/api/qbo/connect` is the entry point
+2. After OAuth callback succeeds, Route Handler calls `gbrain init` via `spawnGBrain(['init', '--yes'], { tenantId })`
+3. `/api/qbo/sync` runs: fetch QBO data → transform → write to `brains/<tenantId>/brain-repo/` → `gbrain import` → `gbrain embed` → skill
+4. No `brains/seed/` copy involved
+
+**Scenario B: User connects QBO after demo seed is in place (most common during v1.1)**
+1. User already has `brains/<tenantId>/` populated from the seed copy
+2. `/api/qbo/sync` runs in **additive mode**: transformer writes to `originals/qbo-*.md` and `companies/` (using QBO data path prefix to distinguish from seed data)
+3. Existing seed concept pages are preserved; `gbrain import` picks up the new QBO-sourced files
+4. `gbrain embed --stale` only embeds new/changed pages
+5. Insight cache is invalidated; next GET `/api/tenants/[id]/insights` recomputes
+
+No "wipe and replace" of the seed. Additive merge is safer and simpler. The smb-audit skill will run over both seed and QBO data, which is the correct behavior.
+
+### Dashboard refresh after QBO sync
+
+Current: insight cache is an in-memory `Map` populated by `computeAndCache()` reading `data/maras-coffee/` (fixed path).
+
+After QBO sync, the insight parsers need to read from the brain dir, not the static fixtures dir. Required change:
+
+`lib/insights/cache.ts` `computeAndCache()` currently hardcodes `FIXTURES_ROOT`. It must accept a `sourceDir` parameter: the per-tenant `brainHome(tenantId)/brain-repo/` directory for QBO-connected tenants, or `FIXTURES_ROOT` for seed-only tenants.
+
+The insight Route Handler already passes `FIXTURES_ROOT` for seed and newly-created tenants. After QBO sync completes, the sync Route Handler calls `invalidate(tenantId)` (already in `lib/insights/cache.ts`). The next dashboard load triggers recomputation from the correct source directory.
+
+The sync Route Handler emits a final `SSE 'done'` event; the browser refreshes the dashboard by re-fetching `/api/tenants/[id]/insights`.
+
+### QBO API endpoints used
+
+| Data | QBO endpoint | Mapped to |
+|------|-------------|-----------|
+| Vendors (suppliers) | `GET /v3/company/<realmId>/query?query=SELECT * FROM Vendor` | `companies/<slug>.md` |
+| Bills (AP invoices) | `GET /v3/company/<realmId>/query?query=SELECT * FROM Bill` | `originals/invoice-<vendor>-<date>.md` |
+| Purchases (bank transactions) | `GET /v3/company/<realmId>/query?query=SELECT * FROM Purchase` | `originals/bank-statement-<ym>.md` |
+| Invoices (AR, if any) | `GET /v3/company/<realmId>/query?query=SELECT * FROM Invoice` | `originals/invoice-ar-<date>.md` |
+
+OAuth scope: `com.intuit.quickbooks.accounting` (covers all the above read-only). No write scopes needed.
+
+### Data flow: QBO sync
+
+```
+[Browser /dash/<tenantId>]
+  └─ clicks "Connect QuickBooks"
+       └─ GET /api/qbo/connect
+            ├─ build QBO auth URL (clientId, scope, state=tenantId, redirectUri=/api/qbo/callback)
+            └─ 302 → Intuit OAuth consent screen
+
+[Intuit OAuth consent screen]
+  └─ user authorizes → 302 → /api/qbo/callback?code=<auth_code>&realmId=<realm>
+
+[GET /api/qbo/callback]
+  ├─ exchange auth_code for {access_token, refresh_token}
+  ├─ encrypt tokens → store in users table (qbo_access_token, qbo_refresh_token, qbo_realm_id)
+  └─ 302 → /dash/<tenantId>?qbo=connected
+
+[Browser /dash/<tenantId>]
+  └─ sees "Sync QuickBooks" button → clicks
+       └─ POST /api/qbo/sync → SSE stream
+
+[SSE stream /api/qbo/sync]
+  ├─ refresh QBO token if needed (inline)
+  ├─ SSE: "Fetching your QuickBooks data..."
+  ├─ fetch Vendors, Bills, Purchases (parallel)
+  ├─ SSE: "Transforming <N> records..."
+  ├─ transform → markdown files via lib/qbo/transformer.ts
+  ├─ write files to brains/<tenantId>/brain-repo/originals/ + companies/
+  ├─ SSE: "Importing into brain..."
+  ├─ spawnGBrain(['import', brainRepoDir]) → mutex-queued
+  ├─ spawnGBrain(['embed', '--stale']) → mutex-queued
+  ├─ SSE: "Running anomaly scan..."
+  ├─ spawnGBrain(['jobs', 'submit', 'shell', ...smb-audit-params]) → mutex-queued
+  ├─ invalidate(tenantId) in insight cache
+  ├─ SSE: 'done'
+  └─ Browser re-fetches /api/tenants/<id>/insights → cards refresh
+```
+
+### New vs modified files — Phase 6
+
+| File | Status | Notes |
+|------|--------|-------|
+| `lib/qbo/transformer.ts` | NEW | Pure functions: QBO JSON → `{ path, content }` markdown |
+| `lib/qbo/client.ts` | NEW | QBO API fetch wrapper; token refresh; `fetchVendors()`, `fetchBills()`, `fetchPurchases()` |
+| `lib/qbo/tokens.ts` | NEW | `encryptToken()`, `decryptToken()` using `node:crypto` AES-256-GCM |
+| `lib/db/users.ts` | MODIFIED | Add `getQboTokens()`, `setQboTokens()`, `clearQboTokens()` |
+| `app/api/qbo/connect/route.ts` | NEW | GET: redirect to QBO OAuth |
+| `app/api/qbo/callback/route.ts` | NEW | GET: exchange code, store tokens |
+| `app/api/qbo/disconnect/route.ts` | NEW | POST: revoke + clear tokens |
+| `app/api/qbo/sync/route.ts` | NEW | POST SSE: fetch → transform → import → skill → invalidate |
+| `app/dash/[id]/page.tsx` | MODIFIED | Add "Connect QuickBooks" / "Sync QuickBooks" buttons (auth-gated) |
+| `lib/insights/cache.ts` | MODIFIED | `computeAndCache(tenantId, sourceDir)` — accept dir param instead of hardcoding `FIXTURES_ROOT` |
+| `lib/insights/top-vendors.ts` | MODIFIED | Accept `sourceDir` param |
+| `lib/insights/pnl.ts` | MODIFIED | Accept `sourceDir` param |
+| `lib/insights/anomalies.ts` | MODIFIED | Accept `sourceDir` param |
+| `app/api/tenants/[id]/insights/route.ts` | MODIFIED | Pass correct `sourceDir` (QBO brain-repo dir or FIXTURES_ROOT) |
+
+---
+
+## Unified Component Map (v1.1)
 
 ```
 quick-brain/
 ├── app/
-│   ├── page.tsx                          # Landing: "Start your business brain"
-│   ├── onboard/
-│   │   └── page.tsx                      # Form + SSE progress log
-│   ├── dash/
-│   │   └── [tenantId]/
-│   │       ├── page.tsx                  # Chat surface + insight cards
-│   │       └── ChatClient.tsx            # Client component, EventSource
-│   ├── api/
-│   │   └── tenants/
-│   │       ├── route.ts                  # POST: create tenant (no spawn yet)
-│   │       └── [tenantId]/
-│   │           ├── onboard/route.ts      # GET (SSE): init → import → embed
-│   │           ├── chat/route.ts         # POST (SSE): query stream
-│   │           ├── insights/route.ts     # GET: cached canned queries
-│   │           └── reset/route.ts        # POST: rm -rf + clear caches
-│   ├── layout.tsx
-│   └── globals.css
+│   ├── page.tsx                          MODIFIED — add "Sign in" link
+│   ├── sign-in/page.tsx                  NEW
+│   ├── onboard/page.tsx                  UNCHANGED
+│   ├── dash/[id]/page.tsx                MODIFIED — auth-gated QBO + reset buttons
+│   └── api/
+│       ├── tenants/route.ts              MODIFIED — link user on creation
+│       ├── tenants/[id]/...              UNCHANGED (onboard, chat, insights, reset)
+│       ├── auth/
+│       │   ├── send-link/route.ts        NEW
+│       │   ├── verify/route.ts           NEW
+│       │   └── sign-out/route.ts         NEW
+│       └── qbo/
+│           ├── connect/route.ts          NEW
+│           ├── callback/route.ts         NEW
+│           ├── disconnect/route.ts       NEW
+│           └── sync/route.ts             NEW (SSE)
+├── middleware.ts                         NEW
 ├── lib/
-│   └── gbrain/
-│       ├── client.ts                     # spawn() wrapper, env helpers
-│       ├── onboard.ts                    # init → import → embed orchestration
-│       ├── query.ts                      # gbrain query stdin/stdout
-│       ├── insights.ts                   # canned queries + cache
-│       ├── tenants.ts                    # in-memory registry
-│       └── paths.ts                      # tenantId → brain dir, fixture dir
-├── brains/                               # .gitignore — per-tenant brain dirs
-│   └── .gitkeep
-├── fixtures/
-│   └── maras-coffee/
-│       ├── invoices/                     # *.md, 30 files
-│       ├── vendor-emails/                # *.md, 20 files
-│       ├── bank-statements/              # *.md, 10 files
-│       ├── notes/                        # *.md, ad-hoc business notes
-│       └── MANIFEST.md                   # planted-anomaly index (dev only)
-├── scripts/
-│   ├── reset-all.sh                      # nuke all brain dirs
-│   └── demo-check.sh                     # verify env, fixtures, gbrain version
-├── .env.local                            # OPENAI_API_KEY, ANTHROPIC_API_KEY
-├── .planning/                            # gsd workflow artifacts
-├── next.config.ts
-├── package.json
-└── tsconfig.json
+│   ├── auth/
+│   │   ├── tokens.ts                    NEW — jose JWT helpers
+│   │   └── rate-limit.ts               NEW — email send rate limiter
+│   ├── db/
+│   │   ├── app-db.ts                    NEW — PGLite singleton (data/app.pglite)
+│   │   └── users.ts                     NEW — user CRUD
+│   ├── qbo/
+│   │   ├── transformer.ts               NEW — pure transform functions
+│   │   ├── client.ts                    NEW — QBO API + token refresh
+│   │   └── tokens.ts                    NEW — AES-256-GCM encrypt/decrypt
+│   ├── audit/
+│   │   ├── anomaly-detector.ts          NEW — logic from scripts/detect-anomalies.ts
+│   │   └── index.ts                     NEW
+│   ├── gbrain/                          UNCHANGED
+│   ├── insights/
+│   │   ├── cache.ts                     MODIFIED — accept sourceDir param
+│   │   ├── top-vendors.ts               MODIFIED — accept sourceDir param
+│   │   ├── pnl.ts                       MODIFIED — accept sourceDir param
+│   │   ├── anomalies.ts                 MODIFIED — accept sourceDir param
+│   │   ├── prewarm.ts                   UNCHANGED
+│   │   └── types.ts                     UNCHANGED
+│   ├── onboarding/                      UNCHANGED
+│   ├── chat/                            UNCHANGED
+│   └── utils.ts                         UNCHANGED
+├── skills/
+│   └── smb-audit/
+│       ├── SKILL.md                     NEW
+│       └── index.ts                     NEW
+├── data/
+│   ├── app.pglite                       NEW — app-layer user DB (gitignored)
+│   └── maras-coffee/                    UNCHANGED
+├── brains/                              UNCHANGED
+└── scripts/
+    ├── seed.sh                          MODIFIED — skill job submission step
+    ├── detect-anomalies.ts              MODIFIED — thin CLI wrapper
+    └── ...                              UNCHANGED
 ```
-
-### Structure Rationale
-
-- **`app/api/tenants/[tenantId]/...`** — RESTful per-tenant routes map cleanly to gbrain operations. Each route has one job; easy to reason about under time pressure.
-- **`lib/gbrain/`** — The gbrain integration is the highest-risk surface. Concentrating it in one folder lets us debug, mock, and instrument it without scattering. **Route Handlers stay thin; logic lives here.**
-- **`brains/` next to the repo (not `~/.gbrain`)** — Keeping brain dirs inside the project (a) makes reset trivial (`rm -rf brains/`), (b) keeps the operator's real `~/.gbrain` (if any) untouched, (c) makes it obvious to judges that brains are real on disk.
-- **`fixtures/maras-coffee/` committed to repo** — Deterministic. No fetching at demo time. Markdown-first matches what `gbrain import` expects natively (no parser needed).
-- **No `src/` layer** — Next.js convention. Don't fight it.
 
 ---
 
-## Architectural Patterns
+## Cross-Capability Integration Notes
 
-### Pattern 1: CLI-as-Backend via `child_process.spawn`
+### Build order dependency graph
 
-**What:** Treat the `gbrain` binary as the backend service. Next.js Route Handlers `spawn()` it per request with `GBRAIN_HOME` set to the tenant's brain directory.
+```
+Phase 4 (SKIL) — INDEPENDENT of auth and QBO
+  ↓ no dependency
+Phase 5 (AUTH) — INDEPENDENT of SKIL, but QBO depends on AUTH
+  ↓ provides: userId, users table, session cookie, middleware
+Phase 6 (QBO) — DEPENDS ON: AUTH (for user identity + token storage)
+                             SKIL (the smb-audit skill runs after sync)
+```
 
-**Why this over `gbrain serve --http`:**
-- `gbrain serve --http` is an **OAuth 2.1 server** with bootstrap-token registration, scope control, and Dynamic Client Registration. Even loopback mode (`127.0.0.1`) requires OAuth client setup. **Multi-hour distraction at 7.5h budget.**
-- CLI invocations are **stateless from our perspective** — gbrain reads `GBRAIN_HOME` per process. No long-running daemon to manage, restart, or port-collide.
-- `gbrain init` is **non-TTY-aware**: when stdin is not a TTY (which `spawn` guarantees), it uses defaults. No interactive hang risk.
-- One concrete failure mode is removed: no port to clash, no PID to track, no daemon lifecycle.
+This confirms the roadmap phase order: SKIL → AUTH → QBO. SKIL has zero dependencies on the other two. AUTH provides the identity plumbing QBO needs. QBO needs both AUTH (token storage) and SKIL (audit post-sync).
 
-**Trade-offs:**
-- ✅ Zero state in our app, trivial reset, simple mental model.
-- ✅ Each invocation gets fresh env — perfect tenant isolation via `GBRAIN_HOME`.
-- ❌ Per-invocation startup cost (~hundreds of ms for `gbrain query`). Acceptable for demo throughput (1 operator).
-- ❌ No persistent connection for chat. Each query is one spawn. Streaming is over stdout, not WebSocket.
+### Mutex behavior with QBO sync
 
-**Example:**
+QBO sync calls `spawnGBrain(['import', ...])` and `spawnGBrain(['embed', '--stale'])` sequentially. Both go through `withTenantLock()`. The sync handler is the only in-flight operation for that tenant during sync (the dashboard is in a loading state). Mutex contention is not a concern.
+
+### Insight cache sourceDir resolution
+
+After Phase 6, `computeAndCache()` needs to know which directory to read from:
 
 ```typescript
-// lib/gbrain/client.ts
-import { spawn } from 'node:child_process';
-import { join } from 'node:path';
-
-export type GBrainEnv = {
-  brainHome: string;          // e.g. ./brains/<tenantId>/
-  openaiKey: string;
-  anthropicKey?: string;
-};
-
-export function spawnGBrain(args: string[], env: GBrainEnv) {
-  return spawn('gbrain', args, {
-    cwd: env.brainHome,
-    env: {
-      ...process.env,
-      GBRAIN_HOME: env.brainHome,
-      OPENAI_API_KEY: env.openaiKey,
-      ANTHROPIC_API_KEY: env.anthropicKey ?? '',
-      // CI=1 hints to non-interactive defaults if any prompt sneaks in
-      CI: '1',
-    },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  });
-}
+// lib/insights/cache.ts
+export async function computeAndCache(
+  tenantId: string,
+  sourceDir: string  // MODIFIED: was implicitly FIXTURES_ROOT
+): Promise<InsightBundle>
 ```
 
-### Pattern 2: SSE via `ReadableStream` in Route Handlers (no Vercel AI SDK)
+The insights Route Handler resolves `sourceDir`:
+- Seed-only tenant (no QBO connection): `FIXTURES_ROOT`
+- QBO-connected tenant: `path.join(brainHome(tenantId), 'brain-repo')`
 
-**What:** Stream onboarding progress and chat responses using a hand-rolled `ReadableStream` returned from a Route Handler. Frame events as standard SSE (`data: ...\n\n`).
+This is determined by checking `users.qbo_realm_id` for the tenant owner (requires mapping tenantId → userId, which the users table provides via `brain_slug`).
 
-**Why not Vercel AI SDK:**
-- AI SDK's `streamText` expects LLM-shaped output (tokens, tool calls). Our chat is `gbrain query` stdout — a single response, not a token stream. Adapting it costs more than rolling our own.
-- AI SDK's data stream protocol (with `x-vercel-ai-ui-message-stream: v1`) is overkill for "emit 5 progress lines then redirect."
-- Hand-rolled SSE is ~30 lines and uses native `EventSource` on the client. Zero deps.
+### Session cookie on anonymous tenants
 
-**When `streamText` *would* win:** if we were exposing the brain's token-by-token LLM output (e.g. if gbrain streamed assistant tokens directly). It doesn't — `gbrain query` returns a single response block.
+Anonymous tenants (no sign-in) are not in the users table. The middleware allows anonymous access to `/dash/[id]` for demo purposes. The dashboard renders a subset of features:
+- Chat: available (no auth needed)
+- Insight cards: available (no auth needed)
+- Reset button: available (no auth needed, same as v1.0)
+- "Connect QuickBooks" button: hidden (requires sign-in)
 
-**Example:**
+---
 
-```typescript
-// app/api/tenants/[tenantId]/onboard/route.ts
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+## Environment Variables (additions for v1.1)
 
-export async function GET(req: Request, { params }: { params: { tenantId: string } }) {
-  const stream = new ReadableStream({
-    async start(controller) {
-      const send = (event: string, data: unknown) =>
-        controller.enqueue(
-          new TextEncoder().encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)
-        );
+```bash
+# .env.local additions
 
-      try {
-        send('phase', { name: 'init', message: 'Creating your brain…' });
-        await runInit(params.tenantId, send);
+# Auth
+JWT_SECRET=<32-byte random hex>        # Signs session and magic-link JWTs
 
-        send('phase', { name: 'import', message: 'Reading invoices and emails…' });
-        await runImport(params.tenantId, send);
+# Email delivery (magic links)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=<email address>
+SMTP_PASS=<app password>
+SMTP_FROM="QuickBrain <noreply@quickbrain.app>"
 
-        send('phase', { name: 'embed', message: 'Indexing for search…' });
-        await runEmbed(params.tenantId, send);
+# QBO OAuth
+QBO_CLIENT_ID=<from Intuit Developer Portal>
+QBO_CLIENT_SECRET=<from Intuit Developer Portal>
+QBO_REDIRECT_URI=http://localhost:3000/api/qbo/callback
+QBO_ENVIRONMENT=sandbox  # or "production"
 
-        send('done', { tenantId: params.tenantId });
-      } catch (err) {
-        send('error', { message: String(err) });
-      } finally {
-        controller.close();
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache, no-transform',
-      'Connection': 'keep-alive',
-    },
-  });
-}
-```
-
-The runner functions pipe `child.stdout` line-by-line through `send('log', { line })` so the UI gets visible "ingesting invoice_0017.md…" feedback. **This is the demo "wow."**
-
-### Pattern 3: Filesystem-as-State (no app DB)
-
-**What:** The web app has zero database. All durable state lives in `./brains/<tenantId>/`. The tenant registry is an in-memory `Map` rebuilt by scanning `./brains/*` on server boot.
-
-**Why:** A demo running for ~5 minutes on one laptop doesn't need durability. Adding SQLite/Postgres/Prisma is a multi-hour tax with zero demo payoff. The brain directory is the single source of truth — `ls ./brains/` is the tenant list.
-
-**Trade-offs:**
-- ✅ Reset is one `rm -rf` away.
-- ✅ Inspect a tenant by `cd brains/<id> && ls`.
-- ✅ Survives server restart by re-scanning the dir.
-- ❌ Concurrent writes from two requests to the same tenant could race. Acceptable: single operator, single demo.
-
-### Pattern 4: Insights as Pre-Run Canned Queries (parallel, cached)
-
-**What:** On dashboard mount, fire 3 canned `gbrain query` calls in parallel (top vendors, monthly P&L, anomalies). Cache results in a process-local `Map<tenantId, InsightSet>`. Render skeleton cards immediately, swap in answers as each resolves.
-
-**Why:** Insight cards must look "instant" but `gbrain query` takes seconds. Pre-running on dashboard mount means they're warm by the time the operator finishes saying "and here are the insights gbrain extracted." Parallel = floor wall-time at the slowest single query.
-
-**Example:**
-
-```typescript
-// lib/gbrain/insights.ts
-const CANNED_QUERIES = [
-  { id: 'top-vendors', q: 'Who are my top 5 vendors by spend last quarter?' },
-  { id: 'pnl-snapshot', q: 'Show monthly revenue vs expenses for the last 6 months.' },
-  { id: 'anomalies',    q: 'What unusual charges or pattern breaks should I look at?' },
-];
-
-const cache = new Map<string, InsightSet>();
-
-export async function getInsights(tenantId: string): Promise<InsightSet> {
-  if (cache.has(tenantId)) return cache.get(tenantId)!;
-  const results = await Promise.all(
-    CANNED_QUERIES.map(async (c) => ({
-      id: c.id,
-      q: c.q,
-      answer: await runQuery(tenantId, c.q),
-    }))
-  );
-  const set: InsightSet = { tenantId, results, at: Date.now() };
-  cache.set(tenantId, set);
-  return set;
-}
+# QBO token encryption
+QBO_ENCRYPTION_KEY=<32-byte random hex>  # AES-256 key for token encryption
 ```
 
 ---
 
-## Data Flow
+## Dependencies to Add
 
-### Flow 1: Onboarding (the 60-second wow moment)
+| Package | Purpose | Phase |
+|---------|---------|-------|
+| `jose` | JWT sign/verify (Web Crypto, works in Edge Middleware + Node.js) | Phase 5 |
+| `nodemailer` | SMTP email delivery for magic links | Phase 5 |
+| `@electric-sql/pglite` | App-layer user database | Phase 5 |
+| `intuit-oauth` (or manual fetch) | QBO OAuth token exchange + refresh | Phase 6 |
 
-```
-[Browser /onboard]
-   │
-   │ 1. POST /api/tenants { name, type }
-   ▼
-[Route Handler]
-   │  - generate tenantId (slug)
-   │  - mkdir ./brains/<tenantId>/
-   │  - add to in-memory registry { status: 'pending' }
-   │  - return { tenantId } 200
-   ▼
-[Browser]
-   │ 2. open EventSource('/api/tenants/<id>/onboard')
-   ▼
-[Route Handler — SSE stream]
-   │
-   │ 3. spawn `gbrain init`     (cwd=brains/<id>, GBRAIN_HOME=brains/<id>)
-   │    pipe stdout → SSE 'log' events
-   │    on exit code 0 → SSE 'phase' { name: 'import' }
-   │
-   │ 4. spawn `gbrain import ../../fixtures/maras-coffee/ --no-embed`
-   │    pipe stdout → SSE 'log' events  (visible per-file progress)
-   │
-   │ 5. spawn `gbrain embed --stale`
-   │    pipe stdout → SSE 'log' events
-   │
-   │ 6. SSE 'done' { tenantId }; close stream
-   ▼
-[Browser]
-   │ 7. on 'done': router.push(`/dash/${tenantId}`)
-   ▼
-[/dash/[tenantId]]
-   │ 8. mount triggers GET /api/tenants/<id>/insights (parallel canned queries)
-   │ 9. user can immediately chat
-```
-
-**Why split init / import / embed into three spawns** (vs one): each is a distinct progress phase the user sees, and each can fail independently with a specific error message. `--no-embed` on import + explicit `embed --stale` is the documented pattern for visible-progress imports.
-
-### Flow 2: Chat
-
-```
-[Browser ChatClient]
-   │ POST /api/tenants/<id>/chat { question }
-   ▼
-[Route Handler — SSE stream]
-   │  spawn `gbrain query "<question>"` (env: GBRAIN_HOME=brains/<id>)
-   │  buffer stdout (gbrain query returns a single response block)
-   │  on close → SSE 'answer' { text }; close
-   ▼
-[Browser]
-   │ append assistant message to chat log
-```
-
-**v1 stays simple:** wait for full `gbrain query` response, send as single SSE event. The UI shows a "thinking" indicator. If we later find time, we can word-stream by chunking the response client-side for a typewriter effect — pure UI, no backend change.
-
-### Flow 3: Insights
-
-```
-[/dash/[tenantId] mount]
-   │ GET /api/tenants/<id>/insights
-   ▼
-[Route Handler]
-   │  if cached → return cached JSON
-   │  else → Promise.all([query1, query2, query3]) → cache → return
-   ▼
-[Browser]
-   │ render 3 cards; skeleton until response, then fade in
-```
-
-### Flow 4: Reset (demo safety net)
-
-```
-[Browser reset button]
-   │ POST /api/tenants/<id>/reset
-   ▼
-[Route Handler]
-   │  - rm -rf ./brains/<tenantId>/
-   │  - delete from registry
-   │  - delete from insight cache
-   │  - 204
-   ▼
-[Browser]
-   │ router.push('/')
-```
-
-**Reset is global-safe:** kills only the named tenant. For a "nuke everything between rehearsals" path, `scripts/reset-all.sh` does `rm -rf ./brains/*` from the shell.
-
-### State Locations
-
-| State | Where it lives | Lifetime |
-|-------|---------------|----------|
-| Tenant metadata (name, type, status) | `Map` in `lib/gbrain/tenants.ts` | Process lifetime; rebuilt by scanning `./brains/*` on boot |
-| Brain content (PGLite DB, markdown) | `./brains/<tenantId>/` filesystem | Durable until reset |
-| Insight results | `Map` in `lib/gbrain/insights.ts` | Process lifetime; cleared on reset |
-| Chat history | Client-side React state in `ChatClient.tsx` | Page-session only (refresh = gone, fine for demo) |
-| Onboarding progress | SSE stream + transient client state | Stream duration only |
+`@electric-sql/pglite` is NOT the same as gbrain's PGLite (which is bundled inside gbrain). This is a separate install for the app-layer user DB. Confidence MEDIUM on API — verify the current package name and import path at install time.
 
 ---
 
-## Build Order (this becomes phase order)
+## Confidence Assessment
 
-The roadmapper should slice this into ~4 phases. Recommended:
-
-### Phase 1 — Foundation: gbrain shell harness *(must work end-to-end before any UI polish)*
-
-**Deliverable:** `lib/gbrain/client.ts` + a CLI smoke script that, given a tenantId, runs `init → import → embed → query` against `./fixtures/maras-coffee/` and prints results.
-
-- `lib/gbrain/client.ts` — `spawnGBrain()`, stdout line iterator, error normalization.
-- `lib/gbrain/paths.ts` — tenant → brain dir, fixtures path.
-- `lib/gbrain/tenants.ts` — Map registry + filesystem rescan.
-- `lib/gbrain/onboard.ts` — init/import/embed orchestration with progress callback.
-- `lib/gbrain/query.ts` — single-shot query wrapper.
-- `scripts/demo-check.sh` — verifies `gbrain --version`, `OPENAI_API_KEY`, fixtures exist.
-- Minimal fixture set (5–10 files) for harness verification — the full ~50–100 file corpus lands in its own task but doesn't block this.
-
-**Why first:** every downstream feature is "this, but with a UI on top." If gbrain shells out cleanly with per-tenant isolation, everything else is plumbing. If it doesn't, no UI saves us.
-
-**Risk gate:** if `gbrain init` doesn't honor `GBRAIN_HOME` cleanly (e.g. it writes to `~/.gbrain` regardless), we discover it here and pivot to per-tenant `cwd`-only with relative paths before any UI is built.
-
-### Phase 2 — Onboarding flow (form → SSE → redirect)
-
-**Deliverable:** operator can fill in "Mara's Coffee / coffee shop" and watch a live progress log until dashboard loads.
-
-- `app/page.tsx` — landing with "Start" CTA.
-- `app/onboard/page.tsx` — form + client component subscribing to SSE.
-- `app/api/tenants/route.ts` — POST creates tenant record + dir.
-- `app/api/tenants/[id]/onboard/route.ts` — SSE stream wiring `onboard.ts` events through.
-- Full synthetic fixture corpus (50–100 files) committed.
-
-**Why second:** this is the demo's centerpiece. Build it before chat so we don't push it to the end and run out of time.
-
-### Phase 3 — Chat surface
-
-**Deliverable:** `/dash/[tenantId]` with a working chat that hits real `gbrain query`.
-
-- `app/dash/[tenantId]/page.tsx` — server component scaffolding.
-- `app/dash/[tenantId]/ChatClient.tsx` — client component with input, message list, EventSource.
-- `app/api/tenants/[id]/chat/route.ts` — SSE wrapper around `query.ts`.
-
-**Why third:** depends on Phase 1 (`query.ts`) and Phase 2 (a tenant exists). Can be a single afternoon block.
-
-### Phase 4 — Insight cards + reset + demo polish
-
-**Deliverable:** dashboard shows 3 insight cards, reset button works, "wow" query is rehearsed.
-
-- `lib/gbrain/insights.ts` — canned queries + cache.
-- `app/api/tenants/[id]/insights/route.ts` — JSON endpoint.
-- Insight card components on the dashboard.
-- `app/api/tenants/[id]/reset/route.ts` + reset button.
-- One curated "what was weird about March?" query rehearsed end-to-end.
-- `scripts/reset-all.sh`.
-
-**Why last:** insights are nice-to-have; they're the polish layer. If we're at hour 6 with no insights, we still have a working demo. Reset is mandatory but trivial once everything else exists.
-
-### Parallelizable
-
-- **Fixture authoring** (writing the 50–100 markdown files with planted anomalies) is independent of all engineering after Phase 1's smoke set lands. The operator can ghostwrite these between code blocks or use an LLM batch-generation script.
-- **Demo script** (the 3-minute talk track) can be drafted while Phase 3/4 land.
-
-### Latest-possible additions
-
-- `smb-audit` custom gbrain skill — out of scope unless 6+ hours remain, and even then only as a stretch.
-- Word-by-word streaming of chat responses — pure client-side polish, last 30 min.
-- Visual polish (animations, colors) — last 30 min.
+| Area | Confidence | Notes |
+|------|------------|-------|
+| smb-audit skill placement and shell-job mechanism | HIGH | Verified via Context7 gbrain docs: `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --follow` is the correct path for a deterministic post-import script; GBRAIN_PLUGIN_PATH / MinionWorker is for LLM subagents requiring a daemon |
+| Skill SKILL.md frontmatter format | HIGH | Template verified via Context7 from `skills/skill-creator/SKILL.md` |
+| seed.sh ordering: skill runs after import, concepts re-imported after skill | MEDIUM | Ordering logic is ours; gbrain's shell job `--follow` flag blocks as expected (verified) |
+| Auth: jose + HttpOnly cookie + app-layer PGLite | HIGH | Standard 2026 Next.js App Router auth pattern; jose works in both Edge and Node.js runtimes |
+| Anonymous onboarding preserved alongside auth | HIGH | Design decision consistent with PROJECT.md constraints |
+| QBO OAuth 2.0 flow (Authorization Code, scope `accounting`) | HIGH | Standard Intuit OAuth 2.0 pattern, well-documented |
+| QBO token refresh (inline before sync) | HIGH | Standard pattern; refresh token expires in 100 days |
+| QBO transformer contract (QBO JSON → seed-schema markdown) | MEDIUM | QBO response shape verified; our markdown output format is our design — needs integration test |
+| Insight cache sourceDir parameterization | HIGH | Mechanical change to existing pure parsers |
+| Additive merge (seed + QBO data coexist) | MEDIUM | Depends on gbrain correctly processing both sources without collision on slug uniqueness — verify no slug collisions between QBO vendor names and synthetic seed company slugs |
 
 ---
 
-## Scaling Considerations
+## Pitfalls Specific to v1.1 Integration
 
-| Scale | Adjustments |
-|-------|------------|
-| **1 operator, 1 demo (target)** | Current architecture is correct as-is. |
-| **Several concurrent demo tenants on same machine** | Already supported via per-tenant `GBRAIN_HOME`. Watch for OpenAI API rate limits if multiple imports embed simultaneously. |
-| **Hosted public demo** | Out of scope. Would require: real auth, per-user storage backend, gbrain-as-service (probably `gbrain serve --http` with OAuth), embedding cost controls, sandboxing of `spawn`. Don't build for this. |
+### Skill ordering: concept pages must exist before second `gbrain import`
+If `gbrain import` runs before `detect-anomalies` writes concept pages, those pages are not in the PGLite index. The chat surface cannot retrieve them via `gbrain query`. Current v1.0 workaround: insight parsers read concept pages directly from filesystem. This works but means `gbrain query "what anomalies were found?"` returns nothing from the brain. Fix in v1.1: run `gbrain import data/maras-coffee/concepts/` AFTER the skill job completes.
 
-### First bottleneck
+### PGLite dual-instance: one for gbrain, one for app layer
+The app-layer `data/app.pglite` and gbrain's per-tenant `brains/<id>/brain.pglite` are two separate PGLite instances. They do not share connections or locks. The app-layer PGLite is opened once per Next.js process. gbrain's PGLite is opened/closed per CLI invocation via the mutex. No conflict, but developers must not confuse the two.
 
-**OpenAI embeddings during `gbrain embed`.** A 50–100 file corpus is ~100 embedding calls. Latency-bound, not us-bound. Mitigation: cache embeddings if we ever re-run; for the demo, accept the 5–10 second embed wall-time as part of the visible "indexing" phase — it makes the brain feel real.
+### QBO sandbox vs production: realmId differs
+The QBO sandbox and production environments use different realmIds for the same company. If a user authorizes in sandbox and then the environment switches to production, their stored realmId is invalid. Keep `QBO_ENVIRONMENT=sandbox` in dev and add a migration check for production.
 
----
+### Magic-link JWTs vs session JWTs: different signing keys
+Use the same `JWT_SECRET` for both but different `purpose` claims (`'magic-link'` vs `'session'`). Verify the purpose claim at each verification point to prevent a magic-link token from being accepted as a session token and vice versa.
 
-## Anti-Patterns
-
-### Anti-Pattern 1: Spinning up `gbrain serve --http` per tenant
-
-**What people do:** Run a long-lived `gbrain serve --http` daemon per tenant on different ports, route the chat API through it.
-
-**Why it's wrong:** `gbrain serve --http` is an OAuth 2.1 server — bootstrap tokens, client registration, scope management. Even loopback requires the OAuth dance. We'd burn 2+ hours on auth setup that delivers zero demo value. Port management, daemon lifecycle, and PID tracking are pure tax.
-
-**Do this instead:** Stateless `child_process.spawn` of the CLI per request. Per-tenant isolation via `GBRAIN_HOME` env. Verified in gbrain docs: CLI commands honor `GBRAIN_HOME`.
-
-### Anti-Pattern 2: Putting a database in the web app
-
-**What people do:** Add Prisma + SQLite to track tenants, sessions, chat history "to do it right."
-
-**Why it's wrong:** The brain directory IS the database. Adding another DB doubles the state stores and costs 1–2 hours in schema + migrations + queries for state we can derive from `ls ./brains/`.
-
-**Do this instead:** In-memory `Map` rebuilt from filesystem on boot. Chat history is client-side React state.
-
-### Anti-Pattern 3: Vercel AI SDK for non-LLM streams
-
-**What people do:** Wire onboarding progress through `streamText` because "it's the streaming SDK."
-
-**Why it's wrong:** AI SDK assumes LLM-shaped streams (tokens, tool calls, finish reasons). Forcing progress logs into that shape adds adapter code with no payoff. The data protocol header (`x-vercel-ai-ui-message-stream: v1`) is solving a problem we don't have.
-
-**Do this instead:** Hand-rolled SSE via `ReadableStream` in a Route Handler. ~30 lines, native `EventSource` on the client, zero deps.
-
-### Anti-Pattern 4: Streaming `gbrain query` token-by-token
-
-**What people do:** Try to stream gbrain's response tokens to the UI.
-
-**Why it's wrong:** `gbrain query` returns a single response block to stdout — not a token stream. Trying to make it stream tokens means modifying gbrain (out of scope) or faking it server-side. Pointless.
-
-**Do this instead:** Send the full response as one SSE event. If you want a typewriter effect, do it client-side after receiving the answer. UI illusion, zero backend cost.
-
-### Anti-Pattern 5: Trusting `~/.gbrain` as the brain location
-
-**What people do:** Skip `GBRAIN_HOME` and let `gbrain init` write to `~/.gbrain`, then "figure out multi-tenancy later."
-
-**Why it's wrong:** First two tenants will collide on `~/.gbrain`. Worse, if the operator already has a personal gbrain, this corrupts it. Reset becomes scary.
-
-**Do this instead:** Set `GBRAIN_HOME=./brains/<tenantId>/` on every single spawn. Make the helper enforce it — no path means no spawn.
-
----
-
-## Failure Modes & Fallbacks (demo-survival oriented)
-
-| Failure | What user sees | Recovery / Fallback |
-|---------|---------------|---------------------|
-| `gbrain init` fails (missing API key, gbrain not on PATH, etc.) | SSE `error` event during onboarding. | Onboarding page shows error + "Try again" button. Pre-demo: `scripts/demo-check.sh` catches this before judges arrive. |
-| `gbrain import` crashes halfway | SSE log shows last successful file; final `error` event. | Reset button → restart onboarding. **Pre-demo**: rehearse onboarding 3x to surface flakes. |
-| `gbrain embed` rate-limited by OpenAI | Slow / hung embed step. | Per-spawn 60s timeout. On timeout: surface "indexing slowed — using keyword-only search for now" message and proceed. `gbrain query` works on keyword-only without embeddings. |
-| `gbrain query` times out during live chat | Chat indicator hangs. | 15s timeout on query spawn. On timeout: append assistant message "Let me try a different angle — try asking again." **Pre-demo**: rehearsed "wow" query is timed and validated. |
-| `gbrain query` returns empty/junk for the rehearsed question | Visible bad answer. | The dashboard has one **canned, hardcoded "demo highlight" card** with the rehearsed answer baked in if needed — labeled as a real gbrain result. (Stretch fallback; only if a query proves unreliable in rehearsal.) |
-| Server-side process crashes mid-demo | Browser sees connection drop. | Tenant registry is rebuilt from filesystem on restart — `./brains/<id>/` still exists. Operator hits refresh. **Hot tip**: leave a terminal open with `bun dev` visible to catch this within 1s. |
-| Port 3000 in use | Next dev fails. | `PORT=3001 bun dev`. `scripts/demo-check.sh` checks port availability. |
-| Operator clicks reset by accident mid-demo | Tenant gone. | Reset button has a 2-second hold-to-confirm. Cheaper: put it behind a small modal. |
-| Filesystem permission error writing `./brains/` | init fails on first run. | `scripts/demo-check.sh` creates `./brains/` with correct perms on startup. |
-
-**Universal fallback:** the reset script makes any failure recoverable in <10 seconds. The demo is one fresh onboarding away from working again at any point.
-
----
-
-## Integration Points
-
-### External Services
-
-| Service | Integration Pattern | Notes / Gotchas |
-|---------|---------------------|-----------------|
-| **OpenAI Embeddings** | Used by `gbrain embed`/`gbrain query`. We set `OPENAI_API_KEY` in spawned process env. | **Required for semantic search.** Without it, gbrain falls back to keyword-only. Pre-demo: verify quota. |
-| **Anthropic (Claude)** | Optional. Used by gbrain for query expansion if `ANTHROPIC_API_KEY` set. | Optional — improves answer quality. Set it. |
-| **gbrain CLI itself** | Installed via `git clone + bun install + bun link` (NOT npm). | Lock to a known-good commit hash in install instructions. Document version in README. |
-
-### Internal Boundaries
-
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| Route Handler ↔ `lib/gbrain` | Direct TS function calls | Keep handlers thin: parse → call lib → frame response |
-| `lib/gbrain` ↔ gbrain CLI | `child_process.spawn` over stdout/stderr/exit code | Always set `GBRAIN_HOME`. Always parse stderr separately. Always set a timeout. |
-| Frontend ↔ Backend | HTTP + SSE (`EventSource`) | No WebSockets. No tRPC. App Router conventions only. |
-| Tenants ↔ Brains | tenantId is the directory name | tenantId = `slugify(name) + '-' + shortRand(4)` — collision-safe enough for one operator |
+### Slug collision: QBO vendor names vs synthetic seed company slugs
+The QBO transformer slugifies `Vendor.DisplayName` to generate `companies/<slug>.md`. If a QBO vendor has the same slug as a synthetic seed company (e.g., a user named their vendor "Square POS"), the QBO transformer will overwrite the seed company page. Fix: prefix QBO-sourced company pages with `qbo-` (e.g., `companies/qbo-square-pos.md`). Update the `smb-audit` detector to recognize both prefixed and unprefixed slugs when matching debits to companies.
 
 ---
 
 ## Sources
 
-- [gbrain README & install (verbatim INSTALL_FOR_AGENTS quotes)](https://github.com/garrytan/gbrain) — HIGH confidence: CLI commands, `GBRAIN_HOME`, env-var requirements, `--no-embed`+`embed --stale` import pattern
-- [gbrain INSTALL_FOR_AGENTS.md (DeepWiki mirror & web search of repo file)](https://github.com/garrytan/gbrain/blob/master/INSTALL_FOR_AGENTS.md) — HIGH: exact install steps, OPENAI_API_KEY required vs ANTHROPIC_API_KEY optional
-- [gbrain TODOS.md — `gbrain init` TTY detection plan](https://github.com/garrytan/gbrain/blob/master/TODOS.md) — HIGH: confirms non-TTY (spawn) gets defaults, no interactive hang
-- [Next.js Streaming guide (App Router)](https://nextjs.org/docs/app/guides/streaming) — HIGH: `runtime = 'nodejs'`, `dynamic = 'force-dynamic'` are required for SSE
-- [Pedro Alonso — SSE in Next.js Route Handlers](https://www.pedroalonso.net/blog/sse-nextjs-real-time-notifications/) — MEDIUM: pattern reference for `ReadableStream` SSE
-- [Server Actions vs Route Handlers — Makerkit](https://makerkit.dev/blog/tutorials/server-actions-vs-route-handlers) — MEDIUM: confirms Route Handlers for SSE / long-running / `EventSource` consumers
-- [Vercel AI SDK Stream Protocols](https://ai-sdk.dev/docs/ai-sdk-ui/stream-protocol) — MEDIUM: confirms SDK targets LLM-shaped streams; reinforces decision to skip it
-- [Next.js SSE Guide 2026 — nextjslaunchpad](https://nextjslaunchpad.com/article/nextjs-server-sent-events-real-time-notifications-progress-tracking-live-dashboards) — MEDIUM: current SSE patterns + caveats
-- [gbrain.homes / DeepWiki gbrain pages](https://deepwiki.com/garrytan/gbrain/1.1-getting-started-and-installation) — MEDIUM: brain dir layout, PGLite default, search-mode config
+- [gbrain skills/skill-creator/SKILL.md](https://github.com/garrytan/gbrain/blob/master/skills/skill-creator/SKILL.md) — SKILL.md frontmatter format, `gbrain skillify scaffold` command (HIGH)
+- [gbrain docs/guides/plugin-authors.md](https://github.com/garrytan/gbrain/blob/master/docs/guides/plugin-authors.md) — GBRAIN_PLUGIN_PATH, subagent plugin discovery (HIGH)
+- [gbrain docs/guides/plugin-handlers.md](https://github.com/garrytan/gbrain/blob/master/docs/guides/plugin-handlers.md) — MinionWorker.register() for custom handlers (HIGH)
+- [gbrain docs/guides/minions-shell-jobs.md](https://github.com/garrytan/gbrain/blob/master/docs/guides/minions-shell-jobs.md) — GBRAIN_ALLOW_SHELL_JOBS=1 shell job pattern (HIGH)
+- [gbrain skills/minion-orchestrator/SKILL.md](https://github.com/garrytan/gbrain/blob/master/skills/minion-orchestrator/SKILL.md) — shell vs subagent routing decision (HIGH)
+- [gbrain README — SKILLS section](https://github.com/garrytan/gbrain/blob/master/README.md) — `gbrain skillify scaffold`, `gbrain jobs submit` commands (HIGH)
+- [Next.js magic-link JWT cookie pattern](https://www.scalekit.com/blog/passwordless-authentication-next-js) — HttpOnly cookie, jose, send-link/verify flow (MEDIUM)
+- [jose documentation](https://github.com/panva/jose) — Web Crypto JWT, works Edge + Node.js (HIGH)
+- [PGLite documentation](https://pglite.dev/docs/) — in-process Postgres, filesystem persistence, Node.js/Bun support (HIGH)
+- [QuickBooks Online OAuth guide](https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/oauth-2.0) — Authorization Code flow, scopes, token refresh (HIGH)
+- [QuickBooks API integration guide](https://zuplo.com/learning-center/quickbooks-api) — endpoint shape, realmId, minor versions (MEDIUM)
+- [node-quickbooks npm](https://www.npmjs.com/package/node-quickbooks) — Node.js QBO client reference (MEDIUM)
+- Context7 `/garrytan/gbrain` — skill mechanism verification, shell job docs, MinionWorker docs (HIGH)
 
 ---
-*Architecture research for: QuickBrain (60-second SMB-onboarding shell around real gbrain)*
-*Researched: 2026-05-16*
+
+*Architecture research for: QuickBrain v1.1 integration (smb-audit skill, magic-link auth, QBO ingest)*
+*Researched: 2026-05-17*
