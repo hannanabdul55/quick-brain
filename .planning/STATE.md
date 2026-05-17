@@ -5,80 +5,74 @@
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** A non-technical small-business owner can go from zero to a live, queryable gbrain in under 60 seconds and immediately see useful answers — without ever touching a terminal.
-**Current focus:** Phase 2 — Onboarding Theater + Chat (planning starts next)
+**Current focus:** Milestone v1.0 COMPLETE. Demo running live at http://64.181.231.190:3000.
 
 ## Current Position
 
-Phase: 2 of 3 (Onboarding Theater + Chat) — pending
-Last completed: Phase 1 — Brain Spine + Synthetic Seed (2026-05-16, passed_with_deferred_item)
-Status: Phase 1 ships; Phase 2 ready to plan
-Last activity: 2026-05-16 — Phase 1 verification written; 4 of 5 success criteria pass; criterion #4 deferred until ANTHROPIC_API_KEY arrives
+Milestone: v1.0 — PASSED (audit: .planning/v1.0-MILESTONE-AUDIT.md)
+Phase: 3 of 3 (all phases shipped)
+Status: SHIPPED — repo public, live deploy on Oracle Cloud VM, README polished for YC submission
+Last activity: 2026-05-16 — milestone close: ROADMAP updated to passed, demo URL live, public repo + LICENSE.
 
-Progress: [████░░░░░░] 33% (1 of 3 phases complete with one deferred verification item)
+Progress: [██████████] 100% (3 of 3 phases complete, milestone audit passed)
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 0
-- Average duration: —
-- Total execution time: 0.0 hours
+- Total plans completed: 17 across 3 phases (6 + 6 + 5)
+- Milestone wall-clock: ~7.5h hackathon budget (per PROJECT.md timeline)
 
 **By Phase:**
 
-| Phase | Plans | Total | Avg/Plan |
-|-------|-------|-------|----------|
-| 1. Brain Spine + Synthetic Seed | 0/TBD | — | — |
-| 2. Onboarding Theater + Chat | 0/TBD | — | — |
-| 3. Insight Cards + Demo Readiness | 0/TBD | — | — |
-
-**Recent Trend:**
-- Last 5 plans: (none yet)
-- Trend: —
-
-*Updated after each plan completion*
+| Phase | Plans | Status |
+|-------|-------|--------|
+| 1. Brain Spine + Synthetic Seed | 6/6 | Passed |
+| 2. Onboarding Theater + Chat | 6/6 | Passed |
+| 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) |
 
 ## Accumulated Context
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table.
-Recent decisions affecting current work:
+Decisions are logged in PROJECT.md Key Decisions table. Highlights:
 
-- Pre-roadmap (research): Use `child_process.spawn` per request with in-process mutex queue, NOT `gbrain serve --http` (OAuth 2.1 + PGLite incompatibility blocks the HTTP path at 7.5h).
-- Pre-roadmap (research): Synthetic data MUST sit under gbrain's whitelisted dirs (`companies/`, `originals/`, `media/`, `concepts/`, `people/`) — custom dir names silently kill ~70% of graph cross-refs.
-- Pre-roadmap (research): Pre-bake seed brain once via `scripts/seed.sh`; onboarding is `cp -r brains/seed/ brains/<tenantId>/` plus a 30–45s narrated SSE stream — honest *and* deterministic.
-- Pre-roadmap (research): Hand-rolled SSE via `ReadableStream`. No Vercel AI SDK (gbrain query is single-response, not token-stream — wrong shape).
-- Pre-roadmap (research): Custom `smb-audit` skill is STRETCH ONLY — hand-rolled TS anomaly rules produce identical UI output in less time.
+- Pre-roadmap: Use `child_process.spawn` per request with in-process mutex queue, NOT `gbrain serve --http` (OAuth 2.1 + PGLite incompatibility blocks the HTTP path at 7.5h).
+- Pre-roadmap: Synthetic data MUST sit under gbrain's whitelisted dirs (`companies/`, `originals/`, `media/`, `concepts/`, `people/`) — custom dir names silently kill ~70% of graph cross-refs.
+- Pre-roadmap: Pre-bake seed brain once via `scripts/seed.sh`; onboarding is `cp -r brains/seed/ brains/<tenantId>/` plus a 30–45s narrated SSE stream — honest *and* deterministic.
+- Pre-roadmap: Hand-rolled SSE via `ReadableStream`. No Vercel AI SDK (gbrain query is single-response, not token-stream — wrong shape).
+- Phase 1 retest: Use `gbrain think --model haiku` for synthesis (not `gbrain query`, which is retrieval-only; not default tier `deep`, which uses Opus and hangs minute-scale).
+- Phase 2: Wikilinks must use `[[dir/slug]]` form (e.g. `[[companies/beanstalk-roasters]]`) for gbrain's `WIKILINK_RE` to match.
+- Phase 3: Insight cards parse static markdown directly (no gbrain spawns) for <200ms loads; locked per CONTEXT.md spec_override.
 
 ### Pending Todos
 
-None yet.
+None — milestone v1.0 closed.
 
 ### Blockers/Concerns
 
-**OUTSTANDING (2026-05-16):** ANTHROPIC_API_KEY is still not set. Phase 1 verification #4 is deferred behind this key; Phase 2's chat surface and Phase 3's insight cards will return graceful timeout errors instead of LLM-synthesized answers until the key arrives. The non-LLM parts of Phase 2 (Next.js scaffold, onboarding theater, dashboard chrome, SSE plumbing, query routing, error UX) and Phase 3 (graph-backed insight cards using `gbrain graph-query`, reset script, demo doc) all build and demo without it.
-
-**Resume Phase 1 criterion #4:** Once the key is added, `GBRAIN_HOME=brains/seed gbrain query "what was weird about last month?"` should name all 3 anomalies in one paragraph; flip `.planning/phases/01-brain-spine-synthetic-seed/01-VERIFICATION.md` `status:` to `passed`.
-
-**Already-completed operator setup (do not redo):**
-- `bun 1.3.14` installed at `~/.bun/bin/bun` (path added to `~/.zshrc`)
-- `gbrain 0.35.1` installed via `git clone ~/Git repos/gbrain && bun install && bun link`
-- `brains/` directory writable in repo
-- `OPENAI_API_KEY` exported in `~/.zshenv` (with `export` keyword — non-interactive subshells inherit)
-- Phase 1 shipped: `lib/gbrain/`, `data/maras-coffee/` (46 files), `scripts/` (seed.sh, demo-check.sh, detect-anomalies.ts, mutex-smoke.ts), `brains/seed/` reproducible artifact
-- Phase 1 closeout docs: `01-SUMMARY.md`, `01-VERIFICATION.md` under `.planning/phases/01-brain-spine-synthetic-seed/`
+None active. Tech debt and deferred items are catalogued in `.planning/v1.0-MILESTONE-AUDIT.md`.
 
 ## Deferred Items
 
-Items acknowledged and carried forward from previous milestone close:
+Carried forward to v1.1 per the milestone audit:
 
-| Category | Item | Status | Deferred At |
-|----------|------|--------|-------------|
-| *(none)* | | | |
+| Category | Item | Notes |
+|----------|------|-------|
+| Integration | Real QuickBooks Online connector | OAuth 2.0 + Accounting API → markdown ingest. ~12-20h. |
+| Integration | Stripe + Gmail connectors | Same shape as QB connector. |
+| Stretch | INSI-07/08/09 | 4th card, severity badges, click-to-prefill |
+| Stretch | CHAT-07/08/09 | Vendor linkification, behind-the-scenes panel, typewriter reveal |
+| Stretch | SKIL-01 | Custom `smb-audit` gbrain skill replacing TS detector |
+| Stretch | DATA-12 | 4th planted anomaly (ABCD Plumbing missing-invoice) |
+
+## Operator Gates (still open at milestone close)
+
+- **DEMO-04** — Operator runs 3 back-to-back demo rehearsals before recording. Procedure documented in `docs/DEMO-SCRIPT.md#rehearsal-playbook`.
+- **DEMO-06** — Operator runs `git tag -a demo-final` after rehearsals pass.
 
 ## Session Continuity
 
-Last session: 2026-05-16 (Phase 1 complete; PR #1 by lightspeed merged + 5 post-merge fixes + verification)
-Stopped at: Phase 1 SUMMARY + VERIFICATION committed; ready to plan Phase 2
-Resume file: `.planning/phases/01-brain-spine-synthetic-seed/{01-SUMMARY.md, 01-VERIFICATION.md}`
-Resume command: continuing into Phase 2 — onboarding theater + chat
+Last session: 2026-05-16 (Phase 1+2+3 shipped; milestone audit passed; repo public; live VM deploy)
+Stopped at: Milestone v1.0 close — repo public, README rewrite landed, LICENSE added.
+Resume file: `.planning/v1.0-MILESTONE-AUDIT.md`
+Resume command: ready for v1.1 planning when judges' feedback arrives.

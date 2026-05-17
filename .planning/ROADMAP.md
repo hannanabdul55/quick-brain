@@ -12,9 +12,9 @@ QuickBrain ships in three end-to-end demoable slices over a 7.5-hour hackathon b
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Brain Spine + Synthetic Seed** - End-to-end CLI slice — seeded gbrain answers "what was weird about last month?" naming all 3 planted anomalies
-- [ ] **Phase 2: Onboarding Theater + Chat** - End-to-end web slice — operator completes 60-second onboarding and asks a P0 question through the browser
-- [ ] **Phase 3: Insight Cards + Demo Readiness** - End-to-end demo slice — dashboard cards load with primitive labels, reset works, 3 back-to-back rehearsals pass
+- [x] **Phase 1: Brain Spine + Synthetic Seed** - End-to-end CLI slice — seeded gbrain answers "what was weird about last month?" naming all 3 planted anomalies
+- [x] **Phase 2: Onboarding Theater + Chat** - End-to-end web slice — operator completes 60-second onboarding and asks a P0 question through the browser
+- [x] **Phase 3: Insight Cards + Demo Readiness** - End-to-end demo slice — dashboard cards load with primitive labels, reset works, 3 back-to-back rehearsals pass
 
 ## Phase Details
 
@@ -83,9 +83,11 @@ Phases execute in numeric order: 1 → 2 → 3
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Brain Spine + Synthetic Seed | 0/6 | Not started | - |
-| 2. Onboarding Theater + Chat | 0/6 | Not started | - |
-| 3. Insight Cards + Demo Readiness | 0/5 | Not started | - |
+| 1. Brain Spine + Synthetic Seed | 6/6 | Passed | 2026-05-16 |
+| 2. Onboarding Theater + Chat | 6/6 | Passed | 2026-05-16 |
+| 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) | 2026-05-16 |
+
+**Milestone v1.0:** PASSED — see `.planning/v1.0-MILESTONE-AUDIT.md` (42/42 reqs, 14/15 auto-verified must-haves, 1 operator-driven rehearsal gate).
 
 ---
 
