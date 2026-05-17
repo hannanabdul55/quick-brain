@@ -1,203 +1,151 @@
 # Requirements: QuickBrain
 
-**Defined:** 2026-05-16
-**Core Value:** A non-technical small-business owner can go from zero to a live, queryable gbrain in under 60 seconds and immediately see useful answers — without ever touching a terminal.
+**Defined:** 2026-05-16 (v1.0) · **Extended:** 2026-05-17 (v1.1 "Beyond the Demo")
+**Core Value:** A non-technical small-business owner can go from zero to a live, queryable gbrain — with their own data — in under 60 seconds, without ever touching a terminal.
 
 ---
 
-## v1 Requirements
+## v1.0 Requirements — SHIPPED
 
-Requirements for the hackathon demo. Every requirement maps to exactly one roadmap phase. All requirements are scoped to the 7.5-hour hackathon ceiling; anything that doesn't fit lives in v2 or Out of Scope.
+The hackathon scope. Delivered 2026-05-16 — see `.planning/v1.0-MILESTONE-AUDIT.md` (42/42 requirements, 14/15 must-haves auto-verified). Detail preserved in `.planning/research/v1.0-archive/`.
 
-### Brain Harness (HARN)
+| Group | Count | Phase | Status |
+|---|---|---|---|
+| HARN — Brain Harness | 6 | Phase 1 | shipped |
+| DATA — Synthetic Data | 11 | Phase 1 | shipped |
+| ONBD — Onboarding | 8 | Phase 2 | shipped |
+| CHAT — Chat | 6 | Phase 2 | shipped (CHAT-05 best-effort) |
+| INSI — Insight Cards | 6 | Phase 3 | shipped |
+| DEMO — Demo Readiness | 6 | Phase 3 | shipped (DEMO-04 operator-driven) |
 
-The plumbing that lets Next.js talk to the real `gbrain` CLI safely.
+---
 
-- [ ] **HARN-01**: Operator can install `gbrain` from a pinned git SHA via `git clone + bun install && bun link` (the `bun install -g` path is documented as broken in the README).
-- [ ] **HARN-02**: A `scripts/demo-check.sh` exits non-zero if `gbrain --version`, `gbrain doctor --fast`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, or write-access to `./brains/` is missing.
-- [ ] **HARN-03**: `lib/gbrain/client.ts` exposes a `spawnGBrain(args, opts)` helper that spawns the `gbrain` CLI with `GBRAIN_HOME=./brains/<tenantId>/` and inherits `OPENAI_API_KEY` + `ANTHROPIC_API_KEY` from the parent process env.
-- [ ] **HARN-04**: Every `spawnGBrain(...)` call is routed through an in-process Promise mutex queue keyed by tenant ID, so concurrent requests against the same brain serialize at the application layer (resolves PGLite exclusive-lock contention).
-- [ ] **HARN-05**: `lib/gbrain/tenants.ts` maintains an in-memory `Map<tenantId, TenantRecord>` that is rebuilt from `./brains/*` on Next.js boot (no separate database).
-- [ ] **HARN-06**: Form input that becomes part of a `GBRAIN_HOME` path is validated by zod with a strict slug regex; no shell-special characters can flow into a spawn.
+## v1.1 Requirements — Beyond the Demo
 
-### Synthetic Data (DATA)
+The first post-hackathon milestone. Three pillars: replace the hand-rolled anomaly detector with a real gbrain skill, add email magic-link auth and persistent multi-tenant state, and ingest live QuickBooks Online data so a real SMB owner can answer questions over their own books.
 
-The fictional Mara's Coffee dataset that makes the demo land.
+### Custom gbrain Skill (SKIL)
 
-- [ ] **DATA-01**: All synthetic data lives under gbrain's whitelisted directory names exclusively: `companies/`, `people/`, `originals/`, `media/`, `concepts/`. No custom directory names (would silently break graph cross-linking per gbrain issue #424).
-- [ ] **DATA-02**: At least 5 vendor company pages exist in `companies/` covering the 4 anomaly-anchoring vendors (`beanstalk-roasters`, `square-pos`, `seven-shifts`, `landlord-llc`) plus one additional supplier.
-- [ ] **DATA-03**: Every invoice, vendor-email, and bank-statement page lives in `originals/`, has a `type:` frontmatter value (`invoice` / `vendor-email` / `bank-statement` / `monthly-close`), a "Compiled truth:" prose section above the `---` divider, and at least one `[[wikilink]]` to its anchor `companies/` vendor.
-- [ ] **DATA-04**: The dataset contains 3 months (Jan–Mar 2026) of monthly close pages, bank statements, and ≥2 invoices per vendor per month for the 5 core vendors.
-- [ ] **DATA-05**: Planted anomaly #1 (Beanstalk price hike +22% in March) is detectable via month-over-month invoice-total delta against `companies/beanstalk-roasters.md`.
-- [ ] **DATA-06**: Planted anomaly #2 (duplicate Square POS charge — $79 on Mar 4 and Mar 11) appears in `originals/bank-statement-2026-03.md` and is also surfaced by `originals/email-square-receipt-2026-03-11.md`.
-- [ ] **DATA-07**: Planted anomaly #3 (ghost 7shifts SaaS — $29/mo recurring, last vendor-event >90 days ago) appears in 6+ months of bank statements with no recent event on `companies/seven-shifts.md`.
-- [ ] **DATA-08**: A hand-rolled TypeScript anomaly detector reads the imported brain and writes its findings to `concepts/march-anomaly-summary.md` and `concepts/recurring-charges.md` as queryable markdown pages.
-- [ ] **DATA-09**: `scripts/seed.sh` runs end-to-end in a fresh shell and produces a working `brains/seed/` containing `gbrain init` defaults, model config set to `sonnet`, the imported synthetic data, completed embeddings, and the anomaly-detection concept pages.
-- [ ] **DATA-10**: A smoke gate passes before Phase 1 is declared done: `gbrain graph-query beanstalk-roasters --depth 2` returns ≥3 neighbors, `gbrain orphans` returns a short list, and `gbrain query "what was weird about last month?"` names all 3 planted anomalies in one response.
-- [ ] **DATA-11**: The committed `brains/seed/` tarball (or directory) is reproducible from `scripts/seed.sh` and is the artifact that onboarding clones from.
+The skill that replaces the hand-rolled TypeScript detector and finishes the v1.0 prize-narrative thread.
 
-### Onboarding (ONBD)
+- [ ] **SKIL-01**: A `skills/smb-audit/` directory at the repo root contains a `SKILL.md` manifest and `scripts/smb-audit.mjs` runnable via `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit smb-audit --follow` against any brain dir.
+- [ ] **SKIL-02**: The skill detects all three v1.0 anomaly types — Beanstalk-style price hike (>15% MoM vendor delta), Square-style duplicate charge (same vendor + amount within 14 days), 7shifts-style ghost SaaS (recurring monthly debit with no vendor email or invoice in >90 days) — by reading `originals/` and `companies/` pages in the active brain dir.
+- [ ] **SKIL-03**: The skill detects a 4th anomaly type — bank-debit-without-invoice (a `bank-statement` line item with no matching `invoice` page for the same vendor + month) — fulfilling the v1.0 DATA-12 stretch.
+- [ ] **SKIL-04**: The skill writes its findings to `concepts/march-anomaly-summary.md` and `concepts/recurring-charges.md` in a format byte-compatible with the existing `lib/insights/parsers/anomalies.ts` regex (`- YYYY-MM-DD: [[companies/<slug>]] <description>` bullet lines).
+- [ ] **SKIL-05**: Every emitted anomaly bullet has a structured frontmatter sidecar entry (`severity: high|medium|low`, `dollar_impact`, `anomaly_type`, `vendor_slug`) that downstream insight cards can read without breaking the v1.0 parser contract.
+- [ ] **SKIL-06**: Re-running the skill against the same brain dir produces deterministic concept-page output with no duplicate bullet lines and no stale findings from a prior run.
+- [ ] **SKIL-07**: The skill is wired into `scripts/seed.sh` in place of the v1.0 `bun run scripts/detect-anomalies.ts` step, and the full seed pipeline still completes in under 10 seconds on the demo laptop.
+- [ ] **SKIL-08**: A canonical schema document at `docs/brain-schema.md` documents the exact frontmatter fields (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency`) and wikilink form (`[[companies/<slug>]]`) the skill consumes — this contract binds the QBO transformer (Phase 6).
+- [ ] **SKIL-09**: `lib/insights/cache.ts::computeAndCache` accepts a `sourceDir` parameter and reads from the active tenant's `brains/<brainSlug>/brain-repo/` directory instead of the hardcoded `data/maras-coffee/` — every tenant sees its own anomalies, not Mara's. A fresh tenant brain yields different insight numbers than the demo brain.
+- [ ] **SKIL-10**: A smoke gate passes before Phase 4 closes: skill runs against `brains/seed/`, writes concept pages, the dashboard "Anomalies flagged" card renders all 4 anomaly types with severity badges and dollar impacts populated from skill output.
 
-The 60-second "spin up your brain" theater.
+### Authentication (AUTH)
 
-- [ ] **ONBD-01**: A user can land on `/` and see a "Start your business brain" call-to-action that requires no login.
-- [ ] **ONBD-02**: A user can click the CTA and reach a form at `/onboard` that asks at most three fields (business name, business type, owner name).
-- [ ] **ONBD-03**: Submitting the onboarding form POSTs to `/api/tenants`, which validates input via zod, creates the tenant by `cp -r brains/seed/ brains/<tenantId>/`, registers the tenant in the in-memory `Map`, and returns the tenant ID — all in under 2 seconds wall-clock.
-- [ ] **ONBD-04**: After submit, the browser opens an `EventSource` to `/api/tenants/<id>/onboard` (SSE) and renders a 30–45 second narrated progress sequence with 5 honest stage labels: "Creating your brain → Reading your invoices and emails → Building the knowledge graph → Indexing for search → Ready."
-- [ ] **ONBD-05**: During the onboarding stream, the backend interleaves at least one real `gbrain query` warm-up call so the stream is not pure theater — the brain is actually exercised before the dashboard loads.
-- [ ] **ONBD-06**: When the SSE stream ends, the browser is redirected to `/dash/<tenantId>` automatically.
-- [ ] **ONBD-07**: Total time from form submit to dashboard interactivity is consistently between 30 and 60 seconds (3 consecutive measurements on the demo laptop required).
-- [ ] **ONBD-08**: No screen during onboarding asks for an API key, sign-up, or payment.
+Email magic-link sign-in with persistent multi-tenant state. No password, no SSO, no MFA.
 
-### Chat (CHAT)
+- [ ] **AUTH-01**: A `/sign-in` page accepts an email address and POSTs to `/api/auth/send-link` which sends a magic-link email via Resend within 5 seconds.
+- [ ] **AUTH-02**: The magic-link email contains a 15-minute expiry signed JWT (jose, ES256) in the URL fragment OR query param, branded with the QuickBrain header and a "did you not request this?" footer.
+- [ ] **AUTH-03**: Clicking the link hits `/api/auth/verify`, verifies the JWT, atomically marks the `jti` as used in the `magic_tokens` table (`UPDATE … SET used=1 WHERE jti=? AND used=0` + rows-affected guard), sets a 30-day HttpOnly Secure SameSite=Lax session cookie, and redirects to `/dash/<brainSlug>`.
+- [ ] **AUTH-04**: A single magic-link URL cannot be redeemed twice — second click shows "this link has already been used" with a path to send a fresh link.
+- [ ] **AUTH-05**: Rate limiting: a given email address can request at most one magic link per 60 seconds; subsequent requests within the window return a friendly throttled message without sending a new email.
+- [ ] **AUTH-06**: A `users` row exists per signed-up email with: `id`, `email`, `brain_slug`, `qbo_realm_id` (nullable), `qbo_tokens_encrypted` (nullable), `created_at`, `last_login_at` — stored in `bun:sqlite` at `data/quickbrain-app.sqlite`.
+- [ ] **AUTH-07**: A user's first sign-in auto-provisions a `brain_slug` (UUID-prefixed, e.g. `u-7a2c-coffee`) and creates an empty `brains/<brain_slug>/` directory; subsequent sign-ins always route the user to the same brain.
+- [ ] **AUTH-08**: `middleware.ts` protects `/dash/*` and `/api/qbo/*` — unauthenticated requests redirect to `/sign-in?next=<original-path>`.
+- [ ] **AUTH-09**: A "Sign out" control on the dashboard hits `/api/auth/sign-out`, clears the session cookie, and redirects to `/`.
+- [ ] **AUTH-10**: Demo path preserved — when `AUTH_ENABLED=0` (the default for the live demo VM), the anonymous `/onboard` flow continues to work exactly as v1.0; when `AUTH_ENABLED=1`, anonymous onboarding is disabled and `/` redirects to `/sign-in`.
+- [ ] **AUTH-11**: `lib/gbrain/tenants.ts` adds a `userId` field to `TenantRecord`, but the per-tenant mutex remains keyed by `brainSlug` (not `userId`) — a branded TypeScript type (`type BrainSlug = string & { __brand: 'BrainSlug' }`) enforces this at the API surface to prevent silent PGLite lock contention regressions.
+- [ ] **AUTH-12**: `scripts/panic-reset.sh` gates on `AUTH_ENABLED=0` or requires a `--force-real-tenants` flag — running it against a system with real users prints a confirmation prompt listing the user emails about to lose data and exits non-zero unless explicitly confirmed.
+- [ ] **AUTH-13**: `scripts/demo-check.sh` is extended to verify `RESEND_API_KEY`, `JWT_SECRET`, and `TOKEN_ENCRYPTION_KEY` are present and at least 32 bytes each.
+- [ ] **AUTH-14**: A smoke gate passes before Phase 5 closes: send-link → click-link → land on `/dash/<brainSlug>` → reload page → still signed in → sign out → `/dash/*` redirects to sign-in.
 
-The plain-English Q&A surface.
+### QuickBooks Online Ingest (QBO)
 
-- [ ] **CHAT-01**: The dashboard at `/dash/<tenantId>` renders a chat surface with shadcn input + send button + message list + scroll-area.
-- [ ] **CHAT-02**: Sending a message POSTs to `/api/tenants/<id>/chat` (SSE), which spawns `gbrain query` through the mutex queue, streams a single SSE event carrying the full markdown response, and closes the stream.
-- [ ] **CHAT-03**: Responses render through `react-markdown + remark-gfm` so gbrain's `[Source: ...]` citations are visible inline.
-- [ ] **CHAT-04**: Three hardcoded suggested-question chips appear above the input on first load: "What was weird about last month?", "Who are my top 5 vendors and how much did I pay each?", "What am I paying for every month that I shouldn't be?". Clicking a chip submits that question.
-- [ ] **CHAT-05**: The system prompt instructs gbrain to say "I don't have data on that" rather than guess when the brain has no relevant pages.
-- [ ] **CHAT-06**: A query that exceeds 30 seconds is aborted and shows a graceful error message in the chat ("That one's running slow — try again or pick a suggested question").
+Live SMB data instead of synthetic seed. OAuth 2.0 + Accounting API → markdown transformer → `gbrain import` → smb-audit skill.
 
-### Insight Cards (INSI)
-
-The dashboard-load proof-of-value cards.
-
-- [ ] **INSI-01**: On dashboard mount, the page fires 3 canned `gbrain query` calls in parallel through the mutex queue and renders the results into three insight cards.
-- [ ] **INSI-02**: Card "Top 5 vendors this quarter" lists vendor names with dollar totals and shows the label "from graph" beneath the card title.
-- [ ] **INSI-03**: Card "Monthly P&L snapshot" shows revenue / COGS / opex / net for the most recent month with a delta vs. prior month and the label "from timeline" beneath the card title.
-- [ ] **INSI-04**: Card "Anomalies flagged" shows 3 anomaly items (Beanstalk price hike, Square duplicate, ghost 7shifts), each with a plain-English description, a dollar-impact figure, a "View source →" link to the originating page, and the label "from skill: recurring-charges" beneath the card title.
-- [ ] **INSI-05**: Each card distinguishes three visible states: loading (skeleton), data (populated), and error (named error with a Retry button). No silent empty states.
-- [ ] **INSI-06**: Insight queries are cached in-process per tenant after first computation; the dashboard does not re-spawn `gbrain query` on every render.
-
-### Demo Readiness (DEMO)
-
-The safety net and the polish that makes the demo land.
-
-- [ ] **DEMO-01**: The dashboard has a "Reset" button that, when held for 2 seconds (or confirmed), kills any in-flight spawn for the tenant, deletes the tenant brain dir, re-copies `brains/seed/`, clears in-memory caches, and reloads the dashboard. Completes in under 10 seconds.
-- [ ] **DEMO-02**: `scripts/panic-reset.sh` resets the entire demo state (all tenants, caches, ports) from the terminal in under 15 seconds without rebuilding the seed.
-- [ ] **DEMO-03**: At Next.js boot, each of the 3 P0 chat questions is run once against `brains/seed/` to pre-warm the OS page cache and PGLite buffer pool.
-- [ ] **DEMO-04**: The operator can run the full 3-minute demo (onboarding → dashboard → 1 chat question → reset → repeat) at least 3 times back-to-back on the demo laptop with no errors and identical anomaly findings each time.
-- [ ] **DEMO-05**: A `docs/DEMO-SCRIPT.md` exists, documenting the 3-minute spoken script, and the script names "graph" / "timeline" / "skill" out loud at least 3 times each (per prize-narrative checklist).
-- [ ] **DEMO-06**: A `git tag demo-final` is created when the build is frozen for the demo, with a README pointer for "if everything breaks, `git checkout demo-final && bun install && scripts/panic-reset.sh && bun dev`."
+- [ ] **QBO-01**: A "Connect QuickBooks" affordance on the signed-in dashboard kicks off an OAuth flow at `/api/qbo/connect` that redirects to Intuit's consent screen with scope `com.intuit.quickbooks.accounting`.
+- [ ] **QBO-02**: `/api/qbo/callback` exchanges the auth code for tokens via `intuit-oauth`, stores the encrypted `access_token` + `refresh_token` + `realm_id` + `issued_at` on the user's row (AES-256-GCM via `node:crypto`, key from `TOKEN_ENCRYPTION_KEY`), and redirects to `/dash/<brainSlug>?qbo=connected`.
+- [ ] **QBO-03**: Initial sync streams progress via SSE (same shape as v1.0 onboarding): fetches 12 months of `Vendor`, `Invoice`, `Bill`, and `Purchase` entities from QBO's Accounting API and pages through the results respecting the 500 req/min rate limit.
+- [ ] **QBO-04**: `lib/qbo/transformer.ts` is a pure-function module mapping QBO entities to markdown files matching the canonical schema in `docs/brain-schema.md`: `Vendor → companies/qbo-<slug>.md`, `Invoice → originals/invoice-<id>.md`, `Bill → originals/bill-<id>.md`, `Purchase → originals/purchase-<id>.md`. All vendor cross-references use `[[companies/qbo-<slug>]]` wikilinks.
+- [ ] **QBO-05**: Every transformed file's frontmatter includes the canonical fields (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency`) so the existing insight parsers and the `smb-audit` skill work against QBO data without modification.
+- [ ] **QBO-06**: The `qbo-` slug prefix on company pages prevents collision with synthetic seed slugs — a user can carry over the demo seed *and* connect QBO without any vendor page overwriting another.
+- [ ] **QBO-07**: After the transformer writes files, the sync pipeline runs `gbrain import → smb-audit skill` through the existing per-tenant mutex; the dashboard refreshes insight cards and chat against the user's now-populated brain.
+- [ ] **QBO-08**: Refresh tokens are persisted immediately after every token exchange (Intuit rotates refresh tokens every 24–26 hours since Nov 2025); a stale refresh-token write results in `invalid_grant` on the next call.
+- [ ] **QBO-09**: When the access token age approaches the 100-day refresh-token expiry, the dashboard surfaces a "Reconnect QuickBooks" banner starting at day 86; the user can re-authorize without losing their imported markdown.
+- [ ] **QBO-10**: A "Disconnect QuickBooks" affordance hits `/api/qbo/disconnect` which clears the OAuth record and revokes the token via Intuit's revoke endpoint, but leaves the imported markdown intact so the user can still chat over historical data.
+- [ ] **QBO-11**: Incremental sync via QBO's CDC endpoint (`changedSince=<ISO8601>`, 30-day lookback) runs when the user clicks "Sync now" on the dashboard or on a scheduled interval; only changed entities are re-transformed.
+- [ ] **QBO-12**: The QBO sandbox + production OAuth realms are switchable via the `QBO_ENV` env var (`sandbox|production`); demo-check.sh fails loudly if `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, and `QBO_ENV` aren't all set.
+- [ ] **QBO-13**: A smoke gate passes before Phase 6 closes: sign in → connect QBO sandbox → initial sync of ≥1 vendor and ≥3 invoices completes within 90 seconds → ask "what was weird about last month?" in chat → response cites at least one `qbo-` source — and the same flow against a synthetic seed tenant continues to work unchanged.
 
 ---
 
 ## v2 Requirements
 
-Deferred. Tracked but explicitly not in the v1 roadmap.
-
-### Stretch — Custom gbrain skill (SKIL)
-
-- **SKIL-01**: A custom gbrain skill `smb-audit` (markdown + TypeScript) replaces the hand-rolled anomaly detector, runs as a gbrain minion at import time, and writes the same `concepts/` pages.
-
-### Stretch — Extra anomalies (DATA)
-
-- **DATA-12**: A 4th planted anomaly (missing invoice — $340 bank-statement debit to "ABCD Plumbing" with no matching invoice page) is detectable by a "bank-debit-without-invoice" rule.
+Deferred from v1.0 or scoped out of v1.1. Tracked but explicitly not in the v1.1 roadmap.
 
 ### Stretch — Chat polish (CHAT)
 
-- **CHAT-07**: Vendor names in chat answers are inline-linked to their `companies/` pages and clicking opens a side panel showing the raw page.
+- **CHAT-07**: Vendor names in chat answers are inline-linked to their `companies/` pages; clicking opens a side panel showing the raw page.
 - **CHAT-08**: Each chat response has a "Behind the scenes" expandable that shows the gbrain query payload, which pages were cited, and which graph edges were traversed.
-- **CHAT-09**: Chat responses use a client-side typewriter visual (no backend change) that types the response at ~20 chars/interval for theatrical effect.
+- **CHAT-09**: Chat responses use a client-side typewriter visual (no backend change) that types the response at ~20 chars/interval.
 
 ### Stretch — Extra insight cards (INSI)
 
 - **INSI-07**: A 4th insight card "Recurring subscriptions" lists every monthly recurring charge with last-used-on and cancel-likely flags.
-- **INSI-08**: Anomaly card items carry severity badges (red/yellow/grey) based on a configurable threshold.
+- **INSI-08**: Anomaly card items carry severity badges (red / yellow / grey) based on `dollar_impact` thresholds — note: SKIL-05 now produces the underlying severity field, so this becomes a UI-only follow-up.
 - **INSI-09**: Clicking an insight card prefills the chat with a relevant follow-up question.
+
+### Stretch — More live connectors
+
+- **STRP-01**: Stripe Connect ingest using the same transformer-shape contract as QBO (charges, payouts, refunds → `originals/`).
+- **GMAIL-01**: Gmail OAuth + transactional-email scrape (invoices arriving as PDFs / inline HTML) → `originals/vendor-email-*.md`.
+
+### Stretch — Brain ops (BRAIN)
+
+- **BRAIN-01**: Per-user incremental sync schedule (cron-shaped) with last-synced-at surface.
+- **BRAIN-02**: Multi-realm QBO support — a single user can carry multiple QuickBooks companies, each backed by its own brain dir.
+- **BRAIN-03**: Account deletion UI that revokes OAuth tokens, deletes the user row, and purges the brain dir.
 
 ---
 
 ## Out of Scope
 
-Explicit exclusions. Each has a reason documented to prevent re-adding under hackathon panic.
+Explicit exclusions for v1.1. Each has a reason documented to prevent re-adding.
 
 | Feature | Reason |
 |---|---|
-| Multi-tenant authentication / accounts / login | Burns 2+ hours for zero demo payoff; the demo is single-session, single-laptop. |
-| Live Gmail / QuickBooks / Stripe / Square integration | Synthetic dataset is deterministic and demo-safe; live ingest is fragile under conference Wi-Fi. |
-| OAuth 2.1 / `gbrain serve --http` integration | Bootstrap-token + admin-dashboard client registration is multi-hour and PGLite-incompatible (DEPLOY.md). |
-| Vercel AI SDK | `gbrain query` is single-response, not a token stream — the SDK is the wrong shape and would cost more time than it saves. |
-| Custom MCP client / stdio framing | The CLI path is simpler and more debuggable in 7.5h. |
-| Multi-persona branching during demo | One persona (Mara's Coffee) — keeps the synthetic dataset tractable. |
-| Mobile responsive design | The demo runs on the operator's laptop projector. |
-| Production deployment (auth, billing, isolation, observability) | This is a demo, not a SaaS. |
-| Replacement of QuickBooks or Xero | QuickBrain is a brain on top of existing SMB data, not bookkeeping software. |
+| Password auth, social SSO, 2FA | Magic-link is the cheapest path to a stable user identity; passwords add storage + reset flows for zero added value at v1.1 scale. |
+| Live webhook ingestion from QBO | Poll-only is simpler and avoids exposing a public webhook URL; the user clicks "Sync now" or relies on the scheduled refresh. |
+| Write-back to QuickBooks (creating invoices, marking paid, etc.) | QuickBrain is a brain *on top of* SMB books, not bookkeeping software. |
+| QBO payroll, POS items, attachments / PDFs | Out of scope for v1.1 — Invoices + Bills + Vendors + Purchases cover the insight cards. |
+| Raw bank-feed transactions ("For Review" items) | Not exposed by the Accounting API — `Purchase` / `Bill` / `Deposit` entities are the substitute. |
+| ML-based anomaly detection | The rule-based `smb-audit` skill produces identical user-visible output and is easier to demo and explain. |
+| Charts library (recharts, visx, chart.js) | Typography + numbers carry the insight cards; charts are still time we don't need to spend. |
+| Multi-persona branching from a single account | One user, one tenant, one brain in v1.1. |
+| Mobile responsive design | Desktop-first; mobile is its own design pass. |
+| Custom MCP client / `gbrain serve --http` integration | CLI shell-out is simpler and proven; revisit only if external MCP-aware tools need to connect to a user's brain. |
+| Replacement of QuickBooks / Xero | QuickBrain is a brain on top of SMB books, not the books themselves. |
 | Native mobile apps | Web-first. |
-| Real PDF rendering / OCR | All synthetic data is markdown; PDF UX is an anti-feature for the 7.5h scope. |
-| Charts library (recharts, visx, chart.js, etc.) | Insight cards use typography + numbers; charts cost time without changing the prize narrative. |
-| ML-based anomaly detection | Rule-based is faster to ship, easier to demo, and produces identical visible output. |
-| Item-level POS data (per-drink itemization) | Daily POS summaries in `media/` are sufficient for the P&L card. |
-| Backups / disaster recovery | Pre-baked seed brain + reset script is the only persistence we need. |
-| User onboarding analytics / telemetry | No production users; not relevant. |
-| Tests beyond the smoke gate | Smoke gate in DATA-10 + 3-rehearsal pass in DEMO-04 are the only verification. Anything else is time we don't have. |
-| Any feature that breaks the 7.5h budget | Filter every late-stage decision through this. |
+| Real PDF rendering / OCR | QBO data arrives structured; OCR is a separate workstream. |
+| Production billing, RBAC, enterprise SSO | Out of scope for v1.1; revisit when there are paying users. |
+| Backups / disaster recovery beyond panic-reset | Per-tenant brain dirs are reproducible from the QBO sync; users can always re-sync. |
+| Tests beyond smoke gates + transformer unit tests | Smoke gates per phase + transformer fixture-based unit tests are the verification bar for v1.1. |
 
 ---
 
 ## Traceability
 
-Populated by `/gsd:roadmap` on 2026-05-16. Every v1 requirement maps to exactly one phase; no orphans, no duplicates.
+To be populated by `/gsd:plan-phase` after roadmap creation. Every v1.1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| HARN-01 | Phase 1 | Pending |
-| HARN-02 | Phase 1 | Pending |
-| HARN-03 | Phase 1 | Pending |
-| HARN-04 | Phase 1 | Pending |
-| HARN-05 | Phase 1 | Pending |
-| HARN-06 | Phase 1 | Pending |
-| DATA-01 | Phase 1 | Pending |
-| DATA-02 | Phase 1 | Pending |
-| DATA-03 | Phase 1 | Pending |
-| DATA-04 | Phase 1 | Pending |
-| DATA-05 | Phase 1 | Pending |
-| DATA-06 | Phase 1 | Pending |
-| DATA-07 | Phase 1 | Pending |
-| DATA-08 | Phase 1 | Pending |
-| DATA-09 | Phase 1 | Pending |
-| DATA-10 | Phase 1 | Pending |
-| DATA-11 | Phase 1 | Pending |
-| ONBD-01 | Phase 2 | Pending |
-| ONBD-02 | Phase 2 | Pending |
-| ONBD-03 | Phase 2 | Pending |
-| ONBD-04 | Phase 2 | Pending |
-| ONBD-05 | Phase 2 | Pending |
-| ONBD-06 | Phase 2 | Pending |
-| ONBD-07 | Phase 2 | Pending |
-| ONBD-08 | Phase 2 | Pending |
-| CHAT-01 | Phase 2 | Pending |
-| CHAT-02 | Phase 2 | Pending |
-| CHAT-03 | Phase 2 | Pending |
-| CHAT-04 | Phase 2 | Pending |
-| CHAT-05 | Phase 2 | Pending |
-| CHAT-06 | Phase 2 | Pending |
-| INSI-01 | Phase 3 | Pending |
-| INSI-02 | Phase 3 | Pending |
-| INSI-03 | Phase 3 | Pending |
-| INSI-04 | Phase 3 | Pending |
-| INSI-05 | Phase 3 | Pending |
-| INSI-06 | Phase 3 | Pending |
-| DEMO-01 | Phase 3 | Pending |
-| DEMO-02 | Phase 3 | Pending |
-| DEMO-03 | Phase 3 | Pending |
-| DEMO-04 | Phase 3 | Pending |
-| DEMO-05 | Phase 3 | Pending |
-| DEMO-06 | Phase 3 | Pending |
+| SKIL-01..10 | Phase 4 | Pending |
+| AUTH-01..14 | Phase 5 | Pending |
+| QBO-01..13 | Phase 6 | Pending |
 
 **Coverage:**
-- v1 requirements: 42 total
-- Mapped to phases: 42 (100%)
-- Unmapped: 0
-
-**Phase distribution:**
-- Phase 1 (Brain Spine + Synthetic Seed): 17 requirements (HARN-01..06, DATA-01..11)
-- Phase 2 (Onboarding Theater + Chat): 14 requirements (ONBD-01..08, CHAT-01..06)
-- Phase 3 (Insight Cards + Demo Readiness): 11 requirements (INSI-01..06, DEMO-01..06)
+- v1.1 requirements: 37 total (SKIL: 10, AUTH: 14, QBO: 13)
+- Mapped to phases: 37 planned (100% target)
 
 ---
 
-*Requirements defined: 2026-05-16*
-*Last updated: 2026-05-16 after roadmap traceability population*
+*Requirements defined: 2026-05-16 (v1.0). Extended for v1.1: 2026-05-17.*
