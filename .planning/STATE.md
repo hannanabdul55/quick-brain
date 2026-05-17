@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Beyond the Demo
 status: planning
-last_updated: "2026-05-17T16:50:43.862Z"
+last_updated: "2026-05-17T00:00:00.000Z"
 last_activity: 2026-05-17
 progress:
-  total_phases: 0
+  total_phases: 3
   completed_phases: 0
-  total_plans: 0
+  total_plans: 15
   completed_plans: 0
   percent: 0
 ---
@@ -17,23 +17,27 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-16)
+See: .planning/PROJECT.md (updated 2026-05-17)
 
-**Core value:** A non-technical small-business owner can go from zero to a live, queryable gbrain in under 60 seconds and immediately see useful answers — without ever touching a terminal.
-**Current focus:** Milestone v1.0 COMPLETE. Demo running live at http://64.181.231.190:3000.
+**Core value:** A non-technical small-business owner can go from zero to a live, queryable gbrain — with their own data — in under 60 seconds, without ever touching a terminal.
+**Current focus:** Milestone v1.1 "Beyond the Demo" — roadmap defined, ready for Phase 4 spike.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: 4 — smb-audit gbrain Skill (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-17 — Milestone v1.1 started
+Status: Ready for phase 4 spike
+Last activity: 2026-05-17 — v1.1 roadmap created (Phases 4-6 defined)
+
+```
+v1.1 Progress [                    ] 0% — Phase 4 not started
+```
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 17 across 3 phases (6 + 6 + 5)
+- Total plans completed: 17 across 3 phases (6 + 6 + 5) — v1.0
 - Milestone wall-clock: ~7.5h hackathon budget (per PROJECT.md timeline)
 
 **By Phase:**
@@ -43,6 +47,9 @@ Last activity: 2026-05-17 — Milestone v1.1 started
 | 1. Brain Spine + Synthetic Seed | 6/6 | Passed |
 | 2. Onboarding Theater + Chat | 6/6 | Passed |
 | 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) |
+| 4. smb-audit gbrain Skill | 0/4 | Not started |
+| 5. Email Magic-Link Auth + Persistent Tenants | 0/5 | Not started |
+| 6. QuickBooks Online Ingest | 0/6 | Not started |
 
 ## Accumulated Context
 
@@ -57,10 +64,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Highlights:
 - Phase 1 retest: Use `gbrain think --model haiku` for synthesis (not `gbrain query`, which is retrieval-only; not default tier `deep`, which uses Opus and hangs minute-scale).
 - Phase 2: Wikilinks must use `[[dir/slug]]` form (e.g. `[[companies/beanstalk-roasters]]`) for gbrain's `WIKILINK_RE` to match.
 - Phase 3: Insight cards parse static markdown directly (no gbrain spawns) for <200ms loads; locked per CONTEXT.md spec_override.
+- v1.1 pre-roadmap: `FIXTURES_ROOT` hardcoding in `lib/insights/cache.ts` is the highest-severity data bug — every real tenant sees Mara's numbers. Must be fixed inside Phase 4 before skill output can be observed.
+- v1.1 pre-roadmap: Auth library choices — `jose` (pure Web Crypto, no native bindings) + `bun:sqlite` (built-in, synchronous, zero ABI risk). Rejecting Auth.js v5 (dns module conflict with App Router Edge) and better-auth (too heavy for one boolean column).
+- v1.1 pre-roadmap: QBO transformer and smb-audit skill share `docs/brain-schema.md` as a hard contract. Schema is defined in Phase 4 and binds Phase 6 transformer output.
+- v1.1 pre-roadmap: Per-tenant mutex must remain keyed by `brainSlug` (not `userId`) — enforced via branded TypeScript type to prevent silent PGLite lock contention regressions.
 
 ### Pending Todos
 
-None — milestone v1.0 closed.
+- Run Phase 4 spike (30 min): verify `gbrain jobs submit` execution path and `@gbrain/api` import resolution under Bun before writing plan-code.
 
 ### Blockers/Concerns
 
@@ -68,16 +79,14 @@ None active. Tech debt and deferred items are catalogued in `.planning/v1.0-MILE
 
 ## Deferred Items
 
-Carried forward to v1.1 per the milestone audit:
+Carried forward to v2 from v1.1 scope-out:
 
 | Category | Item | Notes |
 |----------|------|-------|
-| Integration | Real QuickBooks Online connector | OAuth 2.0 + Accounting API → markdown ingest. ~12-20h. |
-| Integration | Stripe + Gmail connectors | Same shape as QB connector. |
-| Stretch | INSI-07/08/09 | 4th card, severity badges, click-to-prefill |
+| Integration | Stripe + Gmail connectors | Same shape as QBO connector; ship QBO first. |
+| Stretch | INSI-07/08/09 | 4th card, severity badges (UI-only after SKIL-05), click-to-prefill |
 | Stretch | CHAT-07/08/09 | Vendor linkification, behind-the-scenes panel, typewriter reveal |
-| Stretch | SKIL-01 | Custom `smb-audit` gbrain skill replacing TS detector |
-| Stretch | DATA-12 | 4th planted anomaly (ABCD Plumbing missing-invoice) |
+| Brain ops | BRAIN-01/02/03 | Incremental sync schedule, multi-realm QBO, account deletion UI |
 
 ## Operator Gates (still open at milestone close)
 
@@ -86,7 +95,7 @@ Carried forward to v1.1 per the milestone audit:
 
 ## Session Continuity
 
-Last session: 2026-05-16 (Phase 1+2+3 shipped; milestone audit passed; repo public; live VM deploy)
-Stopped at: Milestone v1.0 close — repo public, README rewrite landed, LICENSE added.
-Resume file: `.planning/v1.0-MILESTONE-AUDIT.md`
-Resume command: ready for v1.1 planning when judges' feedback arrives.
+Last session: 2026-05-17 (v1.1 roadmap defined; Phases 4-6 scoped; REQUIREMENTS.md traceability updated)
+Stopped at: Roadmap creation — ready to spike Phase 4.
+Resume file: `.planning/ROADMAP.md` (Phase 4 detail section)
+Resume command: `/gsd:plan-phase 4` — after running the 30-min Phase 4 spike documented in `.planning/research/SUMMARY.md`.

@@ -134,17 +134,51 @@ Explicit exclusions for v1.1. Each has a reason documented to prevent re-adding.
 
 ## Traceability
 
-To be populated by `/gsd:plan-phase` after roadmap creation. Every v1.1 requirement maps to exactly one phase.
+Every v1.1 requirement maps to exactly one phase.
 
 | Requirement | Phase | Status |
 |---|---|---|
-| SKIL-01..10 | Phase 4 | Pending |
-| AUTH-01..14 | Phase 5 | Pending |
-| QBO-01..13 | Phase 6 | Pending |
+| SKIL-01 | Phase 4 | Pending |
+| SKIL-02 | Phase 4 | Pending |
+| SKIL-03 | Phase 4 | Pending |
+| SKIL-04 | Phase 4 | Pending |
+| SKIL-05 | Phase 4 | Pending |
+| SKIL-06 | Phase 4 | Pending |
+| SKIL-07 | Phase 4 | Pending |
+| SKIL-08 | Phase 4 | Pending |
+| SKIL-09 | Phase 4 | Pending |
+| SKIL-10 | Phase 4 | Pending |
+| AUTH-01 | Phase 5 | Pending |
+| AUTH-02 | Phase 5 | Pending |
+| AUTH-03 | Phase 5 | Pending |
+| AUTH-04 | Phase 5 | Pending |
+| AUTH-05 | Phase 5 | Pending |
+| AUTH-06 | Phase 5 | Pending |
+| AUTH-07 | Phase 5 | Pending |
+| AUTH-08 | Phase 5 | Pending |
+| AUTH-09 | Phase 5 | Pending |
+| AUTH-10 | Phase 5 | Pending |
+| AUTH-11 | Phase 5 | Pending |
+| AUTH-12 | Phase 5 | Pending |
+| AUTH-13 | Phase 5 | Pending |
+| AUTH-14 | Phase 5 | Pending |
+| QBO-01 | Phase 6 | Pending |
+| QBO-02 | Phase 6 | Pending |
+| QBO-03 | Phase 6 | Pending |
+| QBO-04 | Phase 6 | Pending |
+| QBO-05 | Phase 6 | Pending |
+| QBO-06 | Phase 6 | Pending |
+| QBO-07 | Phase 6 | Pending |
+| QBO-08 | Phase 6 | Pending |
+| QBO-09 | Phase 6 | Pending |
+| QBO-10 | Phase 6 | Pending |
+| QBO-11 | Phase 6 | Pending |
+| QBO-12 | Phase 6 | Pending |
+| QBO-13 | Phase 6 | Pending |
 
 **Coverage:**
 - v1.1 requirements: 37 total (SKIL: 10, AUTH: 14, QBO: 13)
-- Mapped to phases: 37 planned (100% target)
+- Mapped to phases: 37/37 (100%)
 
 ---
 
