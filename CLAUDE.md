@@ -178,7 +178,39 @@ The product is built as a YC hackathon entry for the gbrain "mom-and-pop SMB" pr
 <!-- GSD:conventions-start source:CONVENTIONS.md -->
 ## Conventions
 
-Conventions not yet established. Will populate as patterns emerge during development.
+### gbrain Skill Invocation
+
+The smb-audit skill runs as a gbrain shell job. To invoke:
+
+```bash
+GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell \
+  --params '{"cmd":"bun <repo>/skills/smb-audit/scripts/smb-audit.mjs","cwd":"<repo>"}' \
+  --max-attempts 2 --timeout-ms 60000 --follow
+```
+
+Or directly (fallback / local dev):
+
+```bash
+GBRAIN_HOME=<brain-dir> bun skills/smb-audit/scripts/smb-audit.mjs
+```
+
+Skill location: `skills/smb-audit/` at repo root (not inside `brains/`).
+Detection logic: `lib/audit/anomaly-detector.ts` (pure functions, no I/O).
+
+### Brain Schema Contract
+
+All document ingestion (synthetic seed, QBO transformer, any future connector)
+MUST use the canonical frontmatter fields documented in `docs/brain-schema.md`.
+Key fields: `type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency`.
+Wikilinks MUST use the full path form: `[[companies/<vendor_slug>]]`.
+See `docs/brain-schema.md` for the complete contract and Phase 6 QBO field mapping.
+
+### Insight Source Dir
+
+`lib/insights/cache.ts::computeAndCache(tenantId, sourceDir)` reads markdown from
+`sourceDir`. Always pass the correct dir:
+- Seed/demo tenant: `FIXTURES_ROOT` (`data/maras-coffee/`)
+- Real tenants: `brainHome(tenantId) + '/brain-repo/'` (or `brainHome` directly if gbrain lays out at root)
 <!-- GSD:conventions-end -->
 
 <!-- GSD:architecture-start source:ARCHITECTURE.md -->

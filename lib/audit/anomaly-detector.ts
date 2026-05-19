@@ -74,7 +74,7 @@ function parseFrontmatter(raw: string): { frontmatter: Frontmatter; body: string
     const m = line.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
     if (!m) continue;
     const key = m[1]!;
-    let value = m[2]!.trim();
+    const value = m[2]!.trim();
     if (value.startsWith("[") && value.endsWith("]")) {
       fm[key] = value
         .slice(1, -1)
