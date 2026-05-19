@@ -16,15 +16,18 @@ Captured as user choices and findings emerge.
 - **Anomaly findings from `smb-audit` must NEVER auto-inject into vendor-facing email bodies.** They surface in the operator's digest only. Source: spike 001.
 - **Reuse Resend** (already locked for Phase 5 magic-link) — no second email provider for outbound. Source: spike 001.
 - **First implementation should be manual-trigger ("compose this week's emails"), not scheduled.** Cron decision is downstream of the Phase 4 Minions-over-PGLite spike. Source: spike 001.
+- **v1.1 Phase 6 stays QBO-only.** Highest US SMB market share + best raw throughput + longest refresh tokens. Source: spike 002 head-to-head.
+- **Name connector-agnostic types from day one** in `lib/connectors/types.ts` (proposed) — `Bill`, `Vendor`, `BankLine` shapes shared across QBO + future Xero adapter. Avoid retro-fit cost in v1.2. Source: spike 002a.
+- **Vendor email composition (spike 001) targets `Vendor.PrimaryEmailAddr.Address` (QBO) and `Contact.EmailAddress` (Xero).** Both expose vendor email as a first-class field. Wave + FreshBooks do not — they store vendor names as free text. The QBO+Xero choice is also a vendor-email-feasibility choice. Source: spikes 001 + 002.
 
 ## Spikes
 
 | # | Name | Type | Validates | Verdict | Tags |
 |---|------|------|-----------|---------|------|
 | 001 | vendor-report-emails | standard | Weekly per-vendor activity-summary email composition + send + approval gate | **PARTIAL ⚠** | email, outbound, compliance, scheduler |
-| 002a | accounting-api-xero | comparison | Xero OAuth 2.0 + Accounting API ergonomics vs QBO | PENDING | accounting, oauth, rest, comparison |
-| 002b | accounting-api-wave | comparison | Wave GraphQL + OAuth ergonomics vs QBO | PENDING | accounting, oauth, graphql, comparison, free-tier |
-| 002c | accounting-api-freshbooks | comparison | FreshBooks OAuth 2.0 + Accounting API ergonomics vs QBO | PENDING | accounting, oauth, rest, comparison, freelancer-niche |
+| 002a | accounting-api-xero | comparison | Xero OAuth 2.0 + Accounting API ergonomics vs QBO | **VALIDATED ✓** (add in v1.2 as 2nd connector) | accounting, oauth, rest, comparison |
+| 002b | accounting-api-wave | comparison | Wave GraphQL + OAuth ergonomics vs QBO | **INVALIDATED ✗** (no new dev apps; data model wrong) | accounting, oauth, graphql, comparison, free-tier |
+| 002c | accounting-api-freshbooks | comparison | FreshBooks OAuth 2.0 + Accounting API ergonomics vs QBO | **PARTIAL ⚠** (freelancer SKU only) | accounting, oauth, rest, comparison, freelancer-niche |
 
 ## Related Project Context
 
