@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spike 001 · Vendor Report Email Preview</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --ink: #111418;
+      --ink-soft: #535d6a;
+      --line: #e4e7eb;
+      --line-soft: #f0f1f3;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --ok: #047857;
+      --ok-bg: #d1fae5;
+      --accent: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; line-height: 1.5; }
+    header.spike-header { max-width: 1100px; margin: 0 auto 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+    header.spike-header h1 { margin: 0 0 4px; font-size: 16px; }
+    header.spike-header p { margin: 0; color: var(--ink-soft); font-size: 13px; }
+    .tag { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 999px; background: var(--warn-bg); color: var(--warn); margin-left: 6px; }
+    main { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+    @media (max-width: 900px) { main { grid-template-columns: 1fr; } }
+    section.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    section.card h2 { margin: 0; padding: 14px 18px; font-size: 14px; border-bottom: 1px solid var(--line); background: var(--line-soft); }
+    .panel-body { padding: 18px; }
+    /* Email preview */
+    .email-shell { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    .email-meta { font-size: 13px; color: var(--ink-soft); padding-bottom: 10px; border-bottom: 1px solid var(--line); margin-bottom: 14px; }
+    .email-meta .label { display: inline-block; min-width: 54px; color: var(--ink-soft); }
+    .email-subject { font-size: 17px; font-weight: 600; margin: 0 0 10px; }
+    .email-body { font-size: 14px; }
+    .email-body p { margin: 0 0 12px; }
+    .email-body ul { margin: 0 0 12px 18px; padding: 0; }
+    .email-body li { margin: 0 0 4px; }
+    .email-body .signoff { margin-top: 18px; color: var(--ink-soft); }
+    .email-footer { margin-top: 22px; padding-top: 12px; border-top: 1px dashed var(--line); font-size: 11px; color: var(--ink-soft); }
+    .email-footer a { color: var(--accent); text-decoration: none; }
+    /* Digest */
+    .digest-list { margin: 0; padding: 0; list-style: none; }
+    .digest-list li { padding: 12px 0; border-bottom: 1px solid var(--line-soft); display: grid; grid-template-columns: 24px 1fr auto; align-items: center; gap: 10px; }
+    .digest-list li:last-child { border-bottom: none; }
+    .digest-list .vendor { font-weight: 600; }
+    .digest-list .summary { color: var(--ink-soft); font-size: 13px; }
+    .digest-list .actions { display: flex; gap: 4px; }
+    .digest-list .actions button { background: transparent; border: 1px solid var(--line); border-radius: 6px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: var(--ink); }
+    .digest-list .actions button:hover { background: var(--line-soft); }
+    .digest-cta { display: flex; gap: 8px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); }
+    .digest-cta .send { flex: 1; padding: 10px; background: var(--accent); color: white; border: 0; border-radius: 8px; font-weight: 600; cursor: pointer; }
+    .digest-cta .secondary { padding: 10px 14px; background: transparent; border: 1px solid var(--line); border-radius: 8px; cursor: pointer; color: var(--ink); }
+    .digest-cta .send.disabled { background: var(--ink-soft); cursor: not-allowed; }
+    .digest-cta .send.disabled::after { content: " (inert demo)"; opacity: 0.8; font-weight: 400; }
+    .compliance-banner { margin-top: 18px; padding: 12px 14px; background: var(--warn-bg); color: var(--warn); border-radius: 8px; font-size: 12px; }
+    .ok-pill { display: inline-block; padding: 1px 8px; font-size: 11px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); }
+    code { background: var(--line-soft); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <header class="spike-header">
+    <h1>Spike 001 · Vendor Report Emails <span class="tag">PARTIAL — see README</span></h1>
+    <p>Left: the proposed weekly email as Beanstalk Roasters would see it in their inbox. Right: the operator-facing weekly digest with the approval gate. Both are inert visual rehearsals — no live send.</p>
+  </header>
+
+  <main>
+    <!-- LEFT: Email as the vendor sees it -->
+    <section class="card">
+      <h2>Vendor's inbox — Beanstalk Roasters</h2>
+      <div class="panel-body email-shell">
+        <div class="email-meta">
+          <div><span class="label">From:</span> Mara Okafor &lt;mara@maras-coffee.com&gt;</div>
+          <div><span class="label">To:</span> orders@beanstalkroasters.com</div>
+          <div><span class="label">Reply-To:</span> mara@maras-coffee.com</div>
+          <div><span class="label">Date:</span> Mon, Mar 9 2026 8:01 AM</div>
+        </div>
+        <p class="email-subject">Mara's Coffee — Weekly Activity Summary (week of Mar 1)</p>
+        <div class="email-body">
+          <p>Hi Beanstalk team,</p>
+          <p>Quick summary of activity from our side for the past week:</p>
+          <ul>
+            <li><strong>Orders placed:</strong> 2 × 25lb bags (whole bean, medium roast)</li>
+            <li><strong>Total billed:</strong> $1,830.00 ($915.00/bag — new pricing in effect since Mar 1)</li>
+            <li><strong>Invoices:</strong> BR-2026-03-A (paid Mar 4) · BR-2026-03-B (paid Mar 11)</li>
+          </ul>
+          <p>A note on our end: we recorded the +22% unit-price change effective Mar 1 (was $750/bag, now $915/bag). Please let us know if any of the above looks off.</p>
+          <p class="signoff">— Mara<br/>Mara's Coffee · 1217 Valencia St, San Francisco CA 94110</p>
+        </div>
+        <div class="email-footer">
+          You're receiving this weekly summary because Beanstalk Roasters is an active supplier for Mara's Coffee. <a href="#">Unsubscribe from these updates</a> · <a href="#">Reply to talk to Mara</a><br/>
+          Sent by Mara's Coffee using <a href="https://quickbrain.local">QuickBrain</a>.
+        </div>
+        <div class="compliance-banner">
+          <strong>Compliance checklist baked into this template:</strong>
+          accurate From + physical address (CAN-SPAM §5.3) ✓ ·
+          unsubscribe link (CAN-SPAM §5.4) ✓ ·
+          identified as ongoing-relationship outreach (not cold acquisition) ✓ ·
+          neutral wording — no anomaly accusations included even though the brain flagged the +22% as notable ✓.
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: Operator's approval gate -->
+    <section class="card">
+      <h2>Mara's dashboard — Weekly digest <span class="ok-pill">approval gate ON</span></h2>
+      <div class="panel-body">
+        <p style="margin:0 0 12px;color:var(--ink-soft);font-size:13px;">5 emails composed for the week of Mar 1. Review and edit before sending — nothing leaves your account until you hit <strong>Send 5 emails</strong>.</p>
+        <ul class="digest-list">
+          <li>
+            <input type="checkbox" checked />
+            <div>
+              <div class="vendor">Beanstalk Roasters</div>
+              <div class="summary">2 orders · $1,830 · 1 note (price change)</div>
+            </div>
+            <div class="actions"><button>Preview</button><button>Edit</button><button>Skip</button></div>
+          </li>
+          <li>
+            <input type="checkbox" checked />
+            <div>
+              <div class="vendor">Square POS</div>
+              <div class="summary">processing fees $204 · 1 duplicate flagged (omitted from email)</div>
+            </div>
+            <div class="actions"><button>Preview</button><button>Edit</button><button>Skip</button></div>
+          </li>
+          <li>
+            <input type="checkbox" checked />
+            <div>
+              <div class="vendor">7shifts</div>
+              <div class="summary">$43 · ghost SaaS — Mara, double-check this one?</div>
+            </div>
+            <div class="actions"><button>Preview</button><button>Edit</button><button>Skip</button></div>
+          </li>
+          <li>
+            <input type="checkbox" checked />
+            <div>
+              <div class="vendor">Landlord LLC</div>
+              <div class="summary">rent $3,200 paid Mar 1</div>
+            </div>
+            <div class="actions"><button>Preview</button><button>Edit</button><button>Skip</button></div>
+          </li>
+          <li>
+            <input type="checkbox" />
+            <div>
+              <div class="vendor">PG&amp;E Utility</div>
+              <div class="summary">$412 utility paid · <em>skipped (utilities don't expect summaries)</em></div>
+            </div>
+            <div class="actions"><button>Preview</button><button>Edit</button><button>Skip</button></div>
+          </li>
+        </ul>
+        <div class="digest-cta">
+          <button class="send disabled">Send 4 emails</button>
+          <button class="secondary">Send later</button>
+          <button class="secondary">Skip all this week</button>
+        </div>
+        <p style="margin:14px 0 0;color:var(--ink-soft);font-size:11px;">
+          Anomaly findings from <code>smb-audit</code> are surfaced to Mara <em>inside</em> the digest as one-line hints, but never auto-injected into the vendor-facing email body — the spike's biggest tone-and-trust call.
+        </p>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

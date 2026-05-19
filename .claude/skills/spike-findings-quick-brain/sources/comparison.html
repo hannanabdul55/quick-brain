@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spike 002 · Accounting API Head-to-Head</title>
+  <style>
+    :root { --bg:#f6f7f9; --surface:#fff; --ink:#111418; --ink-soft:#535d6a; --line:#e4e7eb; --line-soft:#f0f1f3; --good:#047857; --okk:#0369a1; --bad:#b91c1c; --warn:#b45309; --recommend-bg:#ecfdf5; --recommend-bd:#10b981; }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:24px; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif; line-height:1.5; }
+    .wrap { max-width:1200px; margin:0 auto; }
+    header.h { padding:18px 22px; background:var(--surface); border:1px solid var(--line); border-radius:10px; margin-bottom:24px; }
+    header.h h1 { margin:0 0 6px; font-size:17px; }
+    header.h p { margin:0; color:var(--ink-soft); font-size:13px; }
+    .scoreboard { display:grid; grid-template-columns: repeat(4, 1fr); gap:14px; margin-bottom:24px; }
+    @media (max-width: 900px) { .scoreboard { grid-template-columns: repeat(2, 1fr); } }
+    .vendor-card { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+    .vendor-card.recommend { background:var(--recommend-bg); border-color:var(--recommend-bd); }
+    .vendor-card h3 { margin:0 0 6px; font-size:14px; }
+    .vendor-card .verdict { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; margin-bottom:6px; }
+    .v-keep { background:#dbeafe; color:var(--okk); }
+    .v-add { background:#d1fae5; color:var(--good); }
+    .v-skip { background:#fef3c7; color:var(--warn); }
+    .v-no { background:#fee2e2; color:var(--bad); }
+    .vendor-card .one-liner { font-size:12px; color:var(--ink-soft); margin:0; }
+
+    table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; margin-bottom:24px; }
+    th, td { padding:11px 13px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line-soft); font-size:12.5px; }
+    thead th { background:var(--line-soft); font-weight:600; font-size:11px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; }
+    tbody tr:last-child td { border-bottom:none; }
+    .axis { font-weight:600; min-width:160px; }
+    .winner { background:#ecfdf5; }
+    .loser { background:#fef2f2; }
+    .pill { display:inline-block; padding:1px 6px; border-radius:4px; font-size:10px; font-weight:600; margin-left:4px; }
+    .pill-good { background:#d1fae5; color:var(--good); }
+    .pill-bad { background:#fee2e2; color:var(--bad); }
+    .conclusion { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:18px 22px; }
+    .conclusion h2 { margin:0 0 12px; font-size:15px; }
+    .conclusion p { margin:0 0 10px; font-size:13px; }
+    .conclusion ul { margin:0 0 10px 18px; padding:0; font-size:13px; }
+    .conclusion strong { color:var(--ink); }
+    code { background:var(--line-soft); padding:1px 5px; border-radius:4px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="h">
+      <h1>Spike 002 · Accounting API Head-to-Head</h1>
+      <p>QBO (the v1.1 Phase 6 commitment) vs Xero, Wave, and FreshBooks across 5 axes. Worked against Mara's Coffee persona (~10 employees, US-based, ~$500k revenue, 5-10 vendors).</p>
+    </header>
+
+    <!-- Scoreboard -->
+    <div class="scoreboard">
+      <div class="vendor-card">
+        <h3>QuickBooks Online</h3>
+        <span class="verdict v-keep">KEEP for v1.1</span>
+        <p class="one-liner">Best raw throughput, longest refresh tokens, dominant US market. Community-maintained TS SDK is the friction.</p>
+      </div>
+      <div class="vendor-card recommend">
+        <h3>Xero</h3>
+        <span class="verdict v-add">ADD as 2nd connector in v1.2</span>
+        <p class="one-liner">Best dev velocity (Demo Company, native TS SDK, single base URL). Tighter rate limit (60/min) but acceptable for Mara-sized accounts.</p>
+      </div>
+      <div class="vendor-card">
+        <h3>Wave</h3>
+        <span class="verdict v-no">DO NOT pursue</span>
+        <p class="one-liner">No new dev applications accepted since 2024. Free-text vendor model would be a transformer mess anyway.</p>
+      </div>
+      <div class="vendor-card">
+        <h3>FreshBooks</h3>
+        <span class="verdict v-skip">DEFER — freelancer SKU only</span>
+        <p class="one-liner">12-hour refresh tokens kill scheduled syncs. Time Tracking + OCR matter for a solo-operator product, not for Mara's persona.</p>
+      </div>
+    </div>
+
+    <!-- Head-to-head matrix -->
+    <table>
+      <thead>
+        <tr>
+          <th>Axis</th>
+          <th>QuickBooks Online</th>
+          <th>Xero</th>
+          <th>Wave</th>
+          <th>FreshBooks</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="axis">Time-to-first-fetch</td>
+          <td>~30-45 min (sandbox setup is multi-step)</td>
+          <td class="winner">~15 min — Demo Company is preloaded <span class="pill pill-good">WIN</span></td>
+          <td class="loser">N/A — access deprecated</td>
+          <td>~30 min + 30-60 min of manual data seeding (no preloaded sandbox)</td>
+        </tr>
+        <tr>
+          <td class="axis">Data-shape fit to seed schema</td>
+          <td>Bill / Vendor / Purchase clean</td>
+          <td class="winner">Bill (as <code>Invoice</code> with <code>Type=ACCPAY</code>) / Contact / BankTransaction — comparable to QBO with slight edge on the bank entity <span class="pill pill-good">WIN</span></td>
+          <td class="loser">No <code>Bill</code> entity; free-text vendor names <span class="pill pill-bad">BAD</span></td>
+          <td class="loser">No first-class Vendor entity; <code>Bill</code> is plan-gated <span class="pill pill-bad">BAD</span></td>
+        </tr>
+        <tr>
+          <td class="axis">Rate limit (per-minute)</td>
+          <td class="winner">500/min <span class="pill pill-good">WIN</span></td>
+          <td>60/min</td>
+          <td>60/min</td>
+          <td>~120/min general, 60/min on /invoices + /expenses</td>
+        </tr>
+        <tr>
+          <td class="axis">Refresh token lifetime</td>
+          <td class="winner">100 days <span class="pill pill-good">WIN</span></td>
+          <td>60 days</td>
+          <td>—</td>
+          <td class="loser">12 hours <span class="pill pill-bad">BAD</span> — scheduled-sync killer</td>
+        </tr>
+        <tr>
+          <td class="axis">Sandbox-to-prod switching cost</td>
+          <td>Distinct base URL (env-switch in code)</td>
+          <td class="winner">Same URL, different connected org <span class="pill pill-good">WIN</span></td>
+          <td>—</td>
+          <td>Same URL, different connected business</td>
+        </tr>
+        <tr>
+          <td class="axis">Official TypeScript SDK</td>
+          <td>Community-maintained (<code>node-quickbooks</code>); needs <code>declare module</code> shim</td>
+          <td class="winner">Official <code>xero-node</code>; TS-first <span class="pill pill-good">WIN</span></td>
+          <td>—</td>
+          <td>Official <code>@freshbooks/api</code>; partial TS types (many endpoints return <code>any</code>)</td>
+        </tr>
+        <tr>
+          <td class="axis">Vendor email available on contact</td>
+          <td><code>Vendor.PrimaryEmailAddr.Address</code> (nested)</td>
+          <td class="winner"><code>Contact.EmailAddress</code> (flat string) <span class="pill pill-good">WIN</span></td>
+          <td>Free-text only</td>
+          <td>Buried in <code>Expense.vendor</code> free-text</td>
+        </tr>
+        <tr>
+          <td class="axis">Market dominance (US SMB)</td>
+          <td class="winner">~80% US SMB accounting share <span class="pill pill-good">WIN</span></td>
+          <td>Strong in NZ/AU/UK; ~5% US share</td>
+          <td>Freelancer/solo niche only</td>
+          <td>Service-business niche (~5%)</td>
+        </tr>
+        <tr>
+          <td class="axis">Multi-realm / multi-org per app</td>
+          <td>Yes (<code>realmId</code>)</td>
+          <td>Yes (<code>xero-tenant-id</code> header)</td>
+          <td>—</td>
+          <td>Yes (<code>business_id</code>)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="conclusion">
+      <h2>Recommendation</h2>
+      <p><strong>v1.1 Phase 6: stick with QBO.</strong> Highest US market share, best raw throughput (8× Xero's rate limit), longest refresh tokens. The "harder dev experience" axes (separate sandbox URL, community-maintained TS SDK) cost ~1-2 hours of one-time setup — small against the persona-fit win.</p>
+      <p><strong>v1.2+ "Multi-Connector": add Xero as the second connector.</strong> Comparable persona fit (Xero owns AU/NZ/UK SMB market) and materially better dev velocity. Designing the v1.2 connector trait against both QBO and Xero from day one is the right architectural call — their data shapes are close enough to share a transformer interface.</p>
+      <p><strong>Skip Wave and FreshBooks for v1.x.</strong> Wave is access-blocked and structurally wrong (no <code>Bill</code> entity). FreshBooks targets a different persona (freelancers) and the 12h refresh-token policy fights any scheduled-sync use case from Spike 001.</p>
+      <h2>Implications for the v1.1 Phase 6 plan</h2>
+      <ul>
+        <li>No change to current Phase 6 scope. Continue with QBO as the single connector.</li>
+        <li>When writing the <code>lib/qbo/transformer.ts</code>, name the connector-agnostic types (<code>Bill</code>, <code>Vendor</code>, <code>BankLine</code>) so a Xero adapter can target the same interface in v1.2 without retro-fit.</li>
+        <li>Spike 001's vendor-email path lands on <code>Vendor.PrimaryEmailAddr.Address</code> — that field's existence is confirmed in QBO and Xero, absent in Wave and FreshBooks. Future-proofs the manual-trigger compose path.</li>
+        <li>Roadmap candidate: <strong>v1.2 "Multi-Connector"</strong> milestone — Xero ingest + connector-abstraction refactor + Phase-6 transformer split into <code>lib/connectors/{qbo,xero}/transformer.ts</code> with a shared <code>lib/connectors/types.ts</code> interface.</li>
+      </ul>
+    </div>
+  </div>
+</body>
+</html>

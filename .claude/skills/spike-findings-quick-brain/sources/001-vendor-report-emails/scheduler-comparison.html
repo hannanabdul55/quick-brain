@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spike 001 · Scheduler Comparison</title>
+  <style>
+    :root { --bg:#f6f7f9; --surface:#fff; --ink:#111418; --ink-soft:#535d6a; --line:#e4e7eb; --line-soft:#f0f1f3; --good:#047857; --ok:#0369a1; --bad:#b91c1c; --warn:#b45309; --recommend-bg:#ecfdf5; --recommend-bd:#10b981; }
+    * { box-sizing: border-box; }
+    body { margin:0; padding:24px; background:var(--bg); color:var(--ink); font-family:-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",sans-serif; line-height:1.5; }
+    .wrap { max-width:1100px; margin:0 auto; }
+    header { padding:16px 20px; background:var(--surface); border:1px solid var(--line); border-radius:10px; margin-bottom:24px; }
+    header h1 { margin:0 0 4px; font-size:16px; }
+    header p { margin:0; color:var(--ink-soft); font-size:13px; }
+    table { width:100%; border-collapse:collapse; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow:hidden; }
+    th, td { padding:12px 14px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line-soft); font-size:13px; }
+    thead th { background:var(--line-soft); font-weight:600; font-size:12px; color:var(--ink-soft); text-transform:uppercase; letter-spacing:0.04em; }
+    tbody tr:last-child td { border-bottom:none; }
+    .name { font-weight:600; }
+    .verdict { display:inline-block; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; }
+    .v-good { background:#d1fae5; color:var(--good); }
+    .v-ok { background:#dbeafe; color:var(--ok); }
+    .v-warn { background:#fef3c7; color:var(--warn); }
+    .v-bad { background:#fee2e2; color:var(--bad); }
+    .recommend { background:var(--recommend-bg); }
+    .recommend td { border-left:3px solid var(--recommend-bd); }
+    .recommend td:first-child .name::after { content:" ★ recommended for v1.1 hosting"; color:var(--good); font-weight:500; font-size:11px; }
+    .conclusion { background:var(--surface); border:1px solid var(--line); border-radius:10px; padding:18px; margin-top:24px; font-size:13px; }
+    .conclusion h2 { margin:0 0 10px; font-size:14px; }
+    code { background:var(--line-soft); padding:1px 5px; border-radius:4px; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Spike 001 · Scheduler Comparison</h1>
+      <p>Five viable schedulers for weekly vendor-email composition. Each one is sufficient; the choice is downstream of where QuickBrain is being deployed and whether <code>gbrain</code> Minions over PGLite passes the Phase 4 spike.</p>
+    </header>
+
+    <table>
+      <thead>
+        <tr>
+          <th style="width:18%">Option</th>
+          <th>Where it runs</th>
+          <th>Pros</th>
+          <th>Cons</th>
+          <th>Verdict for QuickBrain v1.1</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="recommend">
+          <td><div class="name">gbrain Minions</div></td>
+          <td>Inside the Bun process, durable queue backed by PGLite</td>
+          <td>Same process as the brain · deterministic · $0 token cost · survives crashes · Minions are first-class in gbrain</td>
+          <td>PGLite + Minions interaction is unverified (Phase 4 spike resolves this) · cron-shaped scheduling needs a wrapper · no built-in dashboard</td>
+          <td><span class="verdict v-good">BEST IF PHASE 4 SPIKE PASSES</span> — natural home for any scheduled gbrain work</td>
+        </tr>
+        <tr>
+          <td><div class="name">System cron / launchd</div></td>
+          <td>OS-level, outside the app process</td>
+          <td>Zero infra · persists across reboots · OS-native · already running on every Mac/Linux box</td>
+          <td>Off-process: must invoke a CLI or webhook · logs land in syslog, not the app · operator setup is OS-specific · brittle when the box reboots and timezone shifts</td>
+          <td><span class="verdict v-ok">OK</span> — easy for self-host VM, awkward for operator's laptop</td>
+        </tr>
+        <tr>
+          <td><div class="name">Vercel Cron</div></td>
+          <td>Vercel platform, declared in <code>vercel.json</code></td>
+          <td>Declarative · managed · zero infra · per-deployment</td>
+          <td>Locks to Vercel hosting (not chosen) · minimum cron resolution is daily on hobby tier · no on-prem path</td>
+          <td><span class="verdict v-warn">N/A FOR v1.1</span> — we're not on Vercel; revisit if/when we host there</td>
+        </tr>
+        <tr>
+          <td><div class="name">GitHub Actions cron</div></td>
+          <td>GH Actions runners, outside the app</td>
+          <td>Free · declarative YAML · easy to manage · can call a webhook into the deployed app · secrets live in GH</td>
+          <td>Off-deployment infrastructure · known 5–15 min jitter on GH cron schedules · adds a deployment dependency on GH</td>
+          <td><span class="verdict v-ok">OK</span> — works but feels overkill for a single-box demo VM</td>
+        </tr>
+        <tr>
+          <td><div class="name">node-cron / croner (in-process)</div></td>
+          <td>Inside the Next.js process</td>
+          <td>Tight integration · can read <code>lib/gbrain</code> directly · zero new deps if we accept <code>croner</code></td>
+          <td>Dies on every Next.js restart · not durable · competes with HTTP for the event loop · anti-pattern in Next.js 15 App Router</td>
+          <td><span class="verdict v-bad">AVOID</span> — fine for prototyping, fails on production-shaped restarts</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="conclusion">
+      <h2>Bottom line</h2>
+      <p>For v1.1 we don't need to pick. The spike answers <strong>"is there a viable option?"</strong> — yes, multiple. Defer the actual scheduler choice to v1.2 ("Outbound Communications") and unblock by building the <em>manual-trigger</em> path first: a dashboard button "Compose this week's vendor emails" that runs the same composition pipeline on demand. That delivers ~80% of the value at ~10% of the complexity and leaves the cron decision downstream of the Phase 4 Minions spike result.</p>
+    </div>
+  </div>
+</body>
+</html>
