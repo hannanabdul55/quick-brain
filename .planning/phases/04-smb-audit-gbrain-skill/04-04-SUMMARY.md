@@ -144,7 +144,18 @@ None — no new network endpoints, auth paths, or trust boundary changes introdu
 - `detect-anomalies.ts` is deprecated-in-place — Phase 5 cleanup can safely delete it
 - One deferred item: `companies/quick-clean.md` slug frontmatter fix (add `slug: companies/quick-clean` or remove the `slug:` line) to prevent the gbrain import skip warning
 
-## Self-Check
+## Self-Check: PASSED
+
+All files verified to exist:
+- `FOUND: .planning/phases/04-smb-audit-gbrain-skill/04-04-SUMMARY.md`
+- `FOUND: scripts/detect-anomalies.ts`
+- `FOUND: CLAUDE.md`
+- `FOUND: lib/audit/anomaly-detector.ts`
+
+All commits verified:
+- `FOUND: 6882ee7` (Task 1 — prefer-const fix)
+- `FOUND: 4453868` (Task 2 — deprecation header + CLAUDE.md)
+- `FOUND: fad569f` (SUMMARY.md)
 
 ---
 *Phase: 04-smb-audit-gbrain-skill*
