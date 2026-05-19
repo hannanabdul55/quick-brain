@@ -1,4 +1,8 @@
 #!/usr/bin/env bun
+// DEPRECATED (Phase 4): This script is superseded by skills/smb-audit/scripts/smb-audit.mjs
+// and lib/audit/anomaly-detector.ts. Kept as a legacy fallback through Phase 5.
+// Do not modify — use lib/audit/anomaly-detector.ts for any logic changes.
+// Scheduled for deletion in Phase 5/6 cleanup.
 // DATA-08: TypeScript anomaly detector.
 //
 // Reads the imported brain source (data/maras-coffee/{originals,companies})
