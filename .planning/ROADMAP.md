@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Brain Spine + Synthetic Seed** - End-to-end CLI slice — seeded gbrain answers "what was weird about last month?" naming all 3 planted anomalies
 - [x] **Phase 2: Onboarding Theater + Chat** - End-to-end web slice — operator completes 60-second onboarding and asks a P0 question through the browser
 - [x] **Phase 3: Insight Cards + Demo Readiness** - End-to-end demo slice — dashboard cards load with primitive labels, reset works, 3 back-to-back rehearsals pass
-- [ ] **Phase 4: smb-audit gbrain Skill** - Replace the v1.0 hand-rolled TS detector with a real gbrain skill, fix FIXTURES_ROOT hardcoding, and lock the canonical brain schema
+- [x] **Phase 4: smb-audit gbrain Skill** - Replace the v1.0 hand-rolled TS detector with a real gbrain skill, fix FIXTURES_ROOT hardcoding, and lock the canonical brain schema (completed 2026-05-19)
 - [ ] **Phase 5: Email Magic-Link Auth + Persistent Tenants** - Email-only sign-in, per-user brain auto-provisioning, demo-path preserved under AUTH_ENABLED=0
 - [ ] **Phase 6: QuickBooks Online Ingest** - QBO OAuth 2.0 → markdown transformer → gbrain import → smb-audit skill, full live-data path
 
@@ -93,11 +93,11 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Two different tenant brain dirs (the demo seed and a fresh empty brain) yield different anomaly counts on the insight card — confirming the `FIXTURES_ROOT` hardcoding is removed from `lib/insights/cache.ts::computeAndCache` and parsers read from the active tenant's `brains/<brainSlug>/brain-repo/` directory.
   4. Re-running the skill against the same brain dir a second time produces byte-identical concept pages with no duplicate bullet lines, confirming idempotent output (SKIL-06).
   5. `docs/brain-schema.md` exists, documents the canonical frontmatter contract (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency` plus skill output fields `severity`, `dollar_impact`, `anomaly_type`), and the `seed.sh` pipeline completes in under 10 seconds using the skill in place of the old detector script.
-**Plans:** 4 plans across 3 waves
-- [ ] 04-01-PLAN.md — Skill scaffold + detector port (4 anomaly rules) + docs/brain-schema.md (SKIL-01..06, SKIL-08)
-- [ ] 04-02-PLAN.md — FIXTURES_ROOT → sourceDir refactor + tenant isolation test (SKIL-09)
-- [ ] 04-03-PLAN.md — seed.sh integration + smoke gate + dashboard end-to-end (SKIL-07, SKIL-10)
-- [ ] 04-04-PLAN.md — Typecheck + lint + deprecation marker + v1.0 demo regression check
+**Plans:** 4/4 plans complete
+- [x] 04-01-PLAN.md — Skill scaffold + detector port (4 anomaly rules) + docs/brain-schema.md (SKIL-01..06, SKIL-08)
+- [x] 04-02-PLAN.md — FIXTURES_ROOT → sourceDir refactor + tenant isolation test (SKIL-09)
+- [x] 04-03-PLAN.md — seed.sh integration + smoke gate + dashboard end-to-end (SKIL-07, SKIL-10)
+- [x] 04-04-PLAN.md — Typecheck + lint + deprecation marker + v1.0 demo regression check
 **UI hint:** yes
 
 ### Phase 5: Email Magic-Link Auth + Persistent Tenants
@@ -112,7 +112,12 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. Running `scripts/panic-reset.sh` against a system with real users (`AUTH_ENABLED=1`) prints a confirmation prompt listing affected user emails and exits non-zero unless `--force-real-tenants` is passed, confirming the safety gate (AUTH-12).
   4. With `AUTH_ENABLED=0`, the anonymous `/onboard` flow completes end-to-end as in v1.0 without any sign-in redirect, confirming the demo path is fully preserved (AUTH-10).
   5. A regression mutex-smoke test runs 5 concurrent `gbrain query` calls against the same `brainSlug` with no PGLite lock contention errors, and the mutex key is typed as `BrainSlug` (branded TypeScript type) so that accidentally passing a `userId` is a compile-time error (AUTH-11).
-**Plans:** TBD (target 5: jose helpers + bun:sqlite schema; send-link/verify endpoints + rate limit; sign-in/check-email pages + middleware; panic-reset hardening + demo-check.sh; mutex key migration + smoke gate)
+**Plans:** 5/5 plans
+- [ ] 05-01-PLAN.md — Auth foundation: jose helpers + bun:sqlite schema + BrainSlug branded type (AUTH-02, AUTH-06, AUTH-11)
+- [ ] 05-02-PLAN.md — Send-link + verify + sign-out endpoints + Resend integration + rate limit (AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-07, AUTH-09)
+- [ ] 05-03-PLAN.md — Sign-in/check-email/used pages + middleware + AUTH_ENABLED flag (AUTH-01, AUTH-04, AUTH-08, AUTH-09, AUTH-10)
+- [ ] 05-04-PLAN.md — Ops hardening: panic-reset gate + demo-check env verification (AUTH-12, AUTH-13)
+- [ ] 05-05-PLAN.md — Smoke gate: mutex-smoke regression + auth E2E + runbook (AUTH-11, AUTH-14)
 **UI hint:** yes
 
 ### Phase 6: QuickBooks Online Ingest
@@ -140,7 +145,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
 | 1. Brain Spine + Synthetic Seed | 6/6 | Passed | 2026-05-16 |
 | 2. Onboarding Theater + Chat | 6/6 | Passed | 2026-05-16 |
 | 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) | 2026-05-16 |
-| 4. smb-audit gbrain Skill | 0/4 | Not started | - |
+| 4. smb-audit gbrain Skill | 4/4 | Complete   | 2026-05-19 |
 | 5. Email Magic-Link Auth + Persistent Tenants | 0/5 | Not started | - |
 | 6. QuickBooks Online Ingest | 0/6 | Not started | - |
 
