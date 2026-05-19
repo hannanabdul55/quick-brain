@@ -2,15 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: Beyond the Demo
-status: planning
-last_updated: "2026-05-17T00:00:00.000Z"
-last_activity: 2026-05-17
+status: in_progress
+stopped_at: Phase 4 complete; ready to start Phase 5 (Email Magic-Link Auth + Persistent Tenants).
+last_updated: "2026-05-19T15:42:55.952Z"
+last_activity: 2026-05-19 -- Phase 04 marked complete (4/4 plans)
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 15
-  completed_plans: 0
-  percent: 0
+  completed_plans: 4
+  percent: 27
 ---
 
 # Project State
@@ -20,17 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-17)
 
 **Core value:** A non-technical small-business owner can go from zero to a live, queryable gbrain — with their own data — in under 60 seconds, without ever touching a terminal.
-**Current focus:** Milestone v1.1 "Beyond the Demo" — roadmap defined, ready for Phase 4 spike.
+**Current focus:** Milestone v1.1 "Beyond the Demo" — Phase 4 complete; ready to plan Phase 5 (Email Magic-Link Auth + Persistent Tenants).
 
 ## Current Position
 
-Phase: 4 — smb-audit gbrain Skill (not started)
-Plan: —
-Status: Ready for phase 4 spike
-Last activity: 2026-05-17 — v1.1 roadmap created (Phases 4-6 defined)
+Phase: 04 — COMPLETE (smb-audit gbrain skill shipped, 4/4 plans, seed in 7s, 4 anomaly types live)
+Next phase: 05 — Email Magic-Link Auth + Persistent Tenants (not started; needs 30-min spike first)
+Last activity: 2026-05-19 -- Phase 04 marked complete (plans 04-01..04-04 merged to main)
 
 ```
-v1.1 Progress [                    ] 0% — Phase 4 not started
+v1.1 Progress [██████▌             ] 33% — Phase 4 complete, Phases 5+6 remain
 ```
 
 ## Performance Metrics
@@ -47,7 +47,7 @@ v1.1 Progress [                    ] 0% — Phase 4 not started
 | 1. Brain Spine + Synthetic Seed | 6/6 | Passed |
 | 2. Onboarding Theater + Chat | 6/6 | Passed |
 | 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) |
-| 4. smb-audit gbrain Skill | 0/4 | Not started |
+| 4. smb-audit gbrain Skill | 4/4 | Complete (2026-05-19) |
 | 5. Email Magic-Link Auth + Persistent Tenants | 0/5 | Not started |
 | 6. QuickBooks Online Ingest | 0/6 | Not started |
 
@@ -71,7 +71,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Highlights:
 
 ### Pending Todos
 
-- Run Phase 4 spike (30 min): verify `gbrain jobs submit` execution path and `@gbrain/api` import resolution under Bun before writing plan-code.
+- **Phase 5 precondition spike (30 min):** verify `jose` + `bun:sqlite` email magic-link round-trip before writing plan-code.
+- **Operator follow-up for Phase 4:** spot-check the dashboard (http://localhost:3000/dash/seed) renders ≥4 anomaly rows including a `missing-invoice` row after `bun run seed` + `bun dev`. Automated parts (seed wall-clock, idempotency, typecheck, lint, all 4 anomaly types in the markdown) verified green by 04-03 and 04-04 plans.
 
 ### Blockers/Concerns
 
@@ -95,7 +96,7 @@ Carried forward to v2 from v1.1 scope-out:
 
 ## Session Continuity
 
-Last session: 2026-05-17 (v1.1 roadmap defined; Phases 4-6 scoped; REQUIREMENTS.md traceability updated)
-Stopped at: Roadmap creation — ready to spike Phase 4.
-Resume file: `.planning/ROADMAP.md` (Phase 4 detail section)
-Resume command: `/gsd:plan-phase 4` — after running the 30-min Phase 4 spike documented in `.planning/research/SUMMARY.md`.
+Last session: 2026-05-19 (Phase 4 executed end-to-end via --auto --chain; 4 plans, 3 waves, all SUMMARY.md files merged to main)
+Stopped at: Phase 4 complete; ready to start Phase 5.
+Resume file: `.planning/ROADMAP.md` (Phase 5 detail section, starting at line ~106)
+Resume command: `/gsd:plan-phase 5` — after running the 30-min Phase 5 spike (jose + bun:sqlite magic-link round-trip).
