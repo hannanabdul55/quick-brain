@@ -32,7 +32,7 @@ if [ -z "${OPENAI_API_KEY:-}" ]; then
   exit 1
 fi
 if [ -z "${ANTHROPIC_API_KEY:-}" ]; then
-  echo "⚠ ANTHROPIC_API_KEY unset — proceeding. Embeddings + import + anomaly detector will succeed;" >&2
+  echo "⚠ ANTHROPIC_API_KEY unset — proceeding. Embeddings + import + smb-audit skill will succeed;" >&2
   echo "  any 'gbrain query' call returns the placeholder until you add the key to ~/.zshenv." >&2
 fi
 
@@ -43,8 +43,17 @@ mkdir -p "${BRAIN_HOME}"
 log "Generating templated fixtures (invoices, bank statements, monthly closes)"
 bun "${REPO_ROOT}/scripts/generate-fixtures.ts"
 
-log "Running anomaly detector (writes data/maras-coffee/concepts/*.md)"
-bun "${REPO_ROOT}/scripts/detect-anomalies.ts"
+log "Running smb-audit skill (writes concepts/*.md)"
+# Direct-bun invocation: skill runs before gbrain init, so the shell-job path
+# (which requires an initialized brain at GBRAIN_HOME) cannot be used here.
+# GBRAIN_HOME is overridden to DATA_DIR so the skill writes concept pages where
+# the seed insight parser reads from (data/maras-coffee/concepts/).
+GBRAIN_HOME="${DATA_DIR}" bun "${REPO_ROOT}/skills/smb-audit/scripts/smb-audit.mjs"
+
+if [ ! -f "${DATA_DIR}/concepts/march-anomaly-summary.md" ]; then
+  echo "[seed] ERROR: smb-audit skill did not write concepts/march-anomaly-summary.md" >&2
+  exit 1
+fi
 
 log "gbrain init"
 gbrain init --yes
@@ -65,6 +74,10 @@ if gbrain --help 2>&1 | grep -q "orphans"; then
   log "gbrain orphans (sanity check, output saved to /tmp/qb-orphans.log)"
   gbrain orphans >/tmp/qb-orphans.log 2>&1 || log "orphans returned non-zero — continuing"
 fi
+
+log "Indexing skill-written concept pages into brain"
+gbrain import "${DATA_DIR}/concepts/" --no-embed
+gbrain embed --stale
 
 log "Seed brain ready at ${BRAIN_HOME}"
 log "Smoke gate: try"
