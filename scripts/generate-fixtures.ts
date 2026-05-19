@@ -11,6 +11,7 @@
 //   1. Beanstalk price hike: $750 -> $915 per bag (+22%) starting Mar 1, 2026
 //   2. Square duplicate charge: $79 on both Mar 4 AND Mar 11
 //   3. Ghost 7shifts SaaS: $43/mo recurring, last meaningful event Nov 2025
+//   4. Missing invoice: QuickClean $150 debit on Mar 15, no matching invoice file
 //
 // Run:  bun scripts/generate-fixtures.ts
 
@@ -201,6 +202,14 @@ function statementForMonth(month: string): { date: string; debits: StatementLine
       day: "11",
       amount: 79.0,
       memo: `Square POS Plus subscription — [[companies/square-pos]] (DUPLICATE of 2026-03-04 charge)`,
+    });
+    // Planted anomaly #4: Missing-invoice — QuickClean switched to ACH auto-pay in March
+    // but Mara never received a formal invoice. The debit appears in the bank statement
+    // with no matching invoice document, triggering the missing-invoice anomaly rule.
+    debits.push({
+      day: "15",
+      amount: 150.0,
+      memo: `Monthly deep-cleaning service — [[companies/quick-clean]] (no invoice on file)`,
     });
   }
 
