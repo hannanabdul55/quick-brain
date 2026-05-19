@@ -6,7 +6,7 @@ account: Main Operating
 tags: [bank, statement, 2026-03]
 ---
 
-Compiled truth: Operating-account statement for March 2026. 11 debits totaling $8,766.95 and 5 credits totaling $27,480.00. Vendors paid: [[companies/beanstalk-roasters]], [[companies/square-pos]], [[companies/seven-shifts]], [[companies/landlord-llc]], [[companies/pge-utility]]. Source of revenue: card-batch deposits from [[companies/square-pos]].
+Compiled truth: Operating-account statement for March 2026. 12 debits totaling $8,916.95 and 5 credits totaling $27,480.00. Vendors paid: [[companies/beanstalk-roasters]], [[companies/square-pos]], [[companies/seven-shifts]], [[companies/landlord-llc]], [[companies/pge-utility]], [[companies/quick-clean]]. Source of revenue: card-batch deposits from [[companies/square-pos]].
 
 ---
 
@@ -19,6 +19,7 @@ Compiled truth: Operating-account statement for March 2026. 11 debits totaling $
 - 2026-03-12: $14.00 debit — 7shifts single-user add-on, monthly — [[companies/seven-shifts]]
 - 2026-03-12: $618.90 debit — Electric service, monthly — [[companies/pge-utility]]
 - 2026-03-12: $176.30 debit — Natural gas service, monthly — [[companies/pge-utility]]
+- 2026-03-15: $150.00 debit — Monthly deep-cleaning service — [[companies/quick-clean]] (no invoice on file)
 - 2026-03-18: $915.00 debit — 25 lb whole bean medium roast (Mara's standard SKU) — [[companies/beanstalk-roasters]]
 - 2026-03-31: $1,390.75 debit — Monthly card-processing fee summary, 2.6% + $0.10/swipe — [[companies/square-pos]]
 - 2026-03-06: $5,410.00 credit — Weekly card-batch deposit — [[companies/square-pos]]
