@@ -1,8 +1,9 @@
 # Spike Wrap-Up Summary
 
-**Date:** 2026-05-19
-**Spikes processed:** 5 (1 standalone + 1 parent + 3 comparison children)
-**Feature areas:** 2 — Outbound vendor communications, Accounting connector strategy
+**Initial wrap-up:** 2026-05-19 (spikes 001 + 002)
+**Appended:** 2026-05-19 (spikes 003 + 004 from frontier-mode pass)
+**Spikes processed:** 7 (2 standalone + 1 parent + 3 comparison children + 1 infrastructure)
+**Feature areas:** 3 — Outbound communications · Accounting connector strategy · gbrain skill infrastructure
 **Skill output:** `./.claude/skills/spike-findings-quick-brain/`
 **Auto-load:** wired into `CLAUDE.md`
 
@@ -15,6 +16,8 @@
 | 002a | accounting-api-xero | comparison | VALIDATED ✓ (add in v1.2) | Accounting connector strategy |
 | 002b | accounting-api-wave | comparison | INVALIDATED ✗ | Accounting connector strategy |
 | 002c | accounting-api-freshbooks | comparison | PARTIAL ⚠ (freelancer-niche) | Accounting connector strategy |
+| 003 | minions-over-pglite | standard | VALIDATED ✓ | gbrain skill infrastructure |
+| 004 | accountant-facing-reports | standard | VALIDATED ✓ (leads v1.2) | Outbound communications |
 
 ## Key Findings
 
@@ -33,6 +36,23 @@
 - **Skip FreshBooks for the Mara persona** — 12h refresh-token TTL fights every scheduled-sync use case. Time Tracking + Expense OCR matter for a freelancer SKU only.
 - **Architectural call surfaced for Phase 6:** name connector-agnostic types (`ConnectorBill`, `ConnectorVendor`, `ConnectorBankLine`) in `lib/connectors/types.ts` from day one. Write Phase 6 code under `lib/connectors/qbo/` (not `lib/qbo/`). Saves a multi-file refactor when Xero arrives in v1.2.
 - **Vendor email field availability is the unsung consequence of the connector choice.** QBO (`Vendor.PrimaryEmailAddr.Address`) + Xero (`Contact.EmailAddress`) both expose it as a first-class field; Wave + FreshBooks don't. This means the connector choice and the spike-001 vendor-email feasibility are structurally tied.
+
+## Key Findings — Frontier Pass (spikes 003 + 004)
+
+**Spike 003 — Minions over PGLite:**
+- Empirically tested against installed gbrain 0.35.1 with PGLite backend. `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --follow` **works inline, no daemon required.**
+- Three Phase 4 design gotchas surfaced:
+  1. The `smb-audit` skill (and every future custom skill) **must always exit 0**. Non-zero triggers gbrain Minions' 3-attempt retry policy with ~1s/2s/4s backoff (~7s wasted on deterministic failure). Internal errors → write `concepts/<skill>-error.md` and exit cleanly.
+  2. **`scripts/seed.sh` must parse the `Result:` JSON line's `exit_code` field.** `gbrain jobs submit --follow`'s own exit code is always 0 regardless of job outcome.
+  3. **`bun` must be in PATH** when invoking `gbrain` — it spawns its worker via `bun` internally. Defensive export at the top of all wrapper scripts.
+- Phase 4 precondition spike embedded in 04-01-PLAN.md is empirically resolved. The skill mechanism is unblocked; the canonical shell-job pattern is the path.
+
+**Spike 004 — Accountant-facing reports:**
+- **Audience swap from "vendor" to "Mara's CPA / bookkeeper" eliminates 6 of 8 risks from spike 001.** The recipient explicitly wants the email (CPAs are paid to read monthly close packages), anomalies become the headline (not the omission), single-recipient model is materially simpler than per-vendor digest.
+- **Reuses ~80% of spike-001's plumbing** — Resend, signed-token unsubscribe URLs, approval gate primitives, server-side template validator (with rule inversion).
+- **PDF archival format = `@media print` stylesheet on the HTML body.** No Puppeteer / Cloud Run / PDF library. Browsers print to PDF natively; CPAs cmd+P to archive.
+- **The audience-keyed template validator is the load-bearing safety check** — CPA payloads REQUIRE anomaly content; vendor payloads REJECT it. One module, two rule sets.
+- Refines v1.2 "Outbound Communications": lead with **Phase A: CPA monthly close**, gate **Phase B: vendor weekly** on a 3-tenant pilot.
 
 ## Cross-Spike Themes
 
@@ -55,8 +75,22 @@ One small change to the existing Phase 6 plan, derived from spike 002:
 
 - **Update 04-04-PLAN.md or the Phase 6 PLAN files** so QBO code lives at `lib/connectors/qbo/` (not `lib/qbo/`). Add `lib/connectors/types.ts` with the connector-agnostic shapes. Trivial in Phase 6; saves a multi-file refactor in v1.2.
 
-This is the only mid-spike action that should land in v1.1 itself.
+## Action Items for v1.1 Phase 4 (Before Execute) — added from spikes 003 + 004
+
+Three small edits to the existing Phase 4 plans, derived from spike 003:
+
+- **`04-01-PLAN.md`** — replace the "30-min spike" precondition with a 5-min "verify env" task. The actual spike (003) is empirically resolved and the canonical pattern is documented.
+- **`04-03-PLAN.md`** — `scripts/seed.sh` must parse the `Result:` JSON line's `exit_code` field, not rely on `gbrain jobs submit --follow`'s own exit code (always 0 regardless of job outcome). Acceptance: a 5-line shell snippet to extract + check.
+- **`04-04-PLAN.md`** — cleanup task should include updating `scripts/demo-check.sh` to verify `bun` is on PATH (`export PATH="$HOME/.bun/bin:$PATH"` defensive export).
+- **`skills/smb-audit/scripts/smb-audit.mjs`** must use try/catch + write `concepts/audit-error.md` + always `process.exit(0)` to avoid Minions' 3× retry on non-zero exit.
+
+## v1.2 Milestone Direction (post-frontier)
+
+The wrap-up's v1.2 candidates refine:
+
+- **v1.2 "Outbound Communications"** — **lead with Phase A: CPA-facing monthly close** (spike 004 VALIDATED). Vendor-facing weekly (spike 001 PARTIAL) becomes Phase B, gated on a 3-tenant real-world pilot. Same composition pipeline, audience-keyed template validator.
+- **v1.2 "Multi-Connector"** (unchanged) — Xero adapter against the shared `lib/connectors/types.ts` interface.
 
 ---
 
-*Wrap-up complete: 2026-05-19.*
+*Initial wrap-up: 2026-05-19. Frontier-spike append: 2026-05-19 (spikes 003 + 004).*
