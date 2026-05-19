@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spike 004 · CPA Monthly Close Email Preview</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --ink: #111418;
+      --ink-soft: #535d6a;
+      --line: #e4e7eb;
+      --line-soft: #f0f1f3;
+      --warn: #b45309;
+      --warn-bg: #fef3c7;
+      --ok: #047857;
+      --ok-bg: #d1fae5;
+      --bad: #b91c1c;
+      --bad-bg: #fee2e2;
+      --accent: #1d4ed8;
+      --positive: #047857;
+      --negative: #b91c1c;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 24px; background: var(--bg); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", sans-serif; line-height: 1.5; }
+    header.spike-header { max-width: 920px; margin: 0 auto 28px; padding: 16px 20px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+    header.spike-header h1 { margin: 0 0 4px; font-size: 16px; }
+    header.spike-header p { margin: 0; color: var(--ink-soft); font-size: 13px; }
+    header.spike-header .tag { display: inline-block; padding: 2px 8px; font-size: 11px; border-radius: 999px; background: var(--ok-bg); color: var(--ok); margin-left: 6px; }
+    .print-hint { max-width: 920px; margin: 0 auto 18px; padding: 10px 14px; background: var(--warn-bg); color: var(--warn); border-radius: 8px; font-size: 12px; }
+    main.email-frame { max-width: 920px; margin: 0 auto; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    .email-meta { padding: 18px 22px; background: var(--line-soft); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--ink-soft); }
+    .email-meta .row { margin: 0 0 2px; }
+    .email-meta .label { display: inline-block; min-width: 70px; color: var(--ink-soft); }
+    .email-body { padding: 22px 26px; font-size: 13.5px; }
+    .email-body .subject { font-size: 17px; font-weight: 700; margin: 0 0 14px; color: var(--ink); }
+    .email-body .lede { margin: 0 0 20px; }
+    .section-title { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); margin: 22px 0 10px; padding-bottom: 4px; border-bottom: 1px solid var(--line); }
+    .anomaly { border-left: 3px solid var(--line); padding: 8px 12px; margin: 0 0 10px; background: var(--line-soft); border-radius: 0 6px 6px 0; }
+    .anomaly.severity-high { border-left-color: var(--bad); background: var(--bad-bg); }
+    .anomaly.severity-medium { border-left-color: var(--warn); background: var(--warn-bg); }
+    .anomaly.severity-low { border-left-color: var(--ink-soft); }
+    .anomaly .head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+    .anomaly .name { font-weight: 600; }
+    .anomaly .impact { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--negative); }
+    .anomaly .desc { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+    .anomaly .source { font-size: 11px; color: var(--ink-soft); margin-top: 4px; }
+    .anomaly .source a { color: var(--accent); text-decoration: none; }
+    .pnl-table, .vendor-table { width: 100%; border-collapse: collapse; margin: 0 0 10px; }
+    .pnl-table th, .pnl-table td, .vendor-table th, .vendor-table td { padding: 7px 10px; text-align: right; border-bottom: 1px solid var(--line-soft); font-size: 13px; }
+    .pnl-table th:first-child, .pnl-table td:first-child, .vendor-table th:first-child, .vendor-table td:first-child { text-align: left; }
+    .pnl-table thead th, .vendor-table thead th { background: var(--line-soft); font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+    .pnl-table tfoot td { font-weight: 700; border-top: 2px solid var(--ink); border-bottom: 0; padding-top: 10px; }
+    .delta-up { color: var(--positive); font-variant-numeric: tabular-nums; }
+    .delta-down { color: var(--negative); font-variant-numeric: tabular-nums; }
+    .num { font-variant-numeric: tabular-nums; }
+    .signoff { margin-top: 20px; color: var(--ink-soft); }
+    .email-footer { margin-top: 24px; padding: 14px 22px; background: var(--line-soft); border-top: 1px dashed var(--line); font-size: 11px; color: var(--ink-soft); }
+    .email-footer a { color: var(--accent); text-decoration: none; }
+    .attachment-strip { display: flex; gap: 8px; margin: 14px 0 0; padding: 10px 12px; background: var(--ok-bg); color: var(--ok); border-radius: 6px; font-size: 12px; }
+    .attachment-strip strong { font-weight: 600; }
+
+    /* Print-only stylesheet — CPAs archive these as PDFs */
+    @media print {
+      body { background: white; padding: 0; }
+      .spike-header, .print-hint, .email-footer { display: none; }
+      .email-frame { box-shadow: none; border: 0; }
+      .email-meta { background: white; border-bottom: 2px solid var(--ink); }
+      .email-body { padding: 0; }
+      .email-body .subject { font-size: 18px; }
+      .anomaly { background: white !important; border-left: 3px solid black !important; page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <header class="spike-header">
+    <h1>Spike 004 · CPA Monthly Close Email Preview <span class="tag">VALIDATED ✓</span></h1>
+    <p>The proposed monthly close email as Mara's CPA, Lin Chen, would see it in her inbox. Audience swap from Spike 001: the recipient explicitly wants this, anomalies are the headline (not omitted), and a print stylesheet turns the email into a CPA-archivable PDF via browser cmd+P.</p>
+  </header>
+
+  <div class="print-hint">
+    <strong>Tip:</strong> Press <code>cmd+P</code> (or <code>ctrl+P</code>) → "Save as PDF". The print-only CSS strips the chrome and produces a clean, archive-quality close report. No Puppeteer, no PDF library — browsers handle it natively.
+  </div>
+
+  <main class="email-frame">
+    <div class="email-meta">
+      <div class="row"><span class="label">From:</span> Mara Okafor &lt;mara@maras-coffee.com&gt;</div>
+      <div class="row"><span class="label">To:</span> Lin Chen, CPA &lt;lin@chen-and-co.com&gt;</div>
+      <div class="row"><span class="label">Reply-To:</span> mara@maras-coffee.com</div>
+      <div class="row"><span class="label">Date:</span> Wed, Apr 1 2026 7:00 AM</div>
+      <div class="row"><span class="label">Subject:</span> Mara's Coffee — March 2026 Monthly Close</div>
+    </div>
+
+    <div class="email-body">
+      <h1 class="subject">Mara's Coffee — March 2026 Monthly Close</h1>
+
+      <p class="lede">Hi Lin — here's the March 2026 close package. <strong>Three items flagged for your review</strong> are at the top. P&amp;L snapshot and vendor activity follow. Brain-generated; please flag anything you want me to re-check before we file Q1.</p>
+
+      <h2 class="section-title">Flagged for your review (3)</h2>
+
+      <div class="anomaly severity-high">
+        <div class="head">
+          <span class="name">Beanstalk Roasters — unit-price increase +22%</span>
+          <span class="impact">−$330.00</span>
+        </div>
+        <p class="desc">House-blend whole-bean wholesale price moved from $750/bag to $915/bag effective 2026-03-01. Both March invoices (2 × 25lb) reflect new pricing. <strong>Anomaly type:</strong> price-hike · <strong>Severity:</strong> high.</p>
+        <p class="source">Source: <a href="#">originals/email-beanstalk-price-hike-2026-02-22</a> · <a href="#">companies/beanstalk-roasters</a></p>
+      </div>
+
+      <div class="anomaly severity-high">
+        <div class="head">
+          <span class="name">Square POS — duplicate processing-fee charge</span>
+          <span class="impact">−$79.00</span>
+        </div>
+        <p class="desc">Same vendor + amount appears on 2026-03-04 and 2026-03-11 (7 days apart, within duplicate window). Recommend reaching out to Square for a refund credit. <strong>Anomaly type:</strong> duplicate · <strong>Severity:</strong> high.</p>
+        <p class="source">Source: <a href="#">originals/bank-statement-2026-03</a> · <a href="#">originals/email-square-receipt-2026-03-11</a></p>
+      </div>
+
+      <div class="anomaly severity-high">
+        <div class="head">
+          <span class="name">7shifts SaaS — recurring charge, no recent vendor activity</span>
+          <span class="impact">−$43.00 / month</span>
+        </div>
+        <p class="desc">$43/mo charge has been billing for 6+ months. Last meaningful 7shifts event &gt; 90 days ago. Likely-cancellable subscription — recommend reviewing utilization before next billing cycle (Apr 14). <strong>Anomaly type:</strong> ghost-saas · <strong>Severity:</strong> high.</p>
+        <p class="source">Source: <a href="#">concepts/recurring-charges</a> · <a href="#">companies/seven-shifts</a></p>
+      </div>
+
+      <h2 class="section-title">P&amp;L snapshot — March 2026</h2>
+      <table class="pnl-table">
+        <thead>
+          <tr><th>Line</th><th>March 2026</th><th>February 2026</th><th>Δ vs prev</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Revenue</td><td class="num">$48,210</td><td class="num">$45,880</td><td class="delta-up">+$2,330 (+5.1%)</td></tr>
+          <tr><td>COGS</td><td class="num">$14,640</td><td class="num">$12,200</td><td class="delta-down">+$2,440 (+20.0%)</td></tr>
+          <tr><td>Opex</td><td class="num">$22,150</td><td class="num">$21,930</td><td class="delta-up">+$220 (+1.0%)</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td>Net</td><td class="num">$11,420</td><td class="num">$11,750</td><td class="delta-down">−$330 (−2.8%)</td></tr>
+        </tfoot>
+      </table>
+      <p style="font-size:12px;color:var(--ink-soft);margin:0 0 16px;">COGS jump (+20%) is driven by the Beanstalk price increase flagged above. Net margin still healthy at 23.7%.</p>
+
+      <h2 class="section-title">Top vendors — March 2026</h2>
+      <table class="vendor-table">
+        <thead>
+          <tr><th>Vendor</th><th>Invoices</th><th>Total paid</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Landlord LLC (rent)</td><td class="num">1</td><td class="num">$3,200</td></tr>
+          <tr><td>Beanstalk Roasters (coffee beans)</td><td class="num">2</td><td class="num">$1,830</td></tr>
+          <tr><td>PG&amp;E (utilities)</td><td class="num">1</td><td class="num">$412</td></tr>
+          <tr><td>Square POS (processing)</td><td class="num">2</td><td class="num">$204 <em style="color:var(--negative);font-size:11px;">($79 disputed)</em></td></tr>
+          <tr><td>7shifts (scheduling)</td><td class="num">1</td><td class="num">$43</td></tr>
+        </tbody>
+      </table>
+
+      <div class="attachment-strip">
+        <strong>📎 Attached:</strong> march-2026-monthly-close.pdf (this email, printable archive format) · march-2026-bank-recon-suggestions.csv
+      </div>
+
+      <p class="signoff">— Mara<br/>Mara's Coffee · 1217 Valencia St, San Francisco CA 94110<br/>Generated by QuickBrain on 2026-04-01 · brain version a3f7c2</p>
+    </div>
+
+    <div class="email-footer">
+      You're receiving this as the bookkeeper of record for Mara's Coffee. <a href="#">Unsubscribe</a> · <a href="#">Reply to Mara</a> · Sent via <a href="https://quickbrain.local">QuickBrain</a>.
+    </div>
+  </main>
+</body>
+</html>
