@@ -19,6 +19,9 @@ Captured as user choices and findings emerge.
 - **v1.1 Phase 6 stays QBO-only.** Highest US SMB market share + best raw throughput + longest refresh tokens. Source: spike 002 head-to-head.
 - **Name connector-agnostic types from day one** in `lib/connectors/types.ts` (proposed) — `Bill`, `Vendor`, `BankLine` shapes shared across QBO + future Xero adapter. Avoid retro-fit cost in v1.2. Source: spike 002a.
 - **Vendor email composition (spike 001) targets `Vendor.PrimaryEmailAddr.Address` (QBO) and `Contact.EmailAddress` (Xero).** Both expose vendor email as a first-class field. Wave + FreshBooks do not — they store vendor names as free text. The QBO+Xero choice is also a vendor-email-feasibility choice. Source: spikes 001 + 002.
+- **The `smb-audit` skill (Phase 4) must ALWAYS exit 0.** Non-zero exits trigger gbrain Minions' 3-attempt retry policy (1s/2s/4s backoff = ~7s wasted on a deterministic skill failure). Internal errors handled internally → write `concepts/audit-error.md` rather than throwing. Source: spike 003.
+- **`scripts/seed.sh` must parse the `Result:` JSON line's `exit_code` field**, not `gbrain jobs submit --follow`'s own exit code (which is always 0 regardless of job outcome). Source: spike 003.
+- **`bun` must be in PATH when invoking `gbrain`.** gbrain spawns its worker via `bun` internally. `scripts/seed.sh` + `scripts/demo-check.sh` should `export PATH="$HOME/.bun/bin:$PATH"` defensively. Source: spike 003.
 
 ## Spikes
 
@@ -28,6 +31,8 @@ Captured as user choices and findings emerge.
 | 002a | accounting-api-xero | comparison | Xero OAuth 2.0 + Accounting API ergonomics vs QBO | **VALIDATED ✓** (add in v1.2 as 2nd connector) | accounting, oauth, rest, comparison |
 | 002b | accounting-api-wave | comparison | Wave GraphQL + OAuth ergonomics vs QBO | **INVALIDATED ✗** (no new dev apps; data model wrong) | accounting, oauth, graphql, comparison, free-tier |
 | 002c | accounting-api-freshbooks | comparison | FreshBooks OAuth 2.0 + Accounting API ergonomics vs QBO | **PARTIAL ⚠** (freelancer SKU only) | accounting, oauth, rest, comparison, freelancer-niche |
+| 003 | minions-over-pglite | standard | Does `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --follow` complete cleanly with PGLite as the gbrain backend? Phase 4 unblock. | **VALIDATED ✓** (works inline; 3 gotchas for Phase 4) | gbrain, minions, pglite, phase-4-precondition |
+| 004 | accountant-facing-reports | standard | Reframe spike 001's vendor-email plumbing for Mara's CPA — same composition, different audience, different tone. Does sidestepping vendor desirability convert the v2 candidate into a v1.2 shipped feature? | PENDING | email, internal, cpa, audience-reframe |
 
 ## Related Project Context
 
