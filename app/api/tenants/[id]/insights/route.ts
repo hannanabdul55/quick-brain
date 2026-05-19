@@ -23,9 +23,10 @@
  * No gbrain CLI spawn — pure in-process static-file computation.
  */
 
+import { join } from "node:path";
 import { tenantSlugSchema } from "@/lib/gbrain/slug";
 import * as tenants from "@/lib/gbrain/tenants";
-import { FIXTURES_ROOT, SEED_TENANT_ID } from "@/lib/gbrain/paths";
+import { FIXTURES_ROOT, SEED_TENANT_ID, brainHome } from "@/lib/gbrain/paths";
 import { getCachedInsights, computeAndCache } from "@/lib/insights/cache";
 
 // Ensure seed pre-warm fires at server startup (idempotent singleton).
@@ -68,10 +69,19 @@ export async function GET(
   // ── 3. Cache-first read ───────────────────────────────────────────────────
   // The seed tenant's bundle is pre-warmed at boot by lib/insights/prewarm.ts.
   // Other tenants compute on first dashboard mount and cache for subsequent loads.
+  //
+  // sourceDir resolution (T-04-02-01 fix):
+  //   - seed tenant: reads from the static fixture dir (data/maras-coffee/)
+  //   - real tenants: reads from their gbrain-populated brain-repo dir
+  //     (brains/<tenantId>/brain-repo/ — where the smb-audit skill writes concept pages)
+  const sourceDir = isSeed
+    ? FIXTURES_ROOT
+    : join(brainHome(tenantId), "brain-repo");
+
   let bundle = getCachedInsights(tenantId);
   if (!bundle) {
     try {
-      bundle = await computeAndCache(tenantId, FIXTURES_ROOT);
+      bundle = await computeAndCache(tenantId, sourceDir);
     } catch (err: unknown) {
       console.error("[insights] compute failed for", tenantId, err);
       return Response.json(
