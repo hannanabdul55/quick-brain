@@ -31,7 +31,7 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 
 ### Phase 1: Brain Spine + Synthetic Seed (v1.0)
 **Goal:** A seeded gbrain instance running locally answers the three P0 demo questions correctly from the terminal.
-**Plans:** 6/6 complete
+**Plans:** 3/3 plans complete
 
 ### Phase 2: Onboarding Theater + Chat (v1.0)
 **Goal:** A non-technical operator can complete onboarding and ask a P0 question through the browser.
@@ -69,9 +69,9 @@ Full detail for all v1.x phases: `.planning/archive/v1.x/ROADMAP.md`
   4. A GitHub Actions workflow fails any push or PR that has a typecheck error, lint error, or failing test
 **Plans**: 3 plans
 Plans:
-- [ ] 01-01-PLAN.md — Vitest setup + CI workflow (vitest.config.ts, package.json test scripts, tests/smoke.test.ts, .github/workflows/ci.yml)
-- [ ] 01-02-PLAN.md — Unit tests for lib/audit + lib/insights (anomaly detector pure functions, bulletRegex contract, pnl/top-vendors/frontmatter parsers)
-- [ ] 01-03-PLAN.md — Port smoke scripts to Vitest (mutex-smoke → unit test, tenant-isolation → CI-safe integration test, concurrent-smoke → opt-in RUN_INTEGRATION test)
+- [x] 01-01-PLAN.md — Vitest setup + CI workflow (vitest.config.ts, package.json test scripts, tests/smoke.test.ts, .github/workflows/ci.yml)
+- [x] 01-02-PLAN.md — Unit tests for lib/audit + lib/insights (anomaly detector pure functions, bulletRegex contract, pnl/top-vendors/frontmatter parsers)
+- [x] 01-03-PLAN.md — Port smoke scripts to Vitest (mutex-smoke → unit test, tenant-isolation → CI-safe integration test, concurrent-smoke → opt-in RUN_INTEGRATION test)
 
 ### Phase 2: gbrain on Supabase + Asset Storage
 
@@ -208,7 +208,7 @@ Plans:
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Brain Spine + Synthetic Seed | v1.0 | 6/6 | Complete | 2026-05-18 |
+| 1. Brain Spine + Synthetic Seed | v1.0 | 3/3 | Complete   | 2026-05-20 |
 | 2. Onboarding Theater + Chat | v1.0 | 6/6 | Complete | 2026-05-18 |
 | 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
 | 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
