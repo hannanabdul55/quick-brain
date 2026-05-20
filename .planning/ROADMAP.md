@@ -91,7 +91,10 @@ Plans:
   4. The existing demo flow (onboarding → seed brain → chat → insight cards) works end-to-end against Supabase Postgres
   5. `gbrain migrate --to pglite` successfully restores a local brain — the rollback path is documented and tested
   6. The app runs correctly with an ephemeral local filesystem; it does not depend on a persistent writable `brains/<slug>/` directory at runtime
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+- [ ] 02-01-PLAN.md — Migrate gbrain to Supabase Postgres (INFRA-01..05): run migration, sanitize config.json, inject GBRAIN_DATABASE_URL pooler into client.ts, update seed.sh, document rollback
+- [ ] 02-02-PLAN.md — Asset storage on Supabase Storage (STOR-01..03): write gbrain.yml, scaffold lib/storage/ shim with local fallback, ephemeral-FS audit, Phase 5 handoff doc
 **UI hint**: no
 
 ### Phase 3: Vercel Deploy + Observability
@@ -213,7 +216,7 @@ Plans:
 | 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
 | 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
 | 1. Test Harness + CI | v2.0 | 0/3 | Planned | - |
-| 2. gbrain on Supabase + Asset Storage | v2.0 | 0/TBD | Not started | - |
+| 2. gbrain on Supabase + Asset Storage | v2.0 | 0/2 | Planned | - |
 | 3. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
 | 4. Background Jobs | v2.0 | 0/TBD | Not started | - |
 | 5. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
