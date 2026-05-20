@@ -135,7 +135,11 @@ Plans:
   3. `GET /api/health` returns a JSON payload reporting app, gbrain database, and Supabase Storage reachability — each subsystem individually flagged
   4. Sentry captures an unhandled server error and an unhandled client error; both surface in the Sentry dashboard
   5. The deployed app stays within Vercel Hobby free-tier limits; a documented decision records what triggers the Pro upgrade (first real user, enabling 60s function timeout)
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 04-01-PLAN.md — Verify in-process gbrain builds under next build; externalize gbrain in next.config.ts (DEPLOY-01 build-readiness gate)
+- [ ] 04-02-PLAN.md — /api/health three-subsystem probe + @sentry/nextjs instrumentation file set (DEPLOY-03, DEPLOY-04)
+- [ ] 04-03-PLAN.md — Deploy to Vercel, load secrets into encrypted env config, live verification, Hobby/Pro decision doc (DEPLOY-01, DEPLOY-02, DEPLOY-04, DEPLOY-05)
 **UI hint**: no
 
 ### Phase 5: Background Jobs
