@@ -1,37 +1,33 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.1
-milestone_name: Beyond the Demo
-status: in_progress
-stopped_at: Phase 4 complete; ready to start Phase 5 (Email Magic-Link Auth + Persistent Tenants).
-last_updated: "2026-05-19T15:42:55.952Z"
-last_activity: 2026-05-19 -- Phase 04 marked complete (4/4 plans)
+milestone: v2.0
+milestone_name: Real-World Foundation
+status: planning
+last_updated: "2026-05-20T03:07:57.701Z"
+last_activity: 2026-05-20
 progress:
-  total_phases: 3
-  completed_phases: 1
-  total_plans: 15
-  completed_plans: 4
-  percent: 27
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-17)
+See: .planning/PROJECT.md (updated 2026-05-19)
 
-**Core value:** A non-technical small-business owner can go from zero to a live, queryable gbrain — with their own data — in under 60 seconds, without ever touching a terminal.
-**Current focus:** Milestone v1.1 "Beyond the Demo" — Phase 4 complete; ready to plan Phase 5 (Email Magic-Link Auth + Persistent Tenants).
+**Core value:** A non-technical small-business owner can connect their real business data and get a live, queryable business brain — useful answers about their own books — without ever touching a terminal, persistent across sessions.
+**Current focus:** Milestone v2.0 "Real-World Foundation" — defining requirements; hackathon-era v1.x artifacts archived to `.planning/archive/v1.x/`.
 
 ## Current Position
 
-Phase: 04 — COMPLETE (smb-audit gbrain skill shipped, 4/4 plans, seed in 7s, 4 anomaly types live)
-Next phase: 05 — Email Magic-Link Auth + Persistent Tenants (not started; needs 30-min spike first)
-Last activity: 2026-05-19 -- Phase 04 marked complete (plans 04-01..04-04 merged to main)
-
-```
-v1.1 Progress [██████▌             ] 33% — Phase 4 complete, Phases 5+6 remain
-```
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-20 — Milestone v2.0 started
 
 ## Performance Metrics
 
