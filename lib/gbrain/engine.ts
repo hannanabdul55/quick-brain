@@ -23,11 +23,18 @@
  *   Phase 6 (multi-tenant) must add pool eviction. Documented gap.
  */
 
-import { createEngine } from "gbrain/engine-factory";
-import { hybridSearch } from "gbrain/search/hybrid";
-import { expandQuery } from "gbrain/search/expansion";
-import type { SearchResult } from "gbrain/types";
-import type { BrainEngine } from "gbrain/engine";
+// gbrain ships raw .ts; importing gbrain/* directly makes tsc strict-check
+// gbrain own source. The shim at @/types/gbrain exposes typed wrappers that
+// load real gbrain at runtime via a computed dynamic import. Importing the
+// shim by its own path (not gbrain/*) keeps tsc out of node_modules/gbrain AND
+// avoids the paths-redirect self-recursion that hangs queryInProcess.
+import {
+  createEngine,
+  hybridSearch,
+  expandQuery,
+  type SearchResult,
+  type BrainEngine,
+} from "@/types/gbrain";
 
 export type { SearchResult };
 
