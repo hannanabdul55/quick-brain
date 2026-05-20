@@ -9,6 +9,12 @@
  * Do NOT shell out to detect support at module load — avoids 200ms spawn cost
  * on every cold start. Operator can flip the var after a one-time check:
  *   gbrain think --help | grep system-prompt
+ *
+ * PHASE 3 NOTE: The chat route now calls think() in-process directly.
+ * RunThinkOpts (gbrain v0.28) has no systemPrompt field, so the system-prompt
+ * is NOT forwarded in the in-process path. The QB_GBRAIN_SUPPORTS_SYSTEM_PROMPT
+ * gate means this was already best-effort. Phase 6 cleanup will resolve this
+ * when gbrain adds a systemPrompt option to RunThinkOpts.
  */
 
 export const MARAS_COFFEE_SYSTEM_PROMPT =
@@ -26,6 +32,11 @@ let _warnedCHAT05 = false;
 
 /**
  * buildThinkArgs — builds the args array for `spawnGBrain` for the chat surface.
+ *
+ * NOTE (Phase 3): The chat route now calls think() in-process directly.
+ * buildThinkArgs is retained for compatibility but is no longer in the primary
+ * chat call path. Phase 6 cleanup will remove this when the onboarding spawn
+ * path is retired.
  *
  * ALWAYS uses `gbrain think --model haiku` (spec_override 2026-05-16):
  *   - `gbrain think` = LLM synthesis (what the chat surface needs)
@@ -58,4 +69,14 @@ export function buildThinkArgs(question: string, model = "haiku"): string[] {
   }
 
   return base;
+}
+
+/**
+ * getThinkModel — returns the configured think model for the in-process path.
+ *
+ * The in-process think() call in route.ts uses this to pick the model.
+ * Defaults to "haiku" per CHAT-06 (Opus hangs minute-scale on demo queries).
+ */
+export function getThinkModel(): string {
+  return "haiku";
 }

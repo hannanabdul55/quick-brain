@@ -1,8 +1,15 @@
 // HARN-04: Per-tenant in-process Promise mutex queue.
 //
-// PGLite holds an exclusive file lock; concurrent gbrain CLI invocations
-// against the same brain crash with "database is locked". Serialize at
-// the application layer so the brain only sees one writer at a time.
+// Per-tenant in-process Promise mutex queue. In Phase 1/2, this serialized
+// child-process spawns to prevent PGLite "database is locked" crashes. As of
+// Phase 3 (in-process gbrain on Postgres), PGLite is no longer in the
+// query/think path and Postgres handles concurrent reads. withTenantLock is
+// retained to:
+// (a) serialize the onboarding init/import/embed sequence per tenant (sequential
+//     gbrain operations must not interleave on the same brain dir),
+// (b) preserve the Phase 1 mutex-smoke regression test contract unchanged.
+// The lock is harmless for query/think (Postgres handles it); it is load-bearing
+// for onboarding provisioning until Phase 6 replaces the spawn-based init path.
 //
 // Queue is keyed by tenantId. Different tenants run in parallel; same
 // tenant serializes. Tasks always run, even if a predecessor rejects.
