@@ -114,9 +114,9 @@ export async function configureGateway(config: AIGatewayConfig): Promise<void> {
 }
 
 // ── Think (LLM synthesis) shim ───────────────────────────────────────────────
-// gbrain/src/core/think/index.ts is NOT in the package.json exports map, so it
-// is loaded via the dynamic _load("core/think/index") trick that bypasses tsc
-// strict-checking of gbrain's raw TS source.
+// gbrain/src/core/think/index.ts is NOT in gbrain's package.json exports map,
+// so it cannot be imported as "gbrain/core/think/index" (ERR_MODULE_NOT_FOUND).
+// _loadThink() resolves it off an exported sibling and imports the file URL.
 
 export interface RunThinkOpts {
   question: string;
@@ -162,11 +162,27 @@ export interface ThinkResult {
   };
 }
 
+// gbrain's exports map only lists ./engine, ./search/hybrid, ./ai/gateway,
+// etc. — never ./core/think/*. import("gbrain/core/think/index") therefore
+// throws ERR_MODULE_NOT_FOUND: the exports map is enforced for computed
+// specifiers too (the _load() string-concat trick only hides the import from
+// tsc, it does NOT bypass Node/Bun module resolution at runtime). _loadThink
+// resolves an exported sibling under src/core/ (./engine -> src/core/engine.ts)
+// to a file URL, then rewrites it to think/index.ts -- file-URL imports are
+// not subject to the package exports map.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function _loadThink(): Promise<any> {
+  // resolve() must be called directly on import.meta -- detaching it into a
+  // const breaks the binding ("must be bound to an import.meta object").
+  const engineUrl = (
+    import.meta as unknown as { resolve(specifier: string): string }
+  ).resolve("gbrain/engine");
+  const thinkUrl = engineUrl.replace(/\/engine\.ts(\?.*)?$/, "/think/index.ts");
+  return import(thinkUrl);
+}
+
 export async function runThink(engine: BrainEngine, opts: RunThinkOpts): Promise<ThinkResult> {
-  // gbrain/core/think/index is NOT in the package.json exports map.
-  // We load it via the computed dynamic import to bypass both tsc and the
-  // exports map restriction.
-  const m = await _load("core/think/index");
+  const m = await _loadThink();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   return m.runThink(engine, opts) as Promise<ThinkResult>;
 }
