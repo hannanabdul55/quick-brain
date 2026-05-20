@@ -35,7 +35,7 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 
 ### Phase 2: Onboarding Theater + Chat (v1.0)
 **Goal:** A non-technical operator can complete onboarding and ask a P0 question through the browser.
-**Plans:** 6/6 complete
+**Plans:** 1/2 plans executed
 
 ### Phase 3: Insight Cards + Demo Readiness (v1.0)
 **Goal:** Dashboard loads with three insight cards; 3 back-to-back rehearsals pass; `git tag demo-final` committed.
@@ -93,7 +93,7 @@ Plans:
   6. The app runs correctly with an ephemeral local filesystem; it does not depend on a persistent writable `brains/<slug>/` directory at runtime
 **Plans**: 2 plans
 Plans:
-- [ ] 02-01-PLAN.md — Migrate gbrain to Supabase Postgres (INFRA-01..05): run migration, sanitize config.json, inject GBRAIN_DATABASE_URL pooler into client.ts, update seed.sh, document rollback
+- [x] 02-01-PLAN.md — Migrate gbrain to Supabase Postgres (INFRA-01..05): run migration, sanitize config.json, inject GBRAIN_DATABASE_URL pooler into client.ts, update seed.sh, document rollback
 - [ ] 02-02-PLAN.md — Asset storage on Supabase Storage (STOR-01..03): write gbrain.yml, scaffold lib/storage/ shim with local fallback, ephemeral-FS audit, Phase 5 handoff doc
 **UI hint**: no
 
@@ -212,7 +212,7 @@ Plans:
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
 | 1. Brain Spine + Synthetic Seed | v1.0 | 3/3 | Complete   | 2026-05-20 |
-| 2. Onboarding Theater + Chat | v1.0 | 6/6 | Complete | 2026-05-18 |
+| 2. Onboarding Theater + Chat | v1.0 | 1/2 | In Progress|  |
 | 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
 | 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
 | 1. Test Harness + CI | v2.0 | 0/3 | Planned | - |
