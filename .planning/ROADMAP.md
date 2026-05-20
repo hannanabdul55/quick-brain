@@ -127,19 +127,19 @@ Plans:
 
 **Goal**: The app runs at a real public URL with secrets in Vercel config, error tracking active, and a health endpoint confirming all subsystems are reachable
 **Depends on**: Phase 3
-**Precondition**: Vercel project linked to this repo; operator authenticated with Vercel CLI (`vercel link` — done 2026-05-20, project `quickbrain`).
+**Precondition**: Vercel project linked to this repo; operator authenticated with Vercel CLI (`vercel link` — done 2026-05-20, project `quickbrain`). The local `bun run build` + production server are a solved problem (debug session `gbrain-next-build-prod` resolved; commits 52be411, c49a927).
 **Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 **Success Criteria** (what must be TRUE):
   1. A `git push main` triggers a Vercel build; the app is reachable at a real URL
   2. All secrets (gbrain DB URLs, OpenAI/Anthropic keys, Supabase keys, Resend key) are in Vercel's encrypted env config; none appear in the repo
   3. `GET /api/health` returns a JSON payload reporting app, gbrain database, and Supabase Storage reachability — each subsystem individually flagged
   4. Sentry captures an unhandled server error and an unhandled client error; both surface in the Sentry dashboard
-  5. The deployed app stays within Vercel Hobby free-tier limits; a documented decision records what triggers the Pro upgrade (first real user, enabling 60s function timeout)
+  5. The deployed app stays within Vercel Hobby free-tier limits; a documented decision records what triggers the Pro upgrade (first real/commercial user)
 **Plans**: 3 plans
 Plans:
-- [ ] 04-01-PLAN.md — Verify in-process gbrain builds under next build; externalize gbrain in next.config.ts (DEPLOY-01 build-readiness gate)
-- [ ] 04-02-PLAN.md — /api/health three-subsystem probe + @sentry/nextjs instrumentation file set (DEPLOY-03, DEPLOY-04)
-- [ ] 04-03-PLAN.md — Deploy to Vercel, load secrets into encrypted env config, live verification, Hobby/Pro decision doc (DEPLOY-01, DEPLOY-02, DEPLOY-04, DEPLOY-05)
+- [ ] 04-01-PLAN.md — GET /api/health three-subsystem probe (app / gbrain DB / Supabase Storage) with per-probe timeout isolation (DEPLOY-03)
+- [ ] 04-02-PLAN.md — @sentry/nextjs install (legitimacy-gated) + Next.js 15 instrumentation file set; withSentryConfig wrap preserving gbrain externalization; .env.example (DEPLOY-04)
+- [ ] 04-03-PLAN.md — Vercel deploy via Git integration: resolve runtime + file-tracing risks, load secrets into encrypted env config, live verification, Hobby/Pro decision doc (DEPLOY-01, DEPLOY-02, DEPLOY-05)
 **UI hint**: no
 
 ### Phase 5: Background Jobs
@@ -244,7 +244,7 @@ Plans:
 | 1. Test Harness + CI | v2.0 | 3/3 | Complete | 2026-05-20 |
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
-| 4. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
+| 4. Vercel Deploy + Observability | v2.0 | 0/3 | Planned | - |
 | 5. Background Jobs | v2.0 | 0/TBD | Not started | - |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
@@ -256,4 +256,4 @@ v1.x phases (shipped): see `.planning/archive/v1.x/ROADMAP.md`.
 
 ---
 
-*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17 · v2.0 phases defined (numbering reset): 2026-05-20*
+*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17 · v2.0 phases defined (numbering reset): 2026-05-20 · Phase 4 replanned: 2026-05-20*
