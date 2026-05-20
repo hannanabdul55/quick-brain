@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Real-World Foundation
-status: completed
-stopped_at: Roadmap created, no phases planned yet.
-last_updated: "2026-05-20T05:21:27.336Z"
-last_activity: 2026-05-20 -- Phase 02 marked complete
+status: in-progress
+stopped_at: Phase 3 (In-Process gbrain Refactor) complete -- Phase 4 (Vercel Deploy) next.
+last_updated: "2026-05-20T08:45:00.000Z"
+last_activity: 2026-05-20 -- Phase 03 complete (in-process gbrain refactor)
 progress:
   total_phases: 10
-  completed_phases: 2
-  total_plans: 5
-  completed_plans: 5
-  percent: 20
+  completed_phases: 3
+  total_plans: 8
+  completed_plans: 8
+  percent: 30
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** A non-technical small-business owner can connect their real business data and get a live, queryable business brain — useful answers about their own books — without ever touching a terminal, persistent across sessions.
-**Current focus:** Milestone v2.0 "Real-World Foundation" — Phases 1-2 shipped; Phase 3 (In-Process gbrain Refactor) ready to plan.
+**Current focus:** Milestone v2.0 "Real-World Foundation" — Phases 1-3 shipped; Phase 4 (Vercel Deploy + Observability) next.
 
 ## Current Position
 
-Phase: 3 of 10 — In-Process gbrain Refactor (ready to plan)
+Phase: 4 of 10 — Vercel Deploy + Observability (not started)
 Plan: —
-Status: Phases 1-2 complete; Phase 3 inserted 2026-05-20 per Spike 006
-Last activity: 2026-05-20 -- v2.0 roadmap reshaped to 10 phases (in-process gbrain refactor inserted before deploy)
+Status: Phases 1-3 complete; Phase 3 (In-Process gbrain Refactor) shipped 2026-05-20
+Last activity: 2026-05-20 -- Phase 3 complete: in-process query + think verified live against the Supabase brain
 
-Progress: [██░░░░░░░░] 20% — 2 of 10 phases
+Progress: [███░░░░░░░] 30% — 3 of 10 phases
 
 ## Performance Metrics
 
@@ -45,7 +45,7 @@ Progress: [██░░░░░░░░] 20% — 2 of 10 phases
 |-------|-------|--------|
 | 1. Test Harness + CI | 3/3 | Complete (2026-05-20) |
 | 2. gbrain on Supabase + Asset Storage | 2/2 | Complete (2026-05-20) |
-| 3. In-Process gbrain Refactor | TBD | Ready to plan |
+| 3. In-Process gbrain Refactor | 3/3 | Complete (2026-05-20) |
 | 4. Vercel Deploy + Observability | TBD | Not started |
 | 5. Background Jobs | TBD | Not started |
 | 6. Auth + Multi-Tenant Isolation | TBD | Not started |
@@ -70,12 +70,13 @@ Decisions are logged in PROJECT.md Key Decisions table. Active v2.0 highlights:
 
 ### Pending Todos
 
-- **Phase 6 precondition (operator action):** Register an Intuit developer app at developer.intuit.com to obtain `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`. Not yet done — flag before Phase 6 planning begins.
-- **Phase 3 precondition (operator action):** Run `vercel link` to associate the repo with the Vercel project before Phase 3 begins.
+- **Phase 7 precondition (operator action):** Register an Intuit developer app at developer.intuit.com to obtain `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`. Not yet done — flag before Phase 7 planning begins.
+- **Phase 6 precondition (operator action):** `RESEND_API_KEY` + a verified Resend domain for the auth email flow.
+- **Phase 4 precondition:** `vercel link` — DONE (project `quickbrain`). Phase 4 must add `gbrain` to `serverExternalPackages` in `next.config.ts` so webpack does not bundle gbrain's raw TS into the server build.
 
 ### Blockers/Concerns
 
-None active. Phase 1 has no operator-credential preconditions — safe to start immediately.
+None active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forward gap: gbrain has no `serverExternalPackages` entry yet — Phase 4 concern.
 
 ## Deferred Items
 
@@ -92,7 +93,7 @@ None active. Phase 1 has no operator-credential preconditions — safe to start 
 
 ## Session Continuity
 
-Last session: 2026-05-20 — v2.0 roadmap created; 9 phases defined; REQUIREMENTS.md traceability filled.
-Stopped at: Roadmap created, no phases planned yet.
-Resume file: None — start fresh with `/gsd:plan-phase 1`.
-Resume command: `/gsd:plan-phase 1` — no preconditions for Phase 1.
+Last session: 2026-05-20 — Phase 3 (In-Process gbrain Refactor) executed end-to-end; in-process query (25 results) and think (1873-char synthesis) verified live against the Supabase brain.
+Stopped at: Phase 3 complete (3/3 plans). Phase 4 (Vercel Deploy) not started.
+Resume file: None.
+Resume command: `/gsd:plan-phase 4` — `vercel link` precondition done; the plan must externalize gbrain for the Next.js server build.
