@@ -12,7 +12,9 @@
     "detect-anomalies": "bun scripts/detect-anomalies.ts",
     "concurrent-smoke": "bun scripts/concurrent-smoke.ts",
     "mutex-smoke": "bun scripts/mutex-smoke.ts",
-    "panic-reset": "bash scripts/panic-reset.sh"
+    "panic-reset": "bash scripts/panic-reset.sh",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -30,6 +32,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
     "@types/bun": "^1.1.10",
     "@types/node": "^20.16.5",
     "@types/react": "^19.0.0",
@@ -37,7 +40,7 @@
     "eslint": "^9.0.0",
     "eslint-config-next": "^15.3.2",
     "tailwindcss": "^4.0.0",
-    "@tailwindcss/postcss": "^4.0.0",
-    "typescript": "^5.6.2"
+    "typescript": "^5.6.2",
+    "vitest": "^4.1.6"
   }
 }
