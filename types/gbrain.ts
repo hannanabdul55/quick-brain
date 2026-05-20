@@ -9,15 +9,38 @@
  *
  * This shim intercepts all gbrain/* imports at the tsc level (via paths redirect
  * in tsconfig.json) and provides opaque but correctly-typed declarations.
- * At runtime (Bun / Next.js webpack) the real gbrain package is loaded via a
- * dynamic import that bypasses the paths redirect.
+ * At runtime (Bun / Next.js webpack) the real gbrain package is loaded via
+ * webpackIgnore-annotated dynamic imports that Bun handles natively.
  *
  * RUNTIME MECHANISM
  * -----------------
+ * The `/* webpackIgnore: true *\/` magic comment on each import() call tells
+ * webpack to emit the dynamic import AS-IS at runtime without processing it.
+ * No module graph entry, no context module, no parse attempt on gbrain source.
+ *
+ * The production server is started with `bun node_modules/.bin/next start`
+ * (package.json "start" script) so that Bun is the runtime. Bun natively loads
+ * gbrain's raw .ts source files via its TypeScript support. Node.js would fail
+ * with ERR_UNSUPPORTED_NODE_MODULES_TYPE_STRIPPING.
+ *
  * tsc cannot statically resolve dynamic imports whose specifier is a computed
  * string, so it does not follow into node_modules/gbrain/src/core/*.ts.
- * Bun and webpack evaluate the string at runtime and load the real package.
+ *
+ * THINK MODULE LOADING
+ * --------------------
+ * gbrain/src/core/think/index.ts is NOT in gbrain's package.json exports map,
+ * so import("gbrain/think/index") throws ERR_PACKAGE_PATH_NOT_EXPORTED.
+ * We construct the absolute path using process.cwd() + the known package
+ * structure (node_modules/gbrain/src/core/think/index.ts) and load it as a
+ * file:// URL with webpackIgnore.
+ *
+ * We avoid:
+ * - import.meta.resolve() — webpack transforms it to ({}).resolve (undefined)
+ * - createRequire.resolve("gbrain/engine") — webpack intercepts and returns a
+ *   numeric module ID instead of the actual file path
  */
+
+import { join } from "node:path";
 
 // ── Type declarations (used by tsc) ─────────────────────────────────────────
 
@@ -75,12 +98,17 @@ export interface AIGatewayConfig {
   env: Record<string, string | undefined>;
 }
 
-// ── Runtime loaders (bypasses paths redirect via computed specifier) ─────────
+// ── Runtime loaders ───────────────────────────────────────────────────────────
+//
+// The /* webpackIgnore: true */ magic comment tells webpack to skip processing
+// this import() entirely — no module graph, no context module, no file parsing.
+// Webpack emits the import() verbatim; Bun handles it at runtime.
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function _load(subpath: string): Promise<any> {
   const pkg = "gbrain/" + subpath;
-  return import(pkg);
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return import(/* webpackIgnore: true */ pkg);
 }
 
 // ── Exported functions (typed here, loaded from real gbrain at runtime) ──────
@@ -114,9 +142,25 @@ export async function configureGateway(config: AIGatewayConfig): Promise<void> {
 }
 
 // ── Think (LLM synthesis) shim ───────────────────────────────────────────────
-// gbrain/src/core/think/index.ts is NOT in gbrain's package.json exports map,
-// so it cannot be imported as "gbrain/core/think/index" (ERR_MODULE_NOT_FOUND).
-// _loadThink() resolves it off an exported sibling and imports the file URL.
+// gbrain/src/core/think/index.ts is NOT in gbrain's package.json exports map.
+//
+// Path construction strategy: process.cwd() + "node_modules/gbrain/src/core/think/index.ts"
+// This avoids all require.resolve / import.meta.resolve approaches that webpack intercepts:
+//   - import.meta.resolve() → webpack transforms to ({}).resolve (undefined at runtime)
+//   - createRequire.resolve("gbrain/engine") → webpack intercepts and returns numeric module ID
+//
+// process.cwd() is the project root in all expected runtime environments:
+//   - Local: `bun run start` from the repo directory
+//   - Vercel: function runs from the project root
+// The "file://" prefix is required for ESM import() to accept a path string.
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function _loadThink(): Promise<any> {
+  const thinkPath = join(process.cwd(), "node_modules", "gbrain", "src", "core", "think", "index.ts");
+  const thinkUrl = "file://" + thinkPath;
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+  return import(/* webpackIgnore: true */ thinkUrl);
+}
 
 export interface RunThinkOpts {
   question: string;
@@ -160,25 +204,6 @@ export interface ThinkResult {
     takesFromVector: number;
     graphHits: number;
   };
-}
-
-// gbrain's exports map only lists ./engine, ./search/hybrid, ./ai/gateway,
-// etc. — never ./core/think/*. import("gbrain/core/think/index") therefore
-// throws ERR_MODULE_NOT_FOUND: the exports map is enforced for computed
-// specifiers too (the _load() string-concat trick only hides the import from
-// tsc, it does NOT bypass Node/Bun module resolution at runtime). _loadThink
-// resolves an exported sibling under src/core/ (./engine -> src/core/engine.ts)
-// to a file URL, then rewrites it to think/index.ts -- file-URL imports are
-// not subject to the package exports map.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function _loadThink(): Promise<any> {
-  // resolve() must be called directly on import.meta -- detaching it into a
-  // const breaks the binding ("must be bound to an import.meta object").
-  const engineUrl = (
-    import.meta as unknown as { resolve(specifier: string): string }
-  ).resolve("gbrain/engine");
-  const thinkUrl = engineUrl.replace(/\/engine\.ts(\?.*)?$/, "/think/index.ts");
-  return import(thinkUrl);
 }
 
 export async function runThink(engine: BrainEngine, opts: RunThinkOpts): Promise<ThinkResult> {

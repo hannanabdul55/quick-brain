@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "bun node_modules/.bin/next start",
     "lint": "next lint",
     "seed": "bash scripts/seed.sh",
     "demo-check": "bash scripts/demo-check.sh",
