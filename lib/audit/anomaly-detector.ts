@@ -19,19 +19,19 @@ import { readdir, readFile, writeFile, mkdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
 // ---- Thresholds (match v1.0 detect-anomalies.ts) ----------------------------
-const DEMO_TODAY = new Date("2026-04-05T00:00:00Z");
-const GHOST_THRESHOLD_DAYS = 90;
-const PRICE_HIKE_THRESHOLD_PCT = 20;
+export const DEMO_TODAY = new Date("2026-04-05T00:00:00Z");
+export const GHOST_THRESHOLD_DAYS = 90;
+export const PRICE_HIKE_THRESHOLD_PCT = 20;
 // Bi-weekly orders (e.g. beans) are 14 days apart and are NOT duplicates.
 // True billing duplicates land within a week. Use a strict <7 day window.
-const DUPLICATE_WINDOW_DAYS = 7;
+export const DUPLICATE_WINDOW_DAYS = 7;
 
 // ---- Types ------------------------------------------------------------------
-type Frontmatter = Record<string, string | number | string[]>;
-type Doc = { path: string; slug: string; frontmatter: Frontmatter; body: string };
+export type Frontmatter = Record<string, string | number | string[]>;
+export type Doc = { path: string; slug: string; frontmatter: Frontmatter; body: string };
 
 type VendorMonthTotal = { vendor: string; month: string; total: number };
-type PriceHike = {
+export type PriceHike = {
   vendor: string;
   prevMonth: string;
   curMonth: string;
@@ -40,21 +40,21 @@ type PriceHike = {
   pctChange: number;
   dollarDelta: number;
 };
-type BankDebit = { vendor: string; date: string; amount: number; sourceSlug: string };
-type Duplicate = {
+export type BankDebit = { vendor: string; date: string; amount: number; sourceSlug: string };
+export type Duplicate = {
   vendor: string;
   amount: number;
   dates: string[];
   sourceSlug: string;
 };
-type Ghost = {
+export type Ghost = {
   vendor: string;
   monthlyTotal: number;
   lastEvent: string;
   ageDays: number;
   monthsActive: number;
 };
-type MissingInvoice = {
+export type MissingInvoice = {
   vendor: string;
   month: string;
   debitDate: string;
@@ -63,7 +63,7 @@ type MissingInvoice = {
 
 // ---- Helper functions -------------------------------------------------------
 
-function parseFrontmatter(raw: string): { frontmatter: Frontmatter; body: string } {
+export function parseFrontmatter(raw: string): { frontmatter: Frontmatter; body: string } {
   if (!raw.startsWith("---\n")) return { frontmatter: {}, body: raw };
   const end = raw.indexOf("\n---\n", 4);
   if (end < 0) return { frontmatter: {}, body: raw };
@@ -113,7 +113,7 @@ async function readDocs(dir: string): Promise<Doc[]> {
   return docs;
 }
 
-function ym(date: string): string {
+export function ym(date: string): string {
   return date.slice(0, 7);
 }
 
@@ -125,11 +125,11 @@ function monthLabel(ymStr: string): string {
   });
 }
 
-function usd(n: number): string {
+export function usd(n: number): string {
   return n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function severityFor(dollarImpact: number, anomalyType: string): string {
+export function severityFor(dollarImpact: number, anomalyType: string): string {
   if (dollarImpact > 100 || anomalyType === "ghost-saas" || anomalyType === "missing-invoice") {
     return "high";
   }
@@ -140,7 +140,7 @@ function severityFor(dollarImpact: number, anomalyType: string): string {
 }
 
 // ---- Anomaly #1: Month-over-month price hike per vendor ---------------------
-function detectPriceHikes(invoices: Doc[]): PriceHike[] {
+export function detectPriceHikes(invoices: Doc[]): PriceHike[] {
   const totals = new Map<string, number>();
   for (const inv of invoices) {
     const vendor = String(inv.frontmatter["vendor"] ?? "");
@@ -184,7 +184,7 @@ function detectPriceHikes(invoices: Doc[]): PriceHike[] {
 }
 
 // ---- Anomaly #2: Duplicate vendor charges on bank statements ----------------
-function parseDebits(bankStatements: Doc[]): BankDebit[] {
+export function parseDebits(bankStatements: Doc[]): BankDebit[] {
   const debits: BankDebit[] = [];
   for (const stmt of bankStatements) {
     for (const line of stmt.body.split("\n")) {
@@ -204,7 +204,7 @@ function parseDebits(bankStatements: Doc[]): BankDebit[] {
   return debits;
 }
 
-function detectDuplicates(debits: BankDebit[]): Duplicate[] {
+export function detectDuplicates(debits: BankDebit[]): Duplicate[] {
   const duplicates: Duplicate[] = [];
   const seen = new Set<string>();
   for (let i = 0; i < debits.length; i++) {
@@ -232,7 +232,7 @@ function detectDuplicates(debits: BankDebit[]): Duplicate[] {
 }
 
 // ---- Anomaly #3: Ghost subscriptions ----------------------------------------
-function detectGhosts(companies: Doc[], debits: BankDebit[]): Ghost[] {
+export function detectGhosts(companies: Doc[], debits: BankDebit[]): Ghost[] {
   const ghosts: Ghost[] = [];
   const debitsByVendor = new Map<string, BankDebit[]>();
   for (const d of debits) {
@@ -273,7 +273,7 @@ function detectGhosts(companies: Doc[], debits: BankDebit[]): Ghost[] {
 }
 
 // ---- Anomaly #4: Missing invoice (NEW — SKIL-03 / DATA-12) ------------------
-function detectMissingInvoices(invoices: Doc[], debits: BankDebit[]): MissingInvoice[] {
+export function detectMissingInvoices(invoices: Doc[], debits: BankDebit[]): MissingInvoice[] {
   // Build a set of (vendor, month) pairs that have at least one invoice
   const invoicedPairs = new Set<string>();
   for (const inv of invoices) {
