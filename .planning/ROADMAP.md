@@ -116,7 +116,11 @@ Plans:
   4. The chat `think` (synthesis) path runs in-process; the chat surface returns answers without shelling out
   5. The per-tenant concurrency model is re-evaluated for the in-process world (engine-connection management replaces subprocess serialization); the mutex-smoke regression test still passes
   6. The Phase 1 test suite stays green and the demo flow (onboarding → chat → insight cards) works end-to-end against in-process gbrain
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 03-01-PLAN.md — Pin gbrain as SHA-pinned dep + build in-process engine + queryInProcess with expansion pipeline (INPROC-01, INPROC-02, INPROC-03)
+- [ ] 03-02-PLAN.md — Rewrite client.ts query/think in-process; update chat route; re-evaluate mutex (INPROC-02, INPROC-04, INPROC-05)
+- [ ] 03-03-PLAN.md — Integration test + full suite regression + end-to-end demo verification (INPROC-06)
 **UI hint**: no
 
 ### Phase 4: Vercel Deploy + Observability
@@ -235,7 +239,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. Test Harness + CI | v2.0 | 3/3 | Complete | 2026-05-20 |
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
-| 3. In-Process gbrain Refactor | v2.0 | 0/TBD | Not started | - |
+| 3. In-Process gbrain Refactor | v2.0 | 0/3 | Not started | - |
 | 4. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
 | 5. Background Jobs | v2.0 | 0/TBD | Not started | - |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |

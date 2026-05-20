@@ -130,12 +130,12 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 | STOR-01 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
 | STOR-02 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
 | STOR-03 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
-| INPROC-01 | Phase 3: In-Process gbrain Refactor | Pending |
-| INPROC-02 | Phase 3: In-Process gbrain Refactor | Pending |
-| INPROC-03 | Phase 3: In-Process gbrain Refactor | Pending |
-| INPROC-04 | Phase 3: In-Process gbrain Refactor | Pending |
-| INPROC-05 | Phase 3: In-Process gbrain Refactor | Pending |
-| INPROC-06 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-01 | Phase 3: In-Process gbrain Refactor | Planned (03-01-PLAN.md) |
+| INPROC-02 | Phase 3: In-Process gbrain Refactor | Planned (03-01-PLAN.md, 03-02-PLAN.md) |
+| INPROC-03 | Phase 3: In-Process gbrain Refactor | Planned (03-01-PLAN.md, 03-03-PLAN.md) |
+| INPROC-04 | Phase 3: In-Process gbrain Refactor | Planned (03-02-PLAN.md) |
+| INPROC-05 | Phase 3: In-Process gbrain Refactor | Planned (03-02-PLAN.md) |
+| INPROC-06 | Phase 3: In-Process gbrain Refactor | Planned (03-03-PLAN.md) |
 | DEPLOY-01 | Phase 4: Vercel Deploy + Observability | Pending |
 | DEPLOY-02 | Phase 4: Vercel Deploy + Observability | Pending |
 | DEPLOY-03 | Phase 4: Vercel Deploy + Observability | Pending |
