@@ -34,7 +34,7 @@ export function parseFrontmatter(text: string): Record<string, unknown> {
   return record;
 }
 
-function coerceValue(raw: string): unknown {
+export function coerceValue(raw: string): unknown {
   // Boolean
   if (raw === "true") return true;
   if (raw === "false") return false;
