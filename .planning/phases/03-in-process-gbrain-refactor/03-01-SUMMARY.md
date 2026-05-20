@@ -184,3 +184,33 @@ satisfies both: tsc gets the types, Bun gets the real module.
 | Commit a9ccf4b (Task 2 RED: failing tests) | FOUND |
 | Commit 65b70ec (Task 2 GREEN: engine.ts) | FOUND |
 | Commit 94b7221 (Task 3: index.ts export) | FOUND |
+
+---
+
+## Post-Merge Fix: INPROC-03 Gateway Initialization (commit 6d16329)
+
+**Date:** 2026-05-20
+
+**Problem:** `queryInProcess` returned 1 result instead of the CLI's 21+. Root cause: gbrain's AI gateway (`gbrain/src/core/ai/gateway.ts`) is a module-level singleton. `expandQuery` calls `gatewayIsAvailable('expansion')` which returns `false` when `_config` is null — causing it to short-circuit and return `[query]` (no expansion). The CLI calls `configureGateway(buildGatewayConfig(config))` inside `connectEngine()` before `createEngine()`; the in-process path never called `configureGateway`, so `_config` stayed null.
+
+**Fix:** Three-part change (commit `6d16329`):
+
+1. **`types/gbrain.ts`** — Added `AIGatewayConfig` interface and `configureGateway()` shim wrapper (dynamic `_load("ai/gateway")` pattern preserves tsc isolation invariant; no static `import from "gbrain/ai/gateway"` which would pull gbrain source into tsc).
+
+2. **`lib/gbrain/engine.ts`** — Added `await configureGateway({ env: { ...process.env } })` call at each pool-miss in `createGBrainEngine()`, before `createEngine()`. Mirrors the CLI's `connectEngine()` exactly. `configureGateway` is idempotent; calling it per-new-engine ensures the env snapshot is current at engine-creation time.
+
+3. **Test fix (two sub-parts):**
+   - `tests/unit/gbrain/engine.test.ts`: Removed the erroneous `delete process.env.SUPABASE_DB_URL_POOLER` from `afterEach` (only `GBRAIN_DATABASE_URL`, which `beforeEach` injected, should be cleaned up). Moved Test 3 stub comment pointing to the new integration file.
+   - `tests/integration/gbrain/engine-expansion.test.ts` (new): Test 3 re-homed here because `vi.mock("gbrain/search/hybrid", ...)` in the unit file intercepts dynamic imports in `engine.ts` (via the shim), making the real `hybridSearch` unreachable from the unit file. The integration test project has no vi.mocks; all gbrain imports resolve to the real library.
+
+**Verification:**
+- `bunx tsc --noEmit` → exit 0, zero errors; tsconfig strictness unchanged; shim mechanism intact
+- `bun run test` (no creds) → 106 passed / 4 skipped; Test 3 skipped (skipIf guard)
+- `RUN_INTEGRATION=1 bun run test` (with creds) → 110 passed; Test 3 passes
+- `bun -e 'const {queryInProcess}=await import("./lib/gbrain/engine.ts"); const r=await queryInProcess("seed","what was weird about last month?"); console.log(r.length+" results")'` → **25 results** (CLI parity: CLI returned 21 in Spike 005)
+
+**Files changed:**
+- `lib/gbrain/engine.ts` (modified — configureGateway call added to createGBrainEngine)
+- `types/gbrain.ts` (modified — AIGatewayConfig + configureGateway shim added)
+- `tests/unit/gbrain/engine.test.ts` (modified — afterEach cleanup fix + Test 3 moved)
+- `tests/integration/gbrain/engine-expansion.test.ts` (new — Test 3 re-homed here)
