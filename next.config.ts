@@ -7,6 +7,26 @@ const nextConfig: NextConfig = {
   // serverless function. (debug resolution: gbrain-next-build-prod.md)
   serverExternalPackages: ["gbrain"],
 
+  // Force-include gbrain and its WASM/native deps in the Vercel serverless
+  // function bundle. Vercel's file tracer does static import analysis, but
+  // gbrain is loaded via /* webpackIgnore: true */ dynamic imports with computed
+  // specifiers ("gbrain/" + subpath) and a process.cwd()-constructed file://
+  // path (_loadThink). The tracer cannot follow either form statically, so
+  // node_modules/gbrain/** and the WASM deps would be silently excluded from
+  // the function bundle — working locally but MODULE_NOT_FOUND on Vercel.
+  // These globs force the tracer to include them regardless.
+  // All four WASM-dep packages are verified at top-level node_modules/ (not
+  // nested under node_modules/gbrain/node_modules/) as of 2026-05-20.
+  outputFileTracingIncludes: {
+    "app/api/**/route.ts": [
+      "node_modules/gbrain/**",
+      "node_modules/postgres/**",
+      "node_modules/@electric-sql/pglite/**",
+      "node_modules/tree-sitter-wasms/**",
+      "node_modules/web-tree-sitter/**",
+    ],
+  },
+
   // Type the webpack fn using Parameters/ReturnType rather than importing
   // webpack directly — webpack is not an installed package in this repo.
   // The original stale webpack type import was removed to fix tsc errors.
