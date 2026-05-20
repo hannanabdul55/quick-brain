@@ -40,7 +40,7 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 
 ### Phase 3: Insight Cards + Demo Readiness (v1.0)
 **Goal:** Dashboard loads with three insight cards; 3 back-to-back rehearsals pass; `git tag demo-final` committed.
-**Plans:** 5/5 complete
+**Plans:** 1/3 plans executed
 
 ### Phase 4: smb-audit gbrain Skill (v1.1)
 **Goal:** A real gbrain skill replaces the hand-rolled TS detector; FIXTURES_ROOT hardcoding removed; canonical brain schema locked.
@@ -118,7 +118,7 @@ Plans:
   6. The Phase 1 test suite stays green and the demo flow (onboarding → chat → insight cards) works end-to-end against in-process gbrain
 **Plans**: 3 plans
 Plans:
-- [ ] 03-01-PLAN.md — Pin gbrain as SHA-pinned dep + build in-process engine + queryInProcess with expansion pipeline (INPROC-01, INPROC-02, INPROC-03)
+- [x] 03-01-PLAN.md — Pin gbrain as SHA-pinned dep + build in-process engine + queryInProcess with expansion pipeline (INPROC-01, INPROC-02, INPROC-03)
 - [ ] 03-02-PLAN.md — Rewrite client.ts query/think in-process; update chat route; re-evaluate mutex (INPROC-02, INPROC-04, INPROC-05)
 - [ ] 03-03-PLAN.md — Integration test + full suite regression + end-to-end demo verification (INPROC-06)
 **UI hint**: no
@@ -239,7 +239,7 @@ Plans:
 |-------|-----------|----------------|--------|-----------|
 | 1. Test Harness + CI | v2.0 | 3/3 | Complete | 2026-05-20 |
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
-| 3. In-Process gbrain Refactor | v2.0 | 0/3 | Not started | - |
+| 3. In-Process gbrain Refactor | v2.0 | 1/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
 | 5. Background Jobs | v2.0 | 0/TBD | Not started | - |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
