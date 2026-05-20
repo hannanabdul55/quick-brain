@@ -125,6 +125,54 @@ None — this plan builds the engine layer without any stub implementations. The
 - GREEN gate: `feat(03-01): build lib/gbrain/engine.ts` — commit 65b70ec ✓
 - REFACTOR gate: Not needed — implementation was clean on first pass
 
+## Post-Merge Fix: tsc CI Gate Restored (2026-05-19)
+
+**Problem:** After 03-01 merged, `bunx tsc --noEmit` failed with 30+ errors all inside
+`node_modules/gbrain/src/core/*.ts` (gateway.ts, migrate.ts, pglite-engine.ts, postgres-engine.ts,
+etc.). `skipLibCheck: true` only skips `.d.ts` files — gbrain ships raw `.ts` source, so tsc
+followed the static imports in `lib/gbrain/engine.ts` into gbrain's own source and applied
+QuickBrain's `noUncheckedIndexedAccess` + `strict` settings there.
+
+**Root cause:** `gbrain/package.json` exports map points subpaths at `.ts` source files.
+When `engine.ts` statically imports `from "gbrain/engine-factory"`, tsc enters
+`node_modules/gbrain/src/core/engine-factory.ts` and transitively pulls in 5+ more files.
+`exclude: ["node_modules"]` only prevents files from being **included** in compilation —
+it does not prevent tsc from type-checking files **referenced via imports**.
+
+**Fix:** Added `types/gbrain.ts` — a typed runtime shim that intercepts all `gbrain/*` imports.
+`tsconfig.json` gains five `paths` entries redirecting each subpath to this shim:
+
+```json
+"gbrain/engine-factory": ["./types/gbrain.ts"],
+"gbrain/engine":         ["./types/gbrain.ts"],
+"gbrain/types":          ["./types/gbrain.ts"],
+"gbrain/search/hybrid":  ["./types/gbrain.ts"],
+"gbrain/search/expansion": ["./types/gbrain.ts"]
+```
+
+The shim has two layers:
+1. **Type layer (tsc):** Inline interface declarations (`BrainEngine`, `SearchResult`, etc.)
+   matching the shapes used in `engine.ts`. tsc uses these; it never enters gbrain's source.
+2. **Runtime layer (Bun/Next.js):** A `_load(subpath)` helper that does
+   `import("gbrain/" + subpath)` — a dynamic import with a computed string. Bun evaluates
+   this at runtime and loads the REAL gbrain from `node_modules`. tsc cannot statically
+   analyze computed-string dynamic imports, so it does not follow into gbrain's source.
+
+**Why paths alone (to a .d.ts file) didn't work:** Bun reads `tsconfig.json` paths and
+uses them at runtime. A paths entry pointing to a `.d.ts` stub makes Bun load the stub
+(which Bun strips to an empty module), breaking runtime. The `.ts` shim with `_load()`
+satisfies both: tsc gets the types, Bun gets the real module.
+
+**Verification results (all passing):**
+- `bunx tsc --noEmit` → exit 0, zero errors
+- `bun -e 'import("gbrain/engine-factory")'` → `createEngine` is a real function (REAL gbrain loaded)
+- `bun run test` → 106 passed / 4 skipped (no regressions)
+- QuickBrain tsconfig strictness (`strict`, `noUncheckedIndexedAccess`) unchanged
+
+**Files changed:**
+- `types/gbrain.ts` (new — the typed runtime shim)
+- `tsconfig.json` (paths entries + include pattern for `types/**/*.ts`)
+
 ## Self-Check: PASSED
 
 | Check | Status |

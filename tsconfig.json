@@ -24,11 +24,17 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "gbrain/engine-factory": ["./types/gbrain.ts"],
+      "gbrain/engine": ["./types/gbrain.ts"],
+      "gbrain/types": ["./types/gbrain.ts"],
+      "gbrain/search/hybrid": ["./types/gbrain.ts"],
+      "gbrain/search/expansion": ["./types/gbrain.ts"]
     }
   },
   "include": [
     "next-env.d.ts",
+    "types/**/*.ts",
     "lib/**/*.ts",
     "scripts/**/*.ts",
     "app/**/*.ts",
