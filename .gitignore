@@ -10,3 +10,4 @@ docs/DEMO-SCRIPT.md
 *.log
 .DS_Store
 tsconfig.tsbuildinfo
+.vercel

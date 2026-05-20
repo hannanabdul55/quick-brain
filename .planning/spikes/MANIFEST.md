@@ -36,6 +36,7 @@ Captured as user choices and findings emerge.
 | 003 | minions-over-pglite | standard | Does `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --follow` complete cleanly with PGLite as the gbrain backend? Phase 4 unblock. | **VALIDATED ✓** (works inline; 3 gotchas for Phase 4) | gbrain, minions, pglite, phase-4-precondition |
 | 004 | accountant-facing-reports | standard | Reframe spike 001's vendor-email plumbing for Mara's CPA — same composition, different audience, different tone. Does sidestepping vendor desirability convert the v2 candidate into a v1.2 shipped feature? | **VALIDATED ✓** (audience swap eliminates 6/8 spike-001 risks) | email, internal, cpa, audience-reframe |
 | 005 | gbrain-on-supabase | standard | Does `gbrain migrate --to supabase` move a PGLite brain onto a free-tier Supabase project losslessly, with pgvector + RLS intact and search working? v2.0 foundation (Phase 1) precondition. | **VALIDATED ✓** (lossless 45s migrate; free tier sufficient; 3 gotchas) | gbrain, supabase, postgres, pgvector, v2.0-foundation |
+| 006 | gbrain-in-process | standard | Can the app import gbrain as a library and run queries in-process (no child_process), so the architecture survives Vercel serverless? v2.0 Phase 3 precondition. | **VALIDATED ✓** (in-process query works 1.34s; recommends inserting an in-process-refactor phase before deploy) | gbrain, vercel, serverless, in-process, architecture |
 
 ## Related Project Context
 
