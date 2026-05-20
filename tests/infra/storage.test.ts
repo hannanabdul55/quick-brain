@@ -55,9 +55,9 @@ describe("lib/storage — local backend", () => {
   it("createStorage('local') exists() returns true after upload, false before", async () => {
     const { createLocalStorage } = await import("../../lib/storage/local.ts");
     const backend = createLocalStorage(tmpDir);
-    expect(backend.exists("not-there.txt")).toBe(false);
+    expect(await backend.exists("not-there.txt")).toBe(false);
     await backend.upload("exists-test.txt", Buffer.from("data"));
-    expect(backend.exists("exists-test.txt")).toBe(true);
+    expect(await backend.exists("exists-test.txt")).toBe(true);
   });
 
   it("factory respects STORAGE_BACKEND=local env var and returns local backend", async () => {

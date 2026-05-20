@@ -1,0 +1,14 @@
+storage:
+  # Directories that are hand-edited and version-controlled.
+  # db_tracked: content lives in both git and the Postgres DB.
+  # All four Mara's Coffee source directories contain human-curated markdown.
+  db_tracked:
+    - companies/
+    - people/
+    - concepts/
+    - originals/
+
+  # db_only: bulk/machine-generated content that should NOT be committed to git.
+  # Empty for the seed brain — no bulk auto-generated directories exist yet.
+  # Add entries here when machine-generated pages are introduced (Phase 4+).
+  db_only: []
