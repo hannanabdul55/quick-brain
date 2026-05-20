@@ -37,6 +37,15 @@ async function runOnce(args: string[], opts: SpawnGBrainOpts): Promise<GBrainRes
     ...process.env,
     GBRAIN_HOME: home,
     CI: "1",
+    // INFRA-02: route runtime gbrain queries through the Supavisor pooler
+    // (port 6543). gbrain's db.ts auto-detects port 6543 → prepare:false.
+    // GBRAIN_DATABASE_URL from process.env is inherited via ...process.env
+    // above — but we make it explicit here so it is always set even if
+    // process.env is missing it (defensive coding). If SUPABASE_DB_URL_POOLER
+    // is unset, fall back to whatever process.env.GBRAIN_DATABASE_URL provides.
+    ...(process.env.SUPABASE_DB_URL_POOLER
+      ? { GBRAIN_DATABASE_URL: process.env.SUPABASE_DB_URL_POOLER }
+      : {}),
   };
 
   const child = spawn("gbrain", args, {
