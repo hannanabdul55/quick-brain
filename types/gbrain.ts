@@ -112,3 +112,61 @@ export async function configureGateway(config: AIGatewayConfig): Promise<void> {
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   m.configureGateway(config);
 }
+
+// ── Think (LLM synthesis) shim ───────────────────────────────────────────────
+// gbrain/src/core/think/index.ts is NOT in the package.json exports map, so it
+// is loaded via the dynamic _load("core/think/index") trick that bypasses tsc
+// strict-checking of gbrain's raw TS source.
+
+export interface RunThinkOpts {
+  question: string;
+  anchor?: string;
+  rounds?: number;
+  save?: boolean;
+  take?: boolean;
+  model?: string;
+  since?: string;
+  until?: string;
+  /** Inject an LLM client (for tests — avoids real Anthropic calls). */
+  client?: unknown;
+  /** Pure-test escape: return synthesized payload without calling any LLM. */
+  stubResponse?: {
+    answer: string;
+    citations: Array<{ page_slug: string; row_num: number | null; citation_index?: number }>;
+    gaps: string[];
+  };
+}
+
+export interface ThinkResult {
+  question: string;
+  answer: string;
+  citations: Array<{
+    page_slug: string;
+    row_num: number | null;
+    text: string;
+    citation_index: number;
+  }>;
+  gaps: string[];
+  pagesGathered: number;
+  takesGathered: number;
+  graphHits: number;
+  modelUsed: string;
+  rounds: number;
+  warnings: string[];
+  savedSlug?: string;
+  diagnostics: {
+    pagesFromHybrid: number;
+    takesFromKeyword: number;
+    takesFromVector: number;
+    graphHits: number;
+  };
+}
+
+export async function runThink(engine: BrainEngine, opts: RunThinkOpts): Promise<ThinkResult> {
+  // gbrain/core/think/index is NOT in the package.json exports map.
+  // We load it via the computed dynamic import to bypass both tsc and the
+  // exports map restriction.
+  const m = await _load("core/think/index");
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  return m.runThink(engine, opts) as Promise<ThinkResult>;
+}

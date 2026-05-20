@@ -3,6 +3,8 @@ import { mkdir } from "node:fs/promises";
 import { brainHome } from "./paths.ts";
 import { assertTenantSlug } from "./slug.ts";
 import { withTenantLock } from "./mutex.ts";
+import { createGBrainEngine, queryInProcess } from "./engine.ts";
+import { runThink } from "@/types/gbrain";
 
 export type SpawnGBrainOpts = {
   tenantId: string;
@@ -18,6 +20,11 @@ export type GBrainResult = {
   stderr: string;
 };
 
+// SCOPE NOTE: spawnGBrain is retained for the
+// onboarding provisioning path (init/import/embed/config). The query and think
+// paths are in-process as of Phase 3. Phase 6 will remove this spawn surface
+// when per-tenant Postgres provisioning replaces gbrain init.
+//
 // HARN-03: spawn helper. Always sets GBRAIN_HOME to ./brains/<tenantId>/,
 // inherits OPENAI_API_KEY + ANTHROPIC_API_KEY from process.env, runs
 // non-interactively (stdin ignored, CI=1).
@@ -128,42 +135,64 @@ async function runOnce(args: string[], opts: SpawnGBrainOpts): Promise<GBrainRes
   });
 }
 
-// Convenience for query — returns stdout text or throws on non-zero.
-// Used by the onboarding warm-up (ONBD-05) for retrieval-only behavior.
-// DO NOT modify the defaults here — the warm-up explicitly uses --no-expand.
+/**
+ * query — in-process hybrid search via the engine pool (INPROC-02).
+ *
+ * Replaces the old spawn("gbrain", ["query", ...]) path. Delegates to
+ * queryInProcess which runs the full multi-query expansion + RRF fusion
+ * pipeline without a child process.
+ *
+ * The opts.noExpand flag mirrors the CLI's --no-expand (used by the onboarding
+ * warm-up path in orchestrator.ts, ONBD-05).
+ *
+ * NOTE: timeoutMs from SpawnGBrainOpts is NOT forwarded — there is no subprocess
+ * to kill. If a request timeout is needed, wire it via AbortController in the
+ * Route Handler (Phase 5 concern).
+ */
 export async function query(
   tenantId: string,
   question: string,
-  opts: Partial<SpawnGBrainOpts> = {},
+  opts?: Partial<SpawnGBrainOpts> & { noExpand?: boolean },
 ): Promise<string> {
-  const r = await spawnGBrain(["query", question], {
-    timeoutMs: 30_000,
-    ...opts,
-    tenantId,
-  });
-  if (r.code !== 0) {
-    throw new Error(
-      `gbrain query exited ${r.code} (tenant=${tenantId}): ${r.stderr.trim() || "(no stderr)"}`,
+  return withTenantLock(tenantId, async () => {
+    const results = await queryInProcess(tenantId, question, {
+      noExpand: opts?.noExpand ?? false,
+    });
+    if (results.length === 0) return "No results.\n";
+    return (
+      results
+        .map(
+          (r) =>
+            `[${(r.score ?? 0).toFixed(4)}] ${r.slug} -- ${(r.chunk_text ?? "").slice(0, 100)}`,
+        )
+        .join("\n") + "\n"
     );
-  }
-  return r.stdout.trim();
+  });
 }
 
 /**
- * think — chat answer synthesis via `gbrain think --model haiku`.
+ * think — in-process LLM synthesis via gbrain/core/think (INPROC-04).
  *
- * Returns the full GBrainResult so the caller can inspect code + stdout + stderr.
- * Does NOT throw on non-zero exit; the caller (Route Handler) handles that to
- * emit the correct SSE error frame.
+ * Replaces the old spawn("gbrain", ["think", "--model", model]) path.
+ * Uses createGBrainEngine to ensure the AI gateway is initialized (configureGateway
+ * was called) before runThink attempts Anthropic API calls.
  *
- * Why `--model haiku`?
- *   `gbrain think` defaults to Opus (`tier: 'deep'`) which hangs minute-scale
- *   on demo-class queries. `--model haiku` produces a clean answer with full
- *   [dir/slug] citations in ~30s. Verified in Phase 1 #4 retest.
- *   (CONTEXT.md "Performance Tuning", 2026-05-16)
+ * Returns GBrainResult so the chat route works unchanged:
+ *   code: 0  — success, stdout = answer text, stderr = warnings (if any)
+ *   code: 1  — error, stdout = "", stderr = error message
  *
- * Default `model`: "haiku". Pass a different value only for research/evaluation.
- * Default `timeoutMs`: 30_000ms (matches CHAT-06 requirement).
+ * Why --model haiku?
+ *   gbrain think defaults to Opus (tier: 'deep') which hangs minute-scale on
+ *   demo-class queries. haiku produces a clean answer in ~30s. (CHAT-06 / CONTEXT.md)
+ *
+ * SYSTEM PROMPT NOTE (Phase 3 gap):
+ *   The CLI's think path previously accepted --system-prompt via buildThinkArgs.
+ *   RunThinkOpts in v0.28 has no systemPrompt field, so the system-prompt is not
+ *   forwarded in-process. The QB_GBRAIN_SUPPORTS_SYSTEM_PROMPT env-var gate in
+ *   system-prompt.ts means this was already best-effort. buildThinkArgs is retained
+ *   in system-prompt.ts for compatibility; Phase 6 cleanup will resolve this.
+ *
+ * Default model: "haiku". Pass a different value only for research/evaluation.
  */
 export async function think(
   tenantId: string,
@@ -171,8 +200,27 @@ export async function think(
   opts?: { model?: string; timeoutMs?: number },
 ): Promise<GBrainResult> {
   const model = opts?.model ?? "haiku";
-  return spawnGBrain(["think", question, "--model", model], {
-    tenantId,
-    timeoutMs: opts?.timeoutMs ?? 30_000,
+  // createGBrainEngine ensures configureGateway ran (gateway singleton init).
+  // Must happen before withTenantLock because createGBrainEngine itself is
+  // safe to call concurrently (pool deduplication via Promise<BrainEngine>).
+  const engine = await createGBrainEngine(tenantId);
+  return withTenantLock(tenantId, async () => {
+    try {
+      const result = await runThink(engine, {
+        question,
+        model,
+      });
+      return {
+        code: 0,
+        stdout: result.answer,
+        stderr: result.warnings.join("\n"),
+      };
+    } catch (err: unknown) {
+      return {
+        code: 1,
+        stdout: "",
+        stderr: err instanceof Error ? err.message : String(err),
+      };
+    }
   });
 }
