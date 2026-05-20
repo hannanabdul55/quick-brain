@@ -67,7 +67,11 @@ Full detail for all v1.x phases: `.planning/archive/v1.x/ROADMAP.md`
   2. The v1.x smoke scripts (mutex, concurrent, tenant-isolation, anomaly checks) pass as proper Vitest tests
   3. `lib/audit` anomaly detector and `lib/insights` parsers have unit tests covering all four anomaly types and the bullet-regex output contract
   4. A GitHub Actions workflow fails any push or PR that has a typecheck error, lint error, or failing test
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 01-01-PLAN.md — Vitest setup + CI workflow (vitest.config.ts, package.json test scripts, tests/smoke.test.ts, .github/workflows/ci.yml)
+- [ ] 01-02-PLAN.md — Unit tests for lib/audit + lib/insights (anomaly detector pure functions, bulletRegex contract, pnl/top-vendors/frontmatter parsers)
+- [ ] 01-03-PLAN.md — Port smoke scripts to Vitest (mutex-smoke → unit test, tenant-isolation → CI-safe integration test, concurrent-smoke → opt-in RUN_INTEGRATION test)
 
 ### Phase 2: gbrain on Supabase + Asset Storage
 
@@ -208,7 +212,7 @@ Full detail for all v1.x phases: `.planning/archive/v1.x/ROADMAP.md`
 | 2. Onboarding Theater + Chat | v1.0 | 6/6 | Complete | 2026-05-18 |
 | 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
 | 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
-| 1. Test Harness + CI | v2.0 | 0/TBD | Not started | - |
+| 1. Test Harness + CI | v2.0 | 0/3 | Planned | - |
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 0/TBD | Not started | - |
 | 3. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
 | 4. Background Jobs | v2.0 | 0/TBD | Not started | - |

@@ -109,10 +109,10 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| TEST-01 | Phase 1: Test Harness + CI | Pending |
-| TEST-02 | Phase 1: Test Harness + CI | Pending |
-| TEST-03 | Phase 1: Test Harness + CI | Pending |
-| TEST-04 | Phase 1: Test Harness + CI | Pending |
+| TEST-01 | Phase 1: Test Harness + CI | Planned (01-01-PLAN.md) |
+| TEST-02 | Phase 1: Test Harness + CI | Planned (01-03-PLAN.md) |
+| TEST-03 | Phase 1: Test Harness + CI | Planned (01-01-PLAN.md) |
+| TEST-04 | Phase 1: Test Harness + CI | Planned (01-02-PLAN.md) |
 | INFRA-01 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
 | INFRA-02 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
 | INFRA-03 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
