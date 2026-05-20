@@ -2,170 +2,222 @@
 
 ## Overview
 
-QuickBrain ships in three end-to-end demoable slices over a 7.5-hour hackathon budget. Phase 1 builds the brain spine — the `gbrain` CLI harness plus a fully-seeded synthetic Mara's Coffee brain — and is demoable as a terminal smoke test. Phase 2 puts the web onboarding theater and chat surface on top of that spine, demoable as a full browser flow ending in a working question. Phase 3 adds the dashboard insight cards, the reset path, and the rehearsed 3-minute demo narrative that makes the build land for YC judges. Each phase is a runnable slice in isolation: if Phase 2 collapses, Phase 1 still demos via CLI; if Phase 3 collapses, Phase 2 still demos via web. Granularity is coarse per `config.json` — 3 phases, no finer.
+QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended with a gbrain skill (v1.1, Phase 4). As of 2026-05-19 it pivots from a single-laptop demo to a hosted multi-tenant product. v2.0 "Real-World Foundation" resets phase numbering to 1 and delivers nine sequential capability layers: a regression net (TEST), gbrain migrated to Supabase Postgres with durable asset storage (INFRA + STOR), a real Vercel deployment with observability (DEPLOY), background-job execution for long-running operations (JOBS), email magic-link auth with per-tenant isolation enforced by gbrain RLS (AUTH), live QuickBooks Online data ingest (QBO), smb-audit validated at real scale (AUDIT), hackathon artifacts removed (CLEAN x2). Each phase unblocks the next; nothing reaches a real user until AUTH gates the door.
 
-**Milestone v1.1 "Beyond the Demo"** extends the roadmap with three additional phases (4-6) continuing the sequential numbering. Each v1.1 phase is MVP-slice demoable in isolation: Phase 4 can be demoed via CLI, Phase 5 can be demoed via browser sign-in landing on the v1.0 dashboard, and Phase 6 delivers the full QBO connect + sync + chat flow. Every v1.1 phase opens with a mandatory 30-minute spike (documented in `.planning/research/SUMMARY.md` "Open Spikes") before plan-code begins.
+## Milestones
+
+- ✅ **v1.0 Demo** — Phases 1-3 (shipped 2026-05-18)
+- ✅ **v1.1 smb-audit** — Phase 4 (shipped 2026-05-19)
+- 🚧 **v2.0 Real-World Foundation** — Phases 1-9 (in progress; phase numbering reset)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
+**Phase Numbering:** Reset to 1 for v2.0 (major version bump; supersedes archived v1.1 Phases 5-6).
 
-Decimal phases appear between their surrounding integers in numeric order.
-
-- [x] **Phase 1: Brain Spine + Synthetic Seed** - End-to-end CLI slice — seeded gbrain answers "what was weird about last month?" naming all 3 planted anomalies
-- [x] **Phase 2: Onboarding Theater + Chat** - End-to-end web slice — operator completes 60-second onboarding and asks a P0 question through the browser
-- [x] **Phase 3: Insight Cards + Demo Readiness** - End-to-end demo slice — dashboard cards load with primitive labels, reset works, 3 back-to-back rehearsals pass
-- [x] **Phase 4: smb-audit gbrain Skill** - Replace the v1.0 hand-rolled TS detector with a real gbrain skill, fix FIXTURES_ROOT hardcoding, and lock the canonical brain schema (completed 2026-05-19)
-- [ ] **Phase 5: Email Magic-Link Auth + Persistent Tenants** - Email-only sign-in, per-user brain auto-provisioning, demo-path preserved under AUTH_ENABLED=0
-- [ ] **Phase 6: QuickBooks Online Ingest** - QBO OAuth 2.0 → markdown transformer → gbrain import → smb-audit skill, full live-data path
+- [ ] **Phase 1: Test Harness + CI** — Vitest suite + GitHub Actions gate; regression net before the risky INFRA migration
+- [ ] **Phase 2: gbrain on Supabase + Asset Storage** — Migrate gbrain from PGLite to Supabase Postgres; wire binary-asset storage via gbrain's `files` subsystem; no credentials in committed files
+- [ ] **Phase 3: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
+- [ ] **Phase 4: Background Jobs** — Measure what exceeds the serverless timeout; route long work through Inngest (or equivalent) with visible browser progress
+- [ ] **Phase 5: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation enforced by gbrain RLS
+- [ ] **Phase 6: QuickBooks Online Ingest** — Intuit OAuth 2.0; ingest invoices/vendors/transactions into a per-tenant hosted brain as a background job
+- [ ] **Phase 7: smb-audit Scale Validation** — Run smb-audit against real-scale QBO data; measure and fix quality or timeout regressions
+- [ ] **Phase 8: Hackathon Artifact Removal** — Delete panic-reset, synthetic-data generator, AUTH_ENABLED bypass, and demo-specific copy
+- [ ] **Phase 9: CLAUDE.md + Codebase Hygiene** — Update CLAUDE.md for the v2.0 stack; remove hackathon constraints; update architecture section
 
 ## Phase Details
 
-### Phase 1: Brain Spine + Synthetic Seed
-**Goal:** A seeded gbrain instance running locally answers the three P0 demo questions correctly from the terminal, validating the entire data path before any UI exists.
-**Mode:** mvp
-**Depends on:** Nothing (first phase)
-**Requirements:** HARN-01, HARN-02, HARN-03, HARN-04, HARN-05, HARN-06, DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07, DATA-08, DATA-09, DATA-10, DATA-11
-**Success Criteria** (what must be TRUE):
-  1. Operator runs `scripts/demo-check.sh` and it exits 0 — `gbrain --version`, `gbrain doctor --fast`, both API keys, and write-access to `./brains/` are all confirmed.
-  2. Operator runs `bun run seed` (or `scripts/seed.sh`) and a working `brains/seed/` directory is produced end-to-end (init → config → import → embed → anomaly detection) with three detectable planted anomalies (Beanstalk price hike, Square duplicate charge, ghost 7shifts SaaS).
-  3. Operator runs `GBRAIN_HOME=brains/seed gbrain graph-query beanstalk-roasters --depth 2` from the terminal and sees ≥3 neighbors (invoices, the price-hike email, the anomaly concept page).
-  4. Operator runs `GBRAIN_HOME=brains/seed gbrain query "what was weird about last month?"` from the terminal and gets a coherent answer naming all 3 planted anomalies in a single response.
-  5. Operator runs the same `gbrain query` concurrently against the same brain through `lib/gbrain/client.ts` and the calls serialize via the in-process mutex queue with no PGLite lock errors.
-**Plans:** 6 plans across 5 waves
-- [ ] 01-01-PLAN.md — Bootstrap Next.js + Bun scaffolding, pre-declare all Phase 1 scripts, write scripts/demo-check.sh + README (HARN-01, HARN-02)
-- [ ] 01-02-PLAN.md — lib/gbrain/ harness: spawnGBrain + mutex + slug + tenants + typed errors (HARN-03..06)
-- [ ] 01-03-PLAN.md — Synthetic Mara's Coffee dataset + validate-dataset.ts (DATA-01..07)
-- [ ] 01-04-PLAN.md — Hand-rolled anomaly detector (3 rules + CLI writing concept pages) (DATA-08)
-- [ ] 01-05-PLAN.md — End-to-end scripts/seed.sh pipeline producing brains/seed/ (DATA-09, DATA-11)
-- [ ] 01-06-PLAN.md — Smoke gate orchestrator + concurrent-smoke + anomaly assertion (DATA-10)
+<details>
+<summary>✅ v1.0 Demo (Phases 1-3) + v1.1 smb-audit (Phase 4) — SHIPPED 2026-05-19</summary>
 
-### Phase 2: Onboarding Theater + Chat
-**Goal:** A non-technical operator can land on `/`, complete the onboarding flow, arrive on their dashboard within 60 seconds, and ask one of the three P0 questions — getting a real gbrain-backed answer with citations rendered as markdown.
-**Mode:** mvp
-**Depends on:** Phase 1
-**Requirements:** ONBD-01, ONBD-02, ONBD-03, ONBD-04, ONBD-05, ONBD-06, ONBD-07, ONBD-08, CHAT-01, CHAT-02, CHAT-03, CHAT-04, CHAT-05, CHAT-06
-**Success Criteria** (what must be TRUE):
-  1. Operator visits `/`, clicks the "Start your business brain" CTA, fills the 3-field form (business name, business type, owner name), and submits — no login, no API-key field, no payment screen appears anywhere in the flow.
-  2. After submit, the browser plays a 30–45 second narrated SSE onboarding sequence with 5 honest stage labels ("Creating your brain → Reading your invoices and emails → Building the knowledge graph → Indexing for search → Ready"), with at least one real `gbrain query` warm-up call interleaved before the stream closes.
-  3. Total wall-clock from form submit to interactive dashboard at `/dash/<tenantId>` is consistently between 30 and 60 seconds across 3 consecutive measurements on the demo laptop.
-  4. Operator on the dashboard sees three hardcoded suggested-question chips, clicks "What was weird about last month?", and within ~30 seconds receives a markdown response with visible `[Source: ...]` citations naming all three planted anomalies.
-  5. A query exceeding 30 seconds aborts cleanly and shows a graceful error message in the chat instead of hanging; the brain says "I don't have data on that" rather than guessing when asked about topics outside the synthetic dataset.
-**Plans:** 6 plans across 4 waves
-- [ ] 02-01-PLAN.md — Scaffold Next.js 15 + shadcn primitives + landing CTA + onboarding form skeleton (ONBD-01, ONBD-02, ONBD-08)
-- [ ] 02-02-PLAN.md — POST /api/tenants Route Handler + createTenant domain (zod, cp -r seed, register, <2s) (ONBD-03)
-- [ ] 02-03-PLAN.md — GET /api/tenants/[id]/onboard SSE + 5-stage orchestrator + gbrain --no-expand warm-up (ONBD-04, ONBD-05, ONBD-07)
-- [ ] 02-04-PLAN.md — /onboard page full client flow: form → POST → EventSource → progress → redirect → error retry (ONBD-02, ONBD-04, ONBD-06, ONBD-07, ONBD-08)
-- [ ] 02-05-PLAN.md — /dash/[id] dashboard + chat surface UI (3 hardcoded chips, message list, scroll area, input) (CHAT-01, CHAT-04)
-- [ ] 02-06-PLAN.md — POST /api/tenants/[id]/chat SSE + react-markdown renderer + query() helper patched to --no-expand default (CHAT-02, CHAT-03, CHAT-05, CHAT-06)
-**UI hint:** yes
+### Phase 1: Brain Spine + Synthetic Seed (v1.0)
+**Goal:** A seeded gbrain instance running locally answers the three P0 demo questions correctly from the terminal.
+**Plans:** 6/6 complete
 
-### Phase 3: Insight Cards + Demo Readiness
-**Goal:** The dashboard loads with three insight cards (top vendors, P&L snapshot, anomalies) each tagged with a visible gbrain-primitive label, the operator can reset state in under 10 seconds, and the full 3-minute demo runs back-to-back three times without errors or state leakage — `git tag demo-final` is committed.
-**Mode:** mvp
-**Depends on:** Phase 2
-**Requirements:** INSI-01, INSI-02, INSI-03, INSI-04, INSI-05, INSI-06, DEMO-01, DEMO-02, DEMO-03, DEMO-04, DEMO-05, DEMO-06
-**Success Criteria** (what must be TRUE):
-  1. Operator opens `/dash/<tenantId>` and within ~5 seconds sees three insight cards populated with real gbrain-backed data: "Top 5 vendors this quarter" (label: "from graph"), "Monthly P&L snapshot" with month-over-month delta (label: "from timeline"), and "Anomalies flagged" listing all 3 planted anomalies with dollar impacts and source links (label: "from skill: recurring-charges"). Each card visibly distinguishes loading, data, and error states.
-  2. Operator presses-and-holds the dashboard Reset button for 2 seconds; in under 10 seconds the tenant brain is rebuilt from `brains/seed/`, in-flight spawns are killed, caches are cleared, and the dashboard reloads to a clean state.
-  3. Operator runs `scripts/panic-reset.sh` from the terminal and the entire demo state (all tenants, caches, ports) resets in under 15 seconds without rebuilding the seed.
-  4. Operator runs 3 consecutive end-to-end demos (onboarding → dashboard → 1 chat question → reset → repeat) back-to-back on the demo laptop with no errors, no state leakage between runs, and identical anomaly findings each time.
-  5. `docs/DEMO-SCRIPT.md` exists with the 3-minute spoken script and names "graph", "timeline", and "skill" out loud at least 3 times each; a `git tag demo-final` is created with a panic-recovery pointer in the README.
-**Plans:** 5 plans across 3 waves
-- [ ] 03-01-PLAN.md — lib/insights/ pure-TS parsers (top-vendors, pnl, anomalies) + in-process cache + boot pre-warm (INSI-02, INSI-03, INSI-04, INSI-06, DEMO-03)
-- [ ] 03-02-PLAN.md — GET /api/tenants/[id]/insights batch endpoint (INSI-01 server)
-- [ ] 03-03-PLAN.md — Insight cards UI (TopVendors, PnL, Anomalies) + InsightCardsRow + mount above ChatSurface (INSI-01 client, INSI-02..05)
-- [ ] 03-04-PLAN.md — Reset endpoint + abort tracker + press-and-hold ResetButton + scripts/panic-reset.sh (DEMO-01, DEMO-02)
-- [ ] 03-05-PLAN.md — docs/DEMO-SCRIPT.md (3-min script) + README "Panic recovery" section (DEMO-04, DEMO-05, DEMO-06)
-**UI hint:** yes
+### Phase 2: Onboarding Theater + Chat (v1.0)
+**Goal:** A non-technical operator can complete onboarding and ask a P0 question through the browser.
+**Plans:** 6/6 complete
 
-### Phase 4: smb-audit gbrain Skill
-**Goal:** A user (or operator) runs `gbrain jobs submit smb-audit --follow` against any brain dir and the dashboard "Anomalies flagged" card renders all 4 anomaly types with severity badges populated from skill output, end-to-end.
-**Mode:** mvp
-**Depends on:** Phase 3
-**Precondition:** 30-minute spike before plan-code: run `GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit shell --params '{"cmd":"echo hello","cwd":"<repo>"}' --follow` and confirm execution path + exit code surfacing; simultaneously verify `import { search, get_page } from '@gbrain/api'` resolves under Bun. If either fails, fall back to `bun skills/smb-audit/index.ts` invoked directly with `GBRAIN_HOME=…` — same observable outcome, simpler harness.
-**Requirements:** SKIL-01, SKIL-02, SKIL-03, SKIL-04, SKIL-05, SKIL-06, SKIL-07, SKIL-08, SKIL-09, SKIL-10
-**Success Criteria** (what must be TRUE):
-  1. Operator runs `GBRAIN_HOME=brains/seed GBRAIN_ALLOW_SHELL_JOBS=1 gbrain jobs submit smb-audit --follow` and the job completes without error, writing `concepts/march-anomaly-summary.md` and `concepts/recurring-charges.md` to `brains/seed/brain-repo/`.
-  2. The "Anomalies flagged" insight card on the demo dashboard renders all 4 anomaly types (Beanstalk price-hike, Square duplicate, 7shifts ghost SaaS, and bank-debit-without-invoice) with `severity` badges and `dollar_impact` values drawn from skill-emitted frontmatter — not the v1.0 hand-rolled detector output.
-  3. Two different tenant brain dirs (the demo seed and a fresh empty brain) yield different anomaly counts on the insight card — confirming the `FIXTURES_ROOT` hardcoding is removed from `lib/insights/cache.ts::computeAndCache` and parsers read from the active tenant's `brains/<brainSlug>/brain-repo/` directory.
-  4. Re-running the skill against the same brain dir a second time produces byte-identical concept pages with no duplicate bullet lines, confirming idempotent output (SKIL-06).
-  5. `docs/brain-schema.md` exists, documents the canonical frontmatter contract (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency` plus skill output fields `severity`, `dollar_impact`, `anomaly_type`), and the `seed.sh` pipeline completes in under 10 seconds using the skill in place of the old detector script.
-**Plans:** 4/4 plans complete
-- [x] 04-01-PLAN.md — Skill scaffold + detector port (4 anomaly rules) + docs/brain-schema.md (SKIL-01..06, SKIL-08)
-- [x] 04-02-PLAN.md — FIXTURES_ROOT → sourceDir refactor + tenant isolation test (SKIL-09)
-- [x] 04-03-PLAN.md — seed.sh integration + smoke gate + dashboard end-to-end (SKIL-07, SKIL-10)
-- [x] 04-04-PLAN.md — Typecheck + lint + deprecation marker + v1.0 demo regression check
-**UI hint:** yes
+### Phase 3: Insight Cards + Demo Readiness (v1.0)
+**Goal:** Dashboard loads with three insight cards; 3 back-to-back rehearsals pass; `git tag demo-final` committed.
+**Plans:** 5/5 complete
 
-### Phase 5: Email Magic-Link Auth + Persistent Tenants
-**Goal:** An email-only signed-in user can persistently land on their own brain across browser sessions, the anonymous demo continues to work when `AUTH_ENABLED=0`, and the per-tenant mutex remains keyed by `brainSlug` (verified by a regression mutex-smoke test).
-**Mode:** mvp
-**Depends on:** Phase 4
-**Precondition:** 30-minute spike before plan-code: send a real Resend email from a Route Handler to a test Gmail address and confirm primary-inbox delivery within 60 seconds. If it lands in spam, configure SPF/DKIM on the sending domain before building the flow.
-**Requirements:** AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09, AUTH-10, AUTH-11, AUTH-12, AUTH-13, AUTH-14
+### Phase 4: smb-audit gbrain Skill (v1.1)
+**Goal:** A real gbrain skill replaces the hand-rolled TS detector; FIXTURES_ROOT hardcoding removed; canonical brain schema locked.
+**Plans:** 4/4 complete (2026-05-19)
+
+Full detail for all v1.x phases: `.planning/archive/v1.x/ROADMAP.md`
+
+</details>
+
+---
+
+### 🚧 v2.0 Real-World Foundation
+
+**Milestone Goal:** A real SMB owner can sign up, connect their QuickBooks, and get a live queryable brain — persisted across sessions and devices — without touching a terminal.
+
+---
+
+### Phase 1: Test Harness + CI
+
+**Goal**: A regression net exists before any risky infra changes — every push is automatically checked
+**Depends on**: Nothing (first v2.0 phase)
+**Requirements**: TEST-01, TEST-02, TEST-03, TEST-04
 **Success Criteria** (what must be TRUE):
-  1. A new user visits `/sign-in`, enters their email, receives a magic-link email via Resend within 5 seconds, clicks the link, and lands on `/dash/<brainSlug>` with a 30-day HttpOnly session cookie set — then reloads the page and is still signed in.
-  2. The same magic-link URL cannot be redeemed a second time — second click shows "this link has already been used" with a send-fresh-link option, confirming the `magic_tokens.used` single-use guard is in place (AUTH-04).
-  3. Running `scripts/panic-reset.sh` against a system with real users (`AUTH_ENABLED=1`) prints a confirmation prompt listing affected user emails and exits non-zero unless `--force-real-tenants` is passed, confirming the safety gate (AUTH-12).
-  4. With `AUTH_ENABLED=0`, the anonymous `/onboard` flow completes end-to-end as in v1.0 without any sign-in redirect, confirming the demo path is fully preserved (AUTH-10).
-  5. A regression mutex-smoke test runs 5 concurrent `gbrain query` calls against the same `brainSlug` with no PGLite lock contention errors, and the mutex key is typed as `BrainSlug` (branded TypeScript type) so that accidentally passing a `userId` is a compile-time error (AUTH-11).
-**Plans:** 5/5 plans
-- [ ] 05-01-PLAN.md — Auth foundation: jose helpers + bun:sqlite schema + BrainSlug branded type (AUTH-02, AUTH-06, AUTH-11)
-- [ ] 05-02-PLAN.md — Send-link + verify + sign-out endpoints + Resend integration + rate limit (AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-07, AUTH-09)
-- [ ] 05-03-PLAN.md — Sign-in/check-email/used pages + middleware + AUTH_ENABLED flag (AUTH-01, AUTH-04, AUTH-08, AUTH-09, AUTH-10)
-- [ ] 05-04-PLAN.md — Ops hardening: panic-reset gate + demo-check env verification (AUTH-12, AUTH-13)
-- [ ] 05-05-PLAN.md — Smoke gate: mutex-smoke regression + auth E2E + runbook (AUTH-11, AUTH-14)
-**UI hint:** yes
+  1. `bun run test` runs the full suite locally and exits 0 on a clean codebase
+  2. The v1.x smoke scripts (mutex, concurrent, tenant-isolation, anomaly checks) pass as proper Vitest tests
+  3. `lib/audit` anomaly detector and `lib/insights` parsers have unit tests covering all four anomaly types and the bullet-regex output contract
+  4. A GitHub Actions workflow fails any push or PR that has a typecheck error, lint error, or failing test
+**Plans**: TBD
+
+### Phase 2: gbrain on Supabase + Asset Storage
+
+**Goal**: gbrain's storage runs on Supabase Postgres + Supabase Storage; no credentials live in committed files; the demo flow works end-to-end
+**Depends on**: Phase 1
+**Precondition**: Supabase project provisioned (operator already has one); `SUPABASE_DB_URL_DIRECT` (port 5432) and `SUPABASE_DB_URL_POOLER` (port 6543) set in `.env.local` (gitignored). Spike 005 confirms the free tier is sufficient.
+**Requirements**: INFRA-01, INFRA-02, INFRA-03, INFRA-04, INFRA-05, STOR-01, STOR-02, STOR-03
+**Context** (Spike 005 — three gotchas must be addressed):
+  - Gotcha 1: `gbrain migrate` writes the DB password into `<brain>/.gbrain/config.json` in plaintext. The prod brain config must use `GBRAIN_DATABASE_URL` env var; `config.json` must carry no plaintext secret.
+  - Gotcha 2: Two connection strings, two jobs — direct (5432) for migration/DDL; Supavisor pooler (6543, `prepare:false`) for app runtime. gbrain accepts the pooler via `GBRAIN_DATABASE_URL`.
+  - Gotcha 3: After `migrate --to supabase` the brain's `config.json` flips to `engine: postgres`. Plan migration as a one-shot; dev brains stay PGLite.
+  - STOR scope: markdown pages live in Postgres post-migration (no object storage needed for them). Only binary assets need Supabase Storage, via gbrain's `files` subsystem + a `gbrain.yml`. The `lib/storage/` shim scope is narrower — a `STORAGE_BACKEND=local` fallback is still required for local dev.
+**Success Criteria** (what must be TRUE):
+  1. `gbrain migrate --to supabase` completes on the Supabase project; `gbrain doctor` reports pgvector + RLS + schema version all OK (matching Spike 005: 48/48 pages, 100% embeddings, schema v66)
+  2. Runtime gbrain queries via `lib/gbrain/` use the Supavisor pooler; no DB credential appears in any committed file
+  3. Binary brain assets (uploaded files) are stored in a Supabase Storage bucket via gbrain's `files` subsystem and a `gbrain.yml`, not local disk
+  4. The existing demo flow (onboarding → seed brain → chat → insight cards) works end-to-end against Supabase Postgres
+  5. `gbrain migrate --to pglite` successfully restores a local brain — the rollback path is documented and tested
+  6. The app runs correctly with an ephemeral local filesystem; it does not depend on a persistent writable `brains/<slug>/` directory at runtime
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 3: Vercel Deploy + Observability
+
+**Goal**: The app runs at a real public URL with secrets in Vercel config, error tracking active, and a health endpoint confirming all subsystems are reachable
+**Depends on**: Phase 2
+**Precondition**: Vercel project linked to this repo; operator authenticated with Vercel CLI (`vercel link`).
+**Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
+**Success Criteria** (what must be TRUE):
+  1. A `git push main` triggers a Vercel build; the app is reachable at a real URL
+  2. All secrets (gbrain DB URLs, OpenAI/Anthropic keys, Supabase keys, Resend key) are in Vercel's encrypted env config; none appear in the repo
+  3. `GET /api/health` returns a JSON payload reporting app, gbrain database, and Supabase Storage reachability — each subsystem individually flagged
+  4. Sentry captures an unhandled server error and an unhandled client error; both surface in the Sentry dashboard
+  5. The deployed app stays within Vercel Hobby free-tier limits; a documented decision records what triggers the Pro upgrade (first real user, enabling 60s function timeout)
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 4: Background Jobs
+
+**Goal**: gbrain operations that exceed the serverless timeout run as background jobs with visible browser progress; the inline-vs-job split is driven by measured latency, not guessed
+**Depends on**: Phase 3
+**Requirements**: JOBS-01, JOBS-02, JOBS-03
+**Success Criteria** (what must be TRUE):
+  1. The p95 latency of each gbrain operation (query retrieval, think synthesis, import) is measured and documented; the inline-vs-job threshold is set from this data
+  2. Operations confirmed to exceed the timeout run as Inngest (or equivalent) background jobs, not inline in a Route Handler
+  3. The browser receives real-time progress for a background job via SSE or polling — no silent multi-minute wait
+  4. Operations that complete under the timeout continue to run inline with no latency overhead from job infrastructure
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 5: Auth + Multi-Tenant Isolation
+
+**Goal**: A real user can sign in with email, have exactly one brain provisioned and persisted, and be certain no other user can reach their data
+**Depends on**: Phase 3, Phase 4
+**Precondition**: `RESEND_API_KEY` with a verified Resend sending domain (operator step); `JWT_SECRET` ≥32 bytes (`openssl rand -hex 32`); `TOKEN_ENCRYPTION_KEY` ≥32 bytes (for QBO token encryption, schema lands here). All must be in Vercel env config and `.env.local`.
+**Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09
+**Context** (Spike 005 + v1.x auth research):
+  - gbrain auto-enables RLS on all 41 tables and installs an auto-RLS event trigger. Multi-tenant isolation leans on gbrain RLS, not a separate app-layer scheme. Spike 005 confirmed: `[OK] rls: RLS enabled on 41/41 public tables`.
+  - Auth stack: `jose` (pure Web Crypto, no native bindings, works in middleware) + Supabase Postgres for user/session/token store (AUTH-08 requires this — not `bun:sqlite`, which was the local-demo choice). Resend for transactional email.
+  - HS256 is the practical JWT algorithm for a single-server Next.js app; one `JWT_SECRET` env var vs. a key-pair. Upgrade to ES256 is a comment-documented path.
+**Success Criteria** (what must be TRUE):
+  1. A user enters their email on the sign-in page; a magic link arrives in their inbox via Resend within 5 seconds
+  2. Clicking the link establishes a 30-day session cookie; a second or expired click shows a clear "already used" message with a resend path
+  3. A signed-in user is routed to their own brain dashboard on every device and browser session; the brain is auto-provisioned on first sign-in
+  4. Route handlers and pages that expose tenant data redirect unauthenticated requests to sign-in
+  5. A test confirms User A cannot query, read, or list any data belonging to User B — cross-tenant access is blocked at the database layer via gbrain RLS
+  6. A user can sign out; accessing a protected link after sign-out redirects to sign-in
+  7. More than one magic-link request per email per 60 seconds is rate-limited; the email is not sent again
+**Plans**: TBD
+**UI hint**: yes
 
 ### Phase 6: QuickBooks Online Ingest
-**Goal:** A signed-in user clicks "Connect QuickBooks" → completes Intuit OAuth (sandbox) → sees a real-time SSE sync → asks "what was weird about last month?" in chat and receives a markdown answer that cites at least one `qbo-` sourced page.
-**Mode:** mvp
-**Depends on:** Phases 4 + 5
-**Precondition:** 30-minute spike before plan-code: complete the QBO OAuth flow end-to-end with `intuit-oauth` against a sandbox account (authorize → callback → `tokenResponse.getJson()`), confirm `realmId` is present, and verify `qbo.findVendors({})` returns ≥1 vendor. If `intuit-oauth` has a Bun issue, fall back to raw `fetch` with `Authorization: Bearer`.
-**Requirements:** QBO-01, QBO-02, QBO-03, QBO-04, QBO-05, QBO-06, QBO-07, QBO-08, QBO-09, QBO-10, QBO-11, QBO-12, QBO-13
+
+**Goal**: A signed-in user can connect their QuickBooks Online account and have their invoices, vendors, and transactions ingested into their hosted brain as a background job with visible progress; chat and smb-audit reflect real QBO data
+**Depends on**: Phase 5, Phase 4
+**Precondition**: An Intuit developer app (sandbox) with `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, and `QBO_REDIRECT_URI` — **operator does not have these yet; registering at developer.intuit.com is a required operator step before this phase can be planned.** Add to Vercel env config and `.env.local`.
+**Requirements**: QBO-01, QBO-02, QBO-03, QBO-04, QBO-05, QBO-06
+**Context**:
+  - Spike 002a confirmed QBO as the right first connector (highest US SMB market share, longest refresh tokens, best raw throughput).
+  - `docs/brain-schema.md` (defined in v1.1 Phase 4) is the hard ingest contract; the QBO transformer must produce markdown matching it.
+  - Connector-agnostic types (`Bill`, `Vendor`, `BankLine`) in `lib/connectors/types.ts` from Spike 002a avoid retro-fit cost when Xero is added later.
+  - OAuth tokens must be encrypted at rest; `TOKEN_ENCRYPTION_KEY` precondition is established in Phase 5.
 **Success Criteria** (what must be TRUE):
-  1. A signed-in user clicks "Connect QuickBooks", completes Intuit OAuth consent in the sandbox, and lands back on `/dash/<brainSlug>?qbo=connected` — with encrypted `access_token`, `refresh_token`, and `realm_id` persisted to the user's row in `bun:sqlite` (QBO-02).
-  2. Initial sync streams SSE progress events to the browser, fetches ≥1 vendor and ≥3 invoices from QBO sandbox within 90 seconds, and the transformed markdown files (`companies/qbo-<slug>.md`, `originals/invoice-<id>.md`) appear in `brains/<brainSlug>/brain-repo/` with all canonical frontmatter fields (`type`, `vendor`, `vendor_slug`, `date`, `amount`, `currency`) populated (QBO-03, QBO-04, QBO-05).
-  3. The user asks "what was weird about last month?" in chat and the response cites at least one `qbo-` sourced page, confirming the `smb-audit` skill produces ≥1 anomaly when run against QBO-sourced markdown with no parser modifications (QBO-07, schema-parity criterion).
-  4. A user who has both demo seed data and QBO data sees no vendor-page collisions — `qbo-` prefixed slugs coexist with synthetic seed slugs in the same brain dir without any page overwriting another (QBO-06).
-  5. `scripts/demo-check.sh` fails loudly if `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, `QBO_REDIRECT_URI`, or `QBO_ENV` are missing, and the same end-to-end flow against a synthetic-only (non-QBO) tenant continues to work unchanged (QBO-12, QBO-13).
-**Plans:** TBD (target 6: OAuth flow + token encryption; transformer pure-functions + unit tests with fixture data; SSE sync endpoint + dashboard UI; refresh-token rotation + reconnect banner; CDC incremental sync + disconnect; smoke gate against sandbox)
-**UI hint:** yes
+  1. A signed-in user clicks "Connect QuickBooks"; completing Intuit OAuth links the account and stores encrypted access token, refresh token, and realm ID in Supabase Postgres
+  2. After connecting, a background job ingests the user's invoices, vendors, and bank-statement-shaped transactions; the browser shows real progress, not a silent wait
+  3. The user can ask questions in chat over their real QBO data; `smb-audit` anomaly cards reflect that data
+  4. When the access token expires it is transparently refreshed; a revoked or failed connection surfaces a clear reconnect prompt
+  5. Subsequent syncs correctly update changed records without creating duplicates
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 7: smb-audit Scale Validation
+
+**Goal**: The smb-audit skill is confirmed correct and performant against real-scale QBO data (multi-year, thousands of rows) before the product is opened to real users
+**Depends on**: Phase 6
+**Requirements**: AUDIT-01, AUDIT-02, AUDIT-03
+**Success Criteria** (what must be TRUE):
+  1. The `smb-audit` skill completes without errors or timeouts against a real-scale dataset (minimum: multi-year, 1000+ invoices/transactions)
+  2. Anomaly-detection quality (false positive and false negative rate per rule type) is measured and documented for the real-scale run; any rule that materially degrades at scale is fixed or flagged with a known-limitation note
+  3. The skill's real-scale runtime fits within the background-job model established in Phase 4 — it does not require inline execution above the measured timeout threshold
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 8: Hackathon Artifact Removal
+
+**Goal**: Every shortcut added for the hackathon demo is removed; the hosted product always requires sign-in and carries no destructive controls
+**Depends on**: Phase 5 (the `AUTH_ENABLED=0` bypass can only be safely removed once real auth is live and verified)
+**Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
+**Success Criteria** (what must be TRUE):
+  1. `scripts/panic-reset.sh` and any demo-reset UI controls are deleted; no destructive "wipe everything" path exists in the deployed product
+  2. The synthetic Mara's Coffee dataset and synthetic-data generator are removed from the runtime path; the app no longer references them except optionally as test fixtures
+  3. The `AUTH_ENABLED=0` code path is deleted; the deployed app always requires sign-in with no bypass
+  4. Hackathon-specific UI copy (demo instructions, demo-script references, "Mara's Coffee" persona strings) is removed or rewritten for the real product
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 9: CLAUDE.md + Codebase Hygiene
+
+**Goal**: CLAUDE.md accurately describes the v2.0 stack, conventions, and architecture; a developer following it alone can run, extend, and deploy the app correctly
+**Depends on**: Phase 8 (all hackathon artifacts must be removed before CLAUDE.md is updated, so the documented stack matches reality)
+**Requirements**: CLEAN-05
+**Success Criteria** (what must be TRUE):
+  1. CLAUDE.md's technology stack, constraints, and architecture sections reflect the live v2.0 system (Vercel + Supabase + Supabase Storage + Inngest + Resend + real auth) — no references to PGLite runtime, the 7.5-hour hackathon timeline, or the single-laptop demo remain
+  2. The hackathon "What NOT to Use" table is replaced with v2.0-specific conventions (patterns to follow, anti-patterns to avoid, and why)
+  3. A developer following CLAUDE.md alone can understand how to run, extend, and deploy the app correctly without reading archived docs
+**Plans**: TBD
+**UI hint**: no
+
+---
 
 ## Progress
 
-**Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
 
-| Phase | Plans Complete | Status | Completed |
-|-------|----------------|--------|-----------|
-| 1. Brain Spine + Synthetic Seed | 6/6 | Passed | 2026-05-16 |
-| 2. Onboarding Theater + Chat | 6/6 | Passed | 2026-05-16 |
-| 3. Insight Cards + Demo Readiness | 5/5 | Passed (DEMO-04 operator-driven) | 2026-05-16 |
-| 4. smb-audit gbrain Skill | 4/4 | Complete   | 2026-05-19 |
-| 5. Email Magic-Link Auth + Persistent Tenants | 0/5 | Not started | - |
-| 6. QuickBooks Online Ingest | 0/6 | Not started | - |
-
-**Milestone v1.0:** PASSED — see `.planning/v1.0-MILESTONE-AUDIT.md` (42/42 reqs, 14/15 auto-verified must-haves, 1 operator-driven rehearsal gate).
-
----
-
-## MVP-Slice Discipline (Per Phase)
-
-Every phase must deliver an end-to-end runnable slice. If a later phase fails or is abandoned, the prior phase must remain demoable on its own:
-
-- **Phase 1 demoable surface:** Terminal. `bun run seed` produces the seed brain; `gbrain query` against it answers correctly. No UI required.
-- **Phase 2 demoable surface:** Browser. Full onboarding → chat flow. The Phase 1 CLI demo continues to work in parallel.
-- **Phase 3 demoable surface:** Full 3-minute demo. The Phase 2 web flow continues to work without the insight cards if Phase 3 is incomplete.
-- **Phase 4 demoable surface:** CLI. `gbrain jobs submit smb-audit --follow` produces concept pages; the v1.0 demo flow continues to work end-to-end.
-- **Phase 5 demoable surface:** Browser. Sign-in flow ends at the existing v1.0 dashboard backed by the user's auto-provisioned brain (starts empty or copies seed depending on env config); anonymous demo path still works under `AUTH_ENABLED=0`.
-- **Phase 6 demoable surface:** Browser. Full QBO connect + sync + chat over real data; synthetic-seed tenants continue to work alongside QBO tenants without any data collision.
-
-v1.0 deferred items now resolved in v1.1: `SKIL-01` (custom gbrain skill) lands in Phase 4 as the SKIL-01..10 cluster; `DATA-12` (4th anomaly: missing-invoice) is folded into SKIL-03. Remaining v2 stretch — `CHAT-07/08/09`, `INSI-07/08/09`, `STRP-01`, `GMAIL-01`, `BRAIN-01/02/03` — stays out of v1.1 per `REQUIREMENTS.md`.
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 1. Brain Spine + Synthetic Seed | v1.0 | 6/6 | Complete | 2026-05-18 |
+| 2. Onboarding Theater + Chat | v1.0 | 6/6 | Complete | 2026-05-18 |
+| 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
+| 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
+| 1. Test Harness + CI | v2.0 | 0/TBD | Not started | - |
+| 2. gbrain on Supabase + Asset Storage | v2.0 | 0/TBD | Not started | - |
+| 3. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
+| 4. Background Jobs | v2.0 | 0/TBD | Not started | - |
+| 5. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
+| 6. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
+| 7. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
+| 8. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
+| 9. CLAUDE.md + Codebase Hygiene | v2.0 | 0/TBD | Not started | - |
 
 ---
 
-*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17*
+*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17 · v2.0 phases defined (numbering reset): 2026-05-20*

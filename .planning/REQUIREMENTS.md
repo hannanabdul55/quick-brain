@@ -105,21 +105,53 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 
 ## Traceability
 
-Filled by the roadmapper once v2.0 phases are defined.
+**Coverage:** 43 v2.0 requirements mapped across 9 phases. All requirements covered.
 
 | Requirement | Phase | Status |
-|---|---|---|
-| TEST-01..04 | TBD | Pending |
-| INFRA-01..05 | TBD | Pending |
-| STOR-01..03 | TBD | Pending |
-| DEPLOY-01..05 | TBD | Pending |
-| JOBS-01..03 | TBD | Pending |
-| AUTH-01..09 | TBD | Pending |
-| QBO-01..06 | TBD | Pending |
-| AUDIT-01..03 | TBD | Pending |
-| CLEAN-01..05 | TBD | Pending |
-
-**Coverage:** 43 v2.0 requirements (TEST 4, INFRA 5, STOR 3, DEPLOY 5, JOBS 3, AUTH 9, QBO 6, AUDIT 3, CLEAN 5). Phase mapping pending roadmap.
+|-------------|-------|--------|
+| TEST-01 | Phase 1: Test Harness + CI | Pending |
+| TEST-02 | Phase 1: Test Harness + CI | Pending |
+| TEST-03 | Phase 1: Test Harness + CI | Pending |
+| TEST-04 | Phase 1: Test Harness + CI | Pending |
+| INFRA-01 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| INFRA-02 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| INFRA-03 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| INFRA-04 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| INFRA-05 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| STOR-01 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| STOR-02 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| STOR-03 | Phase 2: gbrain on Supabase + Asset Storage | Pending |
+| DEPLOY-01 | Phase 3: Vercel Deploy + Observability | Pending |
+| DEPLOY-02 | Phase 3: Vercel Deploy + Observability | Pending |
+| DEPLOY-03 | Phase 3: Vercel Deploy + Observability | Pending |
+| DEPLOY-04 | Phase 3: Vercel Deploy + Observability | Pending |
+| DEPLOY-05 | Phase 3: Vercel Deploy + Observability | Pending |
+| JOBS-01 | Phase 4: Background Jobs | Pending |
+| JOBS-02 | Phase 4: Background Jobs | Pending |
+| JOBS-03 | Phase 4: Background Jobs | Pending |
+| AUTH-01 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-02 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-03 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-04 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-05 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-06 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-07 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-08 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-09 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
+| QBO-01 | Phase 6: QuickBooks Online Ingest | Pending |
+| QBO-02 | Phase 6: QuickBooks Online Ingest | Pending |
+| QBO-03 | Phase 6: QuickBooks Online Ingest | Pending |
+| QBO-04 | Phase 6: QuickBooks Online Ingest | Pending |
+| QBO-05 | Phase 6: QuickBooks Online Ingest | Pending |
+| QBO-06 | Phase 6: QuickBooks Online Ingest | Pending |
+| AUDIT-01 | Phase 7: smb-audit Scale Validation | Pending |
+| AUDIT-02 | Phase 7: smb-audit Scale Validation | Pending |
+| AUDIT-03 | Phase 7: smb-audit Scale Validation | Pending |
+| CLEAN-01 | Phase 8: Hackathon Artifact Removal | Pending |
+| CLEAN-02 | Phase 8: Hackathon Artifact Removal | Pending |
+| CLEAN-03 | Phase 8: Hackathon Artifact Removal | Pending |
+| CLEAN-04 | Phase 8: Hackathon Artifact Removal | Pending |
+| CLEAN-05 | Phase 9: CLAUDE.md + Codebase Hygiene | Pending |
 
 ---
 
