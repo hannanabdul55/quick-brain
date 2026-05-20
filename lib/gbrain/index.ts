@@ -25,3 +25,9 @@ export {
   brainHome,
   seedBrainHome,
 } from "./paths.ts";
+export {
+  createGBrainEngine,
+  queryInProcess,
+  disconnectEngine,
+  type SearchResult,
+} from "./engine.ts";
