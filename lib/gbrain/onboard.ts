@@ -20,6 +20,13 @@ export type OnboardOpts = {
 // SSE route (per-tenant). Each gbrain step is its own spawn so progress
 // is visible and failures are scoped.
 export async function onboard(opts: OnboardOpts): Promise<void> {
+  // Phase 2 scope note: This function initializes local PGLite tenant brains.
+  // The seed/demo brain (SEED_TENANT_ID) has been migrated to Supabase Postgres
+  // (Phase 2), but onboard() still creates local PGLite brains for new tenants.
+  // This is intentional — Phase 5 (Auth + Multi-Tenant Isolation) will replace
+  // this with Postgres-backed provisioning using gbrain RLS per tenant.
+  // Until Phase 5 ships, new-tenant onboarding requires a writable local filesystem.
+  // See docs/phase-5-onboarding-handoff.md for the full scope boundary.
   const { tenantId } = opts;
   const fixtures = opts.fixturesDir ?? FIXTURES_ROOT;
   const emit = opts.onEvent ?? (() => {});
