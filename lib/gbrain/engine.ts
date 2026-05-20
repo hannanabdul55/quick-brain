@@ -15,6 +15,14 @@
  *   config.json. createEngine takes the config object directly.
  * - The noExpand option mirrors the CLI's --no-expand flag (used in onboarding
  *   warm-up where expansion is unnecessary and slow).
+ * - configureGateway is called once per new engine (when the pool misses) to
+ *   initialize gbrain's AI gateway so that expandQuery's
+ *   gatewayIsAvailable('expansion') check returns true. Without this, expandQuery
+ *   returns [query] (no expansion) and hybridSearch returns only 1 result instead
+ *   of the CLI's 21. The CLI calls configureGateway in connectEngine(); we
+ *   replicate that here (INPROC-03 fix). Called at engine-creation time (not
+ *   once per process) so that each new engine receives the current process.env
+ *   snapshot — important when tests reconfigure keys between runs.
  *
  * Threat model:
  * - T-03-02: GBRAIN_DATABASE_URL is read in-process (accepted — same exposure
@@ -32,6 +40,7 @@ import {
   createEngine,
   hybridSearch,
   expandQuery,
+  configureGateway,
   type SearchResult,
   type BrainEngine,
 } from "@/types/gbrain";
@@ -67,6 +76,13 @@ function buildConfig(): { engine: "postgres"; database_url: string } {
  * existing promise — no second createEngine call, no double-connect).
  * Otherwise create, connect, and pool a new engine.
  *
+ * Calls configureGateway before creating the engine, mirroring the CLI's
+ * connectEngine() which calls configureGateway() before createEngine(). This
+ * initializes gbrain's AI gateway singleton so expandQuery can reach the
+ * expansion provider (ANTHROPIC_API_KEY) and gatewayIsAvailable('expansion')
+ * returns true. Called at each pool-miss (once per unique tenant per session)
+ * so the env snapshot is current at the time the engine is created.
+ *
  * @param tenantId - The tenant slug (e.g. "seed")
  * @returns A connected BrainEngine ready for queries
  */
@@ -74,6 +90,13 @@ export async function createGBrainEngine(tenantId: string): Promise<BrainEngine>
   if (enginePool.has(tenantId)) {
     return enginePool.get(tenantId)!;
   }
+
+  // Initialize gbrain's AI gateway with the current process.env snapshot.
+  // Mirrors CLI's connectEngine() which calls configureGateway(buildGatewayConfig(config))
+  // before createEngine(). The gateway is a module-level singleton in gbrain;
+  // configureGateway() is idempotent (just sets _config) so calling it on every
+  // new engine is safe and ensures fresh env vars are always picked up.
+  await configureGateway({ env: { ...process.env } });
 
   const config = buildConfig();
   const enginePromise: Promise<BrainEngine> = createEngine(config).then(

@@ -67,9 +67,11 @@ describe("lib/gbrain/engine", () => {
   });
 
   afterEach(() => {
-    // Clean up env vars
+    // Clean up only env vars that beforeEach injected. Do NOT delete
+    // SUPABASE_DB_URL_POOLER — that comes from the real environment and
+    // Test 3 (the creds-gated integration test) needs it intact when it runs
+    // after this describe block.
     delete process.env.GBRAIN_DATABASE_URL;
-    delete process.env.SUPABASE_DB_URL_POOLER;
   });
 
   describe("Test 1: createGBrainEngine returns engine with query() and disconnect()", () => {
@@ -156,18 +158,8 @@ describe("lib/gbrain/engine", () => {
   });
 });
 
-// Test 3: Integration guard (requires live Supabase connection)
-describe.skipIf(!process.env.SUPABASE_DB_URL_POOLER)(
-  "Test 3 [integration]: queryInProcess returns results from live brain",
-  () => {
-    it("returns >1 result for demo query when expansion is active", async () => {
-      // This test uses the actual gbrain library against Supabase
-      // Only runs when SUPABASE_DB_URL_POOLER is set
-      const { queryInProcess: realQueryInProcess } = await import("../../../lib/gbrain/engine.ts");
-      const results = await realQueryInProcess("seed", "what was weird about last month?");
-      expect(Array.isArray(results)).toBe(true);
-      // With expansion, we expect >1 result (CLI returns 21)
-      expect(results.length).toBeGreaterThan(1);
-    }, 30_000); // Allow 30s for live DB query
-  }
-);
+// Test 3 (INPROC-03) has been moved to tests/integration/gbrain/engine-expansion.test.ts
+// because vi.mock("gbrain/search/hybrid", ...) in this file intercepts dynamic
+// imports in engine.ts, making it impossible to test the real hybridSearch path
+// (which expansion requires) from inside a file that has module-level vi.mocks.
+// The integration test project does not have vi.mocks and uses real gbrain imports.

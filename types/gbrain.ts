@@ -57,6 +57,24 @@ export interface HybridSearchOpts {
   [key: string]: unknown;
 }
 
+export interface AIGatewayConfig {
+  /** Current embedding model as "provider:modelId" (e.g. "openai:text-embedding-3-large"). */
+  embedding_model?: string;
+  /** Target embedding dims. */
+  embedding_dimensions?: number;
+  /** Current expansion model as "provider:modelId". */
+  expansion_model?: string;
+  /** Default chat model. */
+  chat_model?: string;
+  /** Optional per-provider base URL override. */
+  base_urls?: Record<string, string>;
+  /**
+   * Env snapshot read once at configuration time.
+   * Gateway never reads process.env at call time — pass process.env here.
+   */
+  env: Record<string, string | undefined>;
+}
+
 // ── Runtime loaders (bypasses paths redirect via computed specifier) ─────────
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -87,4 +105,10 @@ export async function expandQuery(query: string): Promise<string[]> {
   const m = await _load("search/expansion");
   // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   return m.expandQuery(query) as Promise<string[]>;
+}
+
+export async function configureGateway(config: AIGatewayConfig): Promise<void> {
+  const m = await _load("ai/gateway");
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  m.configureGateway(config);
 }
