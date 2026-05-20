@@ -7,11 +7,11 @@ stopped_at: Roadmap created, no phases planned yet.
 last_updated: "2026-05-20T05:21:27.336Z"
 last_activity: 2026-05-20 -- Phase 02 marked complete
 progress:
-  total_phases: 9
+  total_phases: 10
   completed_phases: 2
   total_plans: 5
   completed_plans: 5
-  percent: 22
+  percent: 20
 ---
 
 # Project State
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-19)
 
 **Core value:** A non-technical small-business owner can connect their real business data and get a live, queryable business brain — useful answers about their own books — without ever touching a terminal, persistent across sessions.
-**Current focus:** Milestone v2.0 "Real-World Foundation" — Phase 1 (Test Harness + CI) ready to plan.
+**Current focus:** Milestone v2.0 "Real-World Foundation" — Phases 1-2 shipped; Phase 3 (In-Process gbrain Refactor) ready to plan.
 
 ## Current Position
 
-Phase: 02 — COMPLETE
+Phase: 3 of 10 — In-Process gbrain Refactor (ready to plan)
 Plan: —
-Status: Phase 02 complete
-Last activity: 2026-05-20 -- Phase 02 marked complete
+Status: Phases 1-2 complete; Phase 3 inserted 2026-05-20 per Spike 006
+Last activity: 2026-05-20 -- v2.0 roadmap reshaped to 10 phases (in-process gbrain refactor inserted before deploy)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20% — 2 of 10 phases
 
 ## Performance Metrics
 
@@ -43,15 +43,16 @@ Progress: [░░░░░░░░░░] 0%
 
 | Phase | Plans | Status |
 |-------|-------|--------|
-| 1. Test Harness + CI | TBD | Not started |
-| 2. gbrain on Supabase + Asset Storage | TBD | Not started |
-| 3. Vercel Deploy + Observability | TBD | Not started |
-| 4. Background Jobs | TBD | Not started |
-| 5. Auth + Multi-Tenant Isolation | TBD | Not started |
-| 6. QuickBooks Online Ingest | TBD | Not started |
-| 7. smb-audit Scale Validation | TBD | Not started |
-| 8. Hackathon Artifact Removal | TBD | Not started |
-| 9. CLAUDE.md + Codebase Hygiene | TBD | Not started |
+| 1. Test Harness + CI | 3/3 | Complete (2026-05-20) |
+| 2. gbrain on Supabase + Asset Storage | 2/2 | Complete (2026-05-20) |
+| 3. In-Process gbrain Refactor | TBD | Ready to plan |
+| 4. Vercel Deploy + Observability | TBD | Not started |
+| 5. Background Jobs | TBD | Not started |
+| 6. Auth + Multi-Tenant Isolation | TBD | Not started |
+| 7. QuickBooks Online Ingest | TBD | Not started |
+| 8. smb-audit Scale Validation | TBD | Not started |
+| 9. Hackathon Artifact Removal | TBD | Not started |
+| 10. CLAUDE.md + Codebase Hygiene | TBD | Not started |
 
 ## Accumulated Context
 

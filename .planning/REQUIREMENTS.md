@@ -32,6 +32,15 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 - [ ] **STOR-02**: A storage abstraction (`lib/storage/`) handles asset read/write with a `STORAGE_BACKEND=local` fallback for local development.
 - [ ] **STOR-03**: The app runs correctly on an ephemeral filesystem — it does not depend on a persistent writable local `brains/<slug>/` directory at runtime.
 
+### INPROC — In-process gbrain refactor
+
+- [ ] **INPROC-01**: `gbrain` is a SHA-pinned dependency in `package.json`; the app no longer relies on a `bun link`-ed `gbrain` binary on PATH.
+- [ ] **INPROC-02**: `lib/gbrain/client.ts` runs queries via in-process gbrain library calls (`createEngine` + `hybridSearch`); no `child_process.spawn` of `gbrain` remains in the query path.
+- [ ] **INPROC-03**: The in-process query pipeline replicates the CLI's multi-query expansion + RRF fusion, so result counts and ranking match the pre-refactor CLI behavior.
+- [ ] **INPROC-04**: The chat synthesis path (`gbrain think`) runs in-process; the chat surface returns answers without shelling out.
+- [ ] **INPROC-05**: The per-tenant concurrency model is re-evaluated for the in-process world (engine-connection management replaces subprocess serialization); the mutex-smoke regression test still passes.
+- [ ] **INPROC-06**: The Phase 1 test suite stays green and the demo flow (onboarding → chat → insight cards) works end-to-end against in-process gbrain.
+
 ### DEPLOY — Vercel deploy + observability
 
 - [ ] **DEPLOY-01**: The app is deployed to Vercel at a real URL, building from `main`.
@@ -105,7 +114,7 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 
 ## Traceability
 
-**Coverage:** 43 v2.0 requirements mapped across 9 phases. All requirements covered.
+**Coverage:** 49 v2.0 requirements mapped across 10 phases. All requirements covered. (INPROC group + Phase 3 added 2026-05-20 per Spike 006; DEPLOY..CLEAN renumbered +1.)
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
@@ -121,37 +130,43 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 | STOR-01 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
 | STOR-02 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
 | STOR-03 | Phase 2: gbrain on Supabase + Asset Storage | Planned (02-02-PLAN.md) |
-| DEPLOY-01 | Phase 3: Vercel Deploy + Observability | Pending |
-| DEPLOY-02 | Phase 3: Vercel Deploy + Observability | Pending |
-| DEPLOY-03 | Phase 3: Vercel Deploy + Observability | Pending |
-| DEPLOY-04 | Phase 3: Vercel Deploy + Observability | Pending |
-| DEPLOY-05 | Phase 3: Vercel Deploy + Observability | Pending |
-| JOBS-01 | Phase 4: Background Jobs | Pending |
-| JOBS-02 | Phase 4: Background Jobs | Pending |
-| JOBS-03 | Phase 4: Background Jobs | Pending |
-| AUTH-01 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-02 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-03 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-04 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-05 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-06 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-07 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-08 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-09 | Phase 5: Auth + Multi-Tenant Isolation | Pending |
-| QBO-01 | Phase 6: QuickBooks Online Ingest | Pending |
-| QBO-02 | Phase 6: QuickBooks Online Ingest | Pending |
-| QBO-03 | Phase 6: QuickBooks Online Ingest | Pending |
-| QBO-04 | Phase 6: QuickBooks Online Ingest | Pending |
-| QBO-05 | Phase 6: QuickBooks Online Ingest | Pending |
-| QBO-06 | Phase 6: QuickBooks Online Ingest | Pending |
-| AUDIT-01 | Phase 7: smb-audit Scale Validation | Pending |
-| AUDIT-02 | Phase 7: smb-audit Scale Validation | Pending |
-| AUDIT-03 | Phase 7: smb-audit Scale Validation | Pending |
-| CLEAN-01 | Phase 8: Hackathon Artifact Removal | Pending |
-| CLEAN-02 | Phase 8: Hackathon Artifact Removal | Pending |
-| CLEAN-03 | Phase 8: Hackathon Artifact Removal | Pending |
-| CLEAN-04 | Phase 8: Hackathon Artifact Removal | Pending |
-| CLEAN-05 | Phase 9: CLAUDE.md + Codebase Hygiene | Pending |
+| INPROC-01 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-02 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-03 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-04 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-05 | Phase 3: In-Process gbrain Refactor | Pending |
+| INPROC-06 | Phase 3: In-Process gbrain Refactor | Pending |
+| DEPLOY-01 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-02 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-03 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-04 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-05 | Phase 4: Vercel Deploy + Observability | Pending |
+| JOBS-01 | Phase 5: Background Jobs | Pending |
+| JOBS-02 | Phase 5: Background Jobs | Pending |
+| JOBS-03 | Phase 5: Background Jobs | Pending |
+| AUTH-01 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-02 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-03 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-04 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-05 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-06 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-07 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-08 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-09 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| QBO-01 | Phase 7: QuickBooks Online Ingest | Pending |
+| QBO-02 | Phase 7: QuickBooks Online Ingest | Pending |
+| QBO-03 | Phase 7: QuickBooks Online Ingest | Pending |
+| QBO-04 | Phase 7: QuickBooks Online Ingest | Pending |
+| QBO-05 | Phase 7: QuickBooks Online Ingest | Pending |
+| QBO-06 | Phase 7: QuickBooks Online Ingest | Pending |
+| AUDIT-01 | Phase 8: smb-audit Scale Validation | Pending |
+| AUDIT-02 | Phase 8: smb-audit Scale Validation | Pending |
+| AUDIT-03 | Phase 8: smb-audit Scale Validation | Pending |
+| CLEAN-01 | Phase 9: Hackathon Artifact Removal | Pending |
+| CLEAN-02 | Phase 9: Hackathon Artifact Removal | Pending |
+| CLEAN-03 | Phase 9: Hackathon Artifact Removal | Pending |
+| CLEAN-04 | Phase 9: Hackathon Artifact Removal | Pending |
+| CLEAN-05 | Phase 10: CLAUDE.md + Codebase Hygiene | Pending |
 
 ---
 

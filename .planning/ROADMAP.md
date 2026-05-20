@@ -2,27 +2,28 @@
 
 ## Overview
 
-QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended with a gbrain skill (v1.1, Phase 4). As of 2026-05-19 it pivots from a single-laptop demo to a hosted multi-tenant product. v2.0 "Real-World Foundation" resets phase numbering to 1 and delivers nine sequential capability layers: a regression net (TEST), gbrain migrated to Supabase Postgres with durable asset storage (INFRA + STOR), a real Vercel deployment with observability (DEPLOY), background-job execution for long-running operations (JOBS), email magic-link auth with per-tenant isolation enforced by gbrain RLS (AUTH), live QuickBooks Online data ingest (QBO), smb-audit validated at real scale (AUDIT), hackathon artifacts removed (CLEAN x2). Each phase unblocks the next; nothing reaches a real user until AUTH gates the door.
+QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended with a gbrain skill (v1.1, Phase 4). As of 2026-05-19 it pivots from a single-laptop demo to a hosted multi-tenant product. v2.0 "Real-World Foundation" resets phase numbering to 1 and delivers ten sequential capability layers: a regression net (TEST), gbrain migrated to Supabase Postgres with durable asset storage (INFRA + STOR), the app refactored to call gbrain in-process so it survives serverless (INPROC), a real Vercel deployment with observability (DEPLOY), background-job execution for long-running operations (JOBS), email magic-link auth with per-tenant isolation enforced by gbrain RLS (AUTH), live QuickBooks Online data ingest (QBO), smb-audit validated at real scale (AUDIT), hackathon artifacts removed (CLEAN x2). Each phase unblocks the next; nothing reaches a real user until AUTH gates the door.
 
 ## Milestones
 
 - ✅ **v1.0 Demo** — Phases 1-3 (shipped 2026-05-18)
 - ✅ **v1.1 smb-audit** — Phase 4 (shipped 2026-05-19)
-- 🚧 **v2.0 Real-World Foundation** — Phases 1-9 (in progress; phase numbering reset)
+- 🚧 **v2.0 Real-World Foundation** — Phases 1-10 (in progress; phase numbering reset)
 
 ## Phases
 
 **Phase Numbering:** Reset to 1 for v2.0 (major version bump; supersedes archived v1.1 Phases 5-6).
 
-- [ ] **Phase 1: Test Harness + CI** — Vitest suite + GitHub Actions gate; regression net before the risky INFRA migration
-- [ ] **Phase 2: gbrain on Supabase + Asset Storage** — Migrate gbrain from PGLite to Supabase Postgres; wire binary-asset storage via gbrain's `files` subsystem; no credentials in committed files
-- [ ] **Phase 3: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
-- [ ] **Phase 4: Background Jobs** — Measure what exceeds the serverless timeout; route long work through Inngest (or equivalent) with visible browser progress
-- [ ] **Phase 5: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation enforced by gbrain RLS
-- [ ] **Phase 6: QuickBooks Online Ingest** — Intuit OAuth 2.0; ingest invoices/vendors/transactions into a per-tenant hosted brain as a background job
-- [ ] **Phase 7: smb-audit Scale Validation** — Run smb-audit against real-scale QBO data; measure and fix quality or timeout regressions
-- [ ] **Phase 8: Hackathon Artifact Removal** — Delete panic-reset, synthetic-data generator, AUTH_ENABLED bypass, and demo-specific copy
-- [ ] **Phase 9: CLAUDE.md + Codebase Hygiene** — Update CLAUDE.md for the v2.0 stack; remove hackathon constraints; update architecture section
+- [x] **Phase 1: Test Harness + CI** — Vitest suite + GitHub Actions gate; regression net before the risky INFRA migration
+- [x] **Phase 2: gbrain on Supabase + Asset Storage** — Migrate gbrain from PGLite to Supabase Postgres; wire binary-asset storage via gbrain's `files` subsystem; no credentials in committed files
+- [ ] **Phase 3: In-Process gbrain Refactor** — Replace `spawn("gbrain")` CLI shell-out with in-process library calls (`createEngine`/`hybridSearch`/`think`); SHA-pin gbrain as a dependency. Prerequisite for serverless (Spike 006)
+- [ ] **Phase 4: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
+- [ ] **Phase 5: Background Jobs** — Measure what exceeds the serverless timeout; route long work through Inngest (or equivalent) with visible browser progress
+- [ ] **Phase 6: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation enforced by gbrain RLS
+- [ ] **Phase 7: QuickBooks Online Ingest** — Intuit OAuth 2.0; ingest invoices/vendors/transactions into a per-tenant hosted brain as a background job
+- [ ] **Phase 8: smb-audit Scale Validation** — Run smb-audit against real-scale QBO data; measure and fix quality or timeout regressions
+- [ ] **Phase 9: Hackathon Artifact Removal** — Delete panic-reset, synthetic-data generator, AUTH_ENABLED bypass, and demo-specific copy
+- [ ] **Phase 10: CLAUDE.md + Codebase Hygiene** — Update CLAUDE.md for the v2.0 stack; remove hackathon constraints; update architecture section
 
 ## Phase Details
 
@@ -97,11 +98,32 @@ Plans:
 - [x] 02-02-PLAN.md — Asset storage on Supabase Storage (STOR-01..03): write gbrain.yml, scaffold lib/storage/ shim with local fallback, ephemeral-FS audit, Phase 5 handoff doc
 **UI hint**: no
 
-### Phase 3: Vercel Deploy + Observability
+### Phase 3: In-Process gbrain Refactor
+
+**Goal**: The app calls gbrain in-process as a library — no `child_process.spawn` — so it can run on a serverless platform; query result quality matches the pre-refactor CLI behavior
+**Depends on**: Phase 2
+**Requirements**: INPROC-01, INPROC-02, INPROC-03, INPROC-04, INPROC-05, INPROC-06
+**Context** (Spike 006 — VALIDATED):
+  - The app currently does `spawn("gbrain", …)` in `lib/gbrain/client.ts`. The `gbrain` binary is `bun link`-ed (not a `package.json` dependency) and absent on serverless; gbrain also spawns a `bun` worker subprocess. This blocks the Vercel deploy.
+  - Spike 006 confirmed gbrain has a first-class `exports` map and is built for library consumption: `createEngine` (`gbrain/engine-factory`) + `hybridSearch` (`gbrain/search/hybrid`) ran in-process against Supabase in 1.34s, no child process. The CLI is just one consumer of the same core.
+  - Gotcha 1: bare `hybridSearch(engine, query)` lacks the CLI's multi-query expansion + RRF fusion (returned 1 result vs the CLI's 21). The refactor must replicate the CLI query pipeline (`gbrain/search/expansion` is exported) so result quality does not regress.
+  - Gotcha 2: the chat surface uses `gbrain think` (LLM synthesis) — a separate in-process entry point that must be wired alongside `hybridSearch`.
+  - Gotcha 3: gbrain is pre-1.0 (0.35.1) and moves fast. Pin it to a specific commit SHA in `package.json`; library import couples to gbrain's internal module API.
+**Success Criteria** (what must be TRUE):
+  1. `gbrain` is a SHA-pinned dependency in `package.json`; the app no longer relies on a `bun link`-ed binary on PATH
+  2. `lib/gbrain/client.ts` runs queries via in-process `createEngine` + `hybridSearch`; no `child_process.spawn` of `gbrain` remains in the query path
+  3. In-process query results match the pre-refactor CLI quality — query expansion is replicated, result counts and ranking are equivalent
+  4. The chat `think` (synthesis) path runs in-process; the chat surface returns answers without shelling out
+  5. The per-tenant concurrency model is re-evaluated for the in-process world (engine-connection management replaces subprocess serialization); the mutex-smoke regression test still passes
+  6. The Phase 1 test suite stays green and the demo flow (onboarding → chat → insight cards) works end-to-end against in-process gbrain
+**Plans**: TBD
+**UI hint**: no
+
+### Phase 4: Vercel Deploy + Observability
 
 **Goal**: The app runs at a real public URL with secrets in Vercel config, error tracking active, and a health endpoint confirming all subsystems are reachable
-**Depends on**: Phase 2
-**Precondition**: Vercel project linked to this repo; operator authenticated with Vercel CLI (`vercel link`).
+**Depends on**: Phase 3
+**Precondition**: Vercel project linked to this repo; operator authenticated with Vercel CLI (`vercel link` — done 2026-05-20, project `quickbrain`).
 **Requirements**: DEPLOY-01, DEPLOY-02, DEPLOY-03, DEPLOY-04, DEPLOY-05
 **Success Criteria** (what must be TRUE):
   1. A `git push main` triggers a Vercel build; the app is reachable at a real URL
@@ -112,10 +134,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: no
 
-### Phase 4: Background Jobs
+### Phase 5: Background Jobs
 
 **Goal**: gbrain operations that exceed the serverless timeout run as background jobs with visible browser progress; the inline-vs-job split is driven by measured latency, not guessed
-**Depends on**: Phase 3
+**Depends on**: Phase 4
 **Requirements**: JOBS-01, JOBS-02, JOBS-03
 **Success Criteria** (what must be TRUE):
   1. The p95 latency of each gbrain operation (query retrieval, think synthesis, import) is measured and documented; the inline-vs-job threshold is set from this data
@@ -125,10 +147,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 5: Auth + Multi-Tenant Isolation
+### Phase 6: Auth + Multi-Tenant Isolation
 
 **Goal**: A real user can sign in with email, have exactly one brain provisioned and persisted, and be certain no other user can reach their data
-**Depends on**: Phase 3, Phase 4
+**Depends on**: Phase 4, Phase 5
 **Precondition**: `RESEND_API_KEY` with a verified Resend sending domain (operator step); `JWT_SECRET` ≥32 bytes (`openssl rand -hex 32`); `TOKEN_ENCRYPTION_KEY` ≥32 bytes (for QBO token encryption, schema lands here). All must be in Vercel env config and `.env.local`.
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09
 **Context** (Spike 005 + v1.x auth research):
@@ -146,10 +168,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 6: QuickBooks Online Ingest
+### Phase 7: QuickBooks Online Ingest
 
 **Goal**: A signed-in user can connect their QuickBooks Online account and have their invoices, vendors, and transactions ingested into their hosted brain as a background job with visible progress; chat and smb-audit reflect real QBO data
-**Depends on**: Phase 5, Phase 4
+**Depends on**: Phase 6, Phase 5
 **Precondition**: An Intuit developer app (sandbox) with `QBO_CLIENT_ID`, `QBO_CLIENT_SECRET`, and `QBO_REDIRECT_URI` — **operator does not have these yet; registering at developer.intuit.com is a required operator step before this phase can be planned.** Add to Vercel env config and `.env.local`.
 **Requirements**: QBO-01, QBO-02, QBO-03, QBO-04, QBO-05, QBO-06
 **Context**:
@@ -166,10 +188,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 7: smb-audit Scale Validation
+### Phase 8: smb-audit Scale Validation
 
 **Goal**: The smb-audit skill is confirmed correct and performant against real-scale QBO data (multi-year, thousands of rows) before the product is opened to real users
-**Depends on**: Phase 6
+**Depends on**: Phase 7
 **Requirements**: AUDIT-01, AUDIT-02, AUDIT-03
 **Success Criteria** (what must be TRUE):
   1. The `smb-audit` skill completes without errors or timeouts against a real-scale dataset (minimum: multi-year, 1000+ invoices/transactions)
@@ -178,10 +200,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: no
 
-### Phase 8: Hackathon Artifact Removal
+### Phase 9: Hackathon Artifact Removal
 
 **Goal**: Every shortcut added for the hackathon demo is removed; the hosted product always requires sign-in and carries no destructive controls
-**Depends on**: Phase 5 (the `AUTH_ENABLED=0` bypass can only be safely removed once real auth is live and verified)
+**Depends on**: Phase 6 (the `AUTH_ENABLED=0` bypass can only be safely removed once real auth is live and verified)
 **Requirements**: CLEAN-01, CLEAN-02, CLEAN-03, CLEAN-04
 **Success Criteria** (what must be TRUE):
   1. `scripts/panic-reset.sh` and any demo-reset UI controls are deleted; no destructive "wipe everything" path exists in the deployed product
@@ -191,10 +213,10 @@ Plans:
 **Plans**: TBD
 **UI hint**: yes
 
-### Phase 9: CLAUDE.md + Codebase Hygiene
+### Phase 10: CLAUDE.md + Codebase Hygiene
 
 **Goal**: CLAUDE.md accurately describes the v2.0 stack, conventions, and architecture; a developer following it alone can run, extend, and deploy the app correctly
-**Depends on**: Phase 8 (all hackathon artifacts must be removed before CLAUDE.md is updated, so the documented stack matches reality)
+**Depends on**: Phase 9 (all hackathon artifacts must be removed before CLAUDE.md is updated, so the documented stack matches reality)
 **Requirements**: CLEAN-05
 **Success Criteria** (what must be TRUE):
   1. CLAUDE.md's technology stack, constraints, and architecture sections reflect the live v2.0 system (Vercel + Supabase + Supabase Storage + Inngest + Resend + real auth) — no references to PGLite runtime, the 7.5-hour hackathon timeline, or the single-laptop demo remain
@@ -207,23 +229,22 @@ Plans:
 
 ## Progress
 
-**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9
+**Execution Order:** 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8 → 9 → 10
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |-------|-----------|----------------|--------|-----------|
-| 1. Brain Spine + Synthetic Seed | v1.0 | 3/3 | Complete   | 2026-05-20 |
-| 2. Onboarding Theater + Chat | v1.0 | 2/2 | Complete   | 2026-05-20 |
-| 3. Insight Cards + Demo Readiness | v1.0 | 5/5 | Complete | 2026-05-18 |
-| 4. smb-audit gbrain Skill | v1.1 | 4/4 | Complete | 2026-05-19 |
-| 1. Test Harness + CI | v2.0 | 0/3 | Planned | - |
-| 2. gbrain on Supabase + Asset Storage | v2.0 | 0/2 | Planned | - |
-| 3. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
-| 4. Background Jobs | v2.0 | 0/TBD | Not started | - |
-| 5. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
-| 6. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
-| 7. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
-| 8. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
-| 9. CLAUDE.md + Codebase Hygiene | v2.0 | 0/TBD | Not started | - |
+| 1. Test Harness + CI | v2.0 | 3/3 | Complete | 2026-05-20 |
+| 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
+| 3. In-Process gbrain Refactor | v2.0 | 0/TBD | Not started | - |
+| 4. Vercel Deploy + Observability | v2.0 | 0/TBD | Not started | - |
+| 5. Background Jobs | v2.0 | 0/TBD | Not started | - |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
+| 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
+| 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
+| 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
+| 10. CLAUDE.md + Codebase Hygiene | v2.0 | 0/TBD | Not started | - |
+
+v1.x phases (shipped): see `.planning/archive/v1.x/ROADMAP.md`.
 
 ---
 
