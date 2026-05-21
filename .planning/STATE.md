@@ -18,7 +18,7 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-05-19)
+See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** A non-technical small-business owner can connect their real business data and get a live, queryable business brain — useful answers about their own books — without ever touching a terminal, persistent across sessions.
 **Current focus:** Phase 5 — background jobs
@@ -30,7 +30,7 @@ Plan: Not started
 Status: Ready to plan
 Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [████░░░░░░] 40% — 4 of 10 phases
 
 ## Performance Metrics
 
