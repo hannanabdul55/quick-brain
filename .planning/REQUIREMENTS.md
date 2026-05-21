@@ -43,11 +43,11 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 
 ### DEPLOY — Vercel deploy + observability
 
-- [ ] **DEPLOY-01**: The app is deployed to Vercel at a real URL, building from `main`.
-- [ ] **DEPLOY-02**: All secrets (gbrain DB URL, OpenAI/Anthropic keys, Supabase keys, Resend key) live in Vercel's encrypted env config, never in the repo.
+- [x] **DEPLOY-01**: The app is deployed to Vercel at a real URL, building from `main`.
+- [x] **DEPLOY-02**: All secrets (gbrain DB URL, OpenAI/Anthropic keys, Supabase keys, Resend key) live in Vercel's encrypted env config, never in the repo.
 - [ ] **DEPLOY-03**: A `/api/health` endpoint reports app, gbrain database, and storage reachability.
 - [ ] **DEPLOY-04**: Sentry captures unhandled server and client errors in the deployed app.
-- [ ] **DEPLOY-05**: The deployed app stays within Vercel Hobby free-tier limits during development; the commercial-use upgrade to Pro is a documented, deliberate step tied to the first real user.
+- [x] **DEPLOY-05**: The deployed app stays within Vercel Hobby free-tier limits during development; the commercial-use upgrade to Pro is a documented, deliberate step tied to the first real user.
 
 ### JOBS — Background-job execution
 
@@ -136,11 +136,11 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 | INPROC-04 | Phase 3: In-Process gbrain Refactor | Planned (03-02-PLAN.md) |
 | INPROC-05 | Phase 3: In-Process gbrain Refactor | Planned (03-02-PLAN.md) |
 | INPROC-06 | Phase 3: In-Process gbrain Refactor | Planned (03-03-PLAN.md) |
-| DEPLOY-01 | Phase 4: Vercel Deploy + Observability | Pending |
-| DEPLOY-02 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-01 | Phase 4: Vercel Deploy + Observability | Complete |
+| DEPLOY-02 | Phase 4: Vercel Deploy + Observability | Complete |
 | DEPLOY-03 | Phase 4: Vercel Deploy + Observability | Pending |
 | DEPLOY-04 | Phase 4: Vercel Deploy + Observability | Pending |
-| DEPLOY-05 | Phase 4: Vercel Deploy + Observability | Pending |
+| DEPLOY-05 | Phase 4: Vercel Deploy + Observability | Complete |
 | JOBS-01 | Phase 5: Background Jobs | Pending |
 | JOBS-02 | Phase 5: Background Jobs | Pending |
 | JOBS-03 | Phase 5: Background Jobs | Pending |
