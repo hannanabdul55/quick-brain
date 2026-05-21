@@ -3,15 +3,15 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Real-World Foundation
 status: executing
-stopped_at: Phase 3 complete (3/3 plans). Phase 4 (Vercel Deploy) not started.
-last_updated: "2026-05-20T15:51:58.460Z"
-last_activity: 2026-05-20 -- Phase 04 execution started
+stopped_at: Phase 4 Plan 3 complete — deploy running on Vercel (bun@1.2.0), docs written, secrets blocker active
+last_updated: "2026-05-21T05:43:18.570Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 10
-  completed_phases: 3
+  completed_phases: 4
   total_plans: 11
-  completed_plans: 8
-  percent: 30
+  completed_plans: 11
+  percent: 40
 ---
 
 # Project State
@@ -26,11 +26,11 @@ See: .planning/PROJECT.md (updated 2026-05-19)
 ## Current Position
 
 Phase: 04 (vercel-deploy-observability) — EXECUTING
-Plan: 1 of 3
-Status: Executing Phase 04
-Last activity: 2026-05-20 -- Phase 04 execution started
+Plan: 2 of 3
+Status: Ready to execute
+Last activity: 2026-05-21
 
-Progress: [███░░░░░░░] 30% — 3 of 10 phases
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -53,6 +53,7 @@ Progress: [███░░░░░░░] 30% — 3 of 10 phases
 | 8. smb-audit Scale Validation | TBD | Not started |
 | 9. Hackathon Artifact Removal | TBD | Not started |
 | 10. CLAUDE.md + Codebase Hygiene | TBD | Not started |
+| Phase 04 P03 | 45 | 6 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Active v2.0 highlights:
 - Phase 5 (AUTH): auth stack = `jose` (HS256, pure Web Crypto) + Resend (transactional email) + Supabase Postgres (user/session/token tables).
 - Phase 6 (QBO): `docs/brain-schema.md` (locked in v1.1 Phase 4) is the hard transformer contract. Connector-agnostic types in `lib/connectors/types.ts` from day one (Spike 002a).
 - Pre-roadmap: Synthetic data dirs must be under gbrain whitelisted paths (`companies/`, `originals/`, `concepts/`, etc.) — custom dirs silently kill ~70% of graph cross-refs.
+- [Phase ?]: Bun runtime bun@1.2.0 required for Vercel functions loading gbrain raw .ts
+- [Phase ?]: Hobby→Pro upgrade trigger: first commercial user (commercial use prohibited on Hobby), NOT a function timeout (300s default all plans)
+- [Phase ?]: Secrets blocker: Vercel Production env config has no variables despite user confirming secrets loaded — gbrainDb probe fails on deployed URL
 
 ### Pending Todos
 
@@ -76,7 +80,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Active v2.0 highlights:
 
 ### Blockers/Concerns
 
-None active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forward gap: gbrain has no `serverExternalPackages` entry yet — Phase 4 concern.
+active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forward gap: gbrain has no `serverExternalPackages` entry yet — Phase 4 concern.
+
+- Vercel Production env config is empty — all 13 app secrets must be added. /api/health returns 503 (gbrainDb down) and chat fails until secrets are loaded.
 
 ## Deferred Items
 
@@ -93,7 +99,7 @@ None active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried
 
 ## Session Continuity
 
-Last session: 2026-05-20T08:52:16.817Z
-Stopped at: Phase 3 complete (3/3 plans). Phase 4 (Vercel Deploy) not started.
+Last session: 2026-05-21T05:43:18.563Z
+Stopped at: Phase 4 Plan 3 complete — deploy running on Vercel (bun@1.2.0), docs written, secrets blocker active
 Resume file: None
 Resume command: `/gsd:plan-phase 4` — `vercel link` precondition done; the plan must externalize gbrain for the Next.js server build.

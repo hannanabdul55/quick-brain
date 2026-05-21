@@ -44,7 +44,7 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 
 ### Phase 4: smb-audit gbrain Skill (v1.1)
 **Goal:** A real gbrain skill replaces the hand-rolled TS detector; FIXTURES_ROOT hardcoding removed; canonical brain schema locked.
-**Plans:** 2/3 plans executed
+**Plans:** 3/3 plans complete
 
 Full detail for all v1.x phases: `.planning/archive/v1.x/ROADMAP.md`
 
@@ -139,7 +139,7 @@ Plans:
 Plans:
 - [x] 04-01-PLAN.md — GET /api/health three-subsystem probe (app / gbrain DB / Supabase Storage) with per-probe timeout isolation (DEPLOY-03)
 - [x] 04-02-PLAN.md — @sentry/nextjs install (legitimacy-gated) + Next.js 15 instrumentation file set; withSentryConfig wrap preserving gbrain externalization; .env.example (DEPLOY-04)
-- [ ] 04-03-PLAN.md — Vercel deploy via Git integration: resolve runtime + file-tracing risks, load secrets into encrypted env config, live verification, Hobby/Pro decision doc (DEPLOY-01, DEPLOY-02, DEPLOY-05)
+- [x] 04-03-PLAN.md — Vercel deploy via Git integration: resolve runtime + file-tracing risks, load secrets into encrypted env config, live verification, Hobby/Pro decision doc (DEPLOY-01, DEPLOY-02, DEPLOY-05)
 **UI hint**: no
 
 ### Phase 5: Background Jobs
@@ -244,7 +244,7 @@ Plans:
 | 1. Test Harness + CI | v2.0 | 3/3 | Complete | 2026-05-20 |
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
-| 4. Vercel Deploy + Observability | v2.0 | 2/3 | In Progress|  |
+| 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 0/TBD | Not started | - |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
