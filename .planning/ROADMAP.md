@@ -16,8 +16,8 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 
 - [x] **Phase 1: Test Harness + CI** — Vitest suite + GitHub Actions gate; regression net before the risky INFRA migration
 - [x] **Phase 2: gbrain on Supabase + Asset Storage** — Migrate gbrain from PGLite to Supabase Postgres; wire binary-asset storage via gbrain's `files` subsystem; no credentials in committed files
-- [ ] **Phase 3: In-Process gbrain Refactor** — Replace `spawn("gbrain")` CLI shell-out with in-process library calls (`createEngine`/`hybridSearch`/`think`); SHA-pin gbrain as a dependency. Prerequisite for serverless (Spike 006)
-- [ ] **Phase 4: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
+- [x] **Phase 3: In-Process gbrain Refactor** — Replace `spawn("gbrain")` CLI shell-out with in-process library calls (`createEngine`/`hybridSearch`/`think`); SHA-pin gbrain as a dependency. Prerequisite for serverless (Spike 006)
+- [x] **Phase 4: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
 - [ ] **Phase 5: Background Jobs** — Measure what exceeds the serverless timeout; route long work through Inngest (or equivalent) with visible browser progress
 - [ ] **Phase 6: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation enforced by gbrain RLS
 - [ ] **Phase 7: QuickBooks Online Ingest** — Intuit OAuth 2.0; ingest invoices/vendors/transactions into a per-tenant hosted brain as a background job
