@@ -42,6 +42,7 @@ A non-technical small-business owner can connect their real business data and ge
 - [x] Custom `smb-audit` gbrain skill replaces the hand-rolled TS detector; 4 anomaly types; runs in the seed pipeline *(v1.1, Phase 4)*
 - [x] Canonical `docs/brain-schema.md` ingest contract (binds the QBO transformer) *(v1.1, Phase 4)*
 - [x] Per-tenant insight isolation — `computeAndCache` resolves `sourceDir` per tenant *(v1.1, Phase 4)*
+- [x] Deployed to Vercel — real public URL, secrets in Vercel encrypted config, `/api/health` 3-subsystem probe, Sentry instrumentation *(v2.0, Phase 4)*
 
 ### Active
 
@@ -50,7 +51,6 @@ A non-technical small-business owner can connect their real business data and ge
 - [ ] Automated test suite + CI gate (Vitest + GitHub Actions) covering the v1.x smoke scripts and the migration
 - [ ] gbrain migrated to Supabase Postgres — `gbrain migrate --to supabase`, runtime via the Supavisor pooler, no plaintext secret in brain config
 - [ ] Brain assets on Supabase Storage (binary files via gbrain's `files` subsystem); markdown pages live in Postgres
-- [ ] Deployed to Vercel — real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
 - [ ] Background-job path for gbrain queries that exceed the serverless function timeout
 - [ ] Email magic-link sign-in with per-user persistent tenants
 - [ ] Multi-tenant data isolation — one user's brain cannot be read by another (lean on gbrain RLS)
@@ -137,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-19 — milestone v2.0 "Real-World Foundation" initialized; hackathon-era v1.x artifacts archived to `.planning/archive/v1.x/`*
+*Last updated: 2026-05-21 — Phase 4 (Vercel Deploy + Observability) complete; app live at quickbrain-brown.vercel.app. Deployed-chat end-to-end answer deferred to Phase 6 (tenant-registry persistence — see `.planning/todos/pending/tenant-registry-deploy-persistent.md`).*
