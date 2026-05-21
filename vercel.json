@@ -2,7 +2,7 @@
   "bunVersion": "1.x",
   "functions": {
     "app/api/**/*.ts": {
-      "runtime": "bun@1"
+      "runtime": "bun@1.2.0"
     }
   }
 }
