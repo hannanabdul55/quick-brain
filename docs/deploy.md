@@ -19,7 +19,7 @@ git push origin main
   → deploy to production URL
 ```
 
-**Production URL:** `https://quick-brain.vercel.app` (or the canonical URL from the Vercel dashboard)
+**Production URL:** `https://quickbrain-hannanabdul55s-projects.vercel.app` (canonical URL for the `quickbrain` Vercel project; also accessible at `https://quickbrain-brown.vercel.app`)
 
 No CLI step is needed for a normal deploy — push `main` and Vercel handles the rest.
 
@@ -86,18 +86,22 @@ and cannot be worked around without pre-compiling gbrain at build time (fragile,
 supported by gbrain's own repo structure). The Bun runtime loads raw `.ts` natively —
 the same path that runs locally with `bun node_modules/.bin/next start`.
 
-**`vercel.json` config applied (Task 3):**
+**`vercel.json` config applied (Task 3, corrected in Task 6):**
 
 ```jsonc
 {
   "bunVersion": "1.x",
   "functions": {
     "app/api/**/*.ts": {
-      "runtime": "bun"
+      "runtime": "bun@1.2.0"
     }
   }
 }
 ```
+
+**Important:** Vercel requires a full `runtime@version` specifier (e.g. `bun@1.2.0`).
+Using `"bun"` or `"bun@1"` causes an immediate build failure with:
+`Function Runtimes must have a valid version, for example now-php@1.0.0`.
 
 **Tradeoff accepted:** The Bun runtime on Vercel is Beta (2026). Sentry's webpack-based
 source-map upload (`withSentryConfig`) still works at build time regardless of the function
