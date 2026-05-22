@@ -22,10 +22,11 @@
  */
 import { serve } from "inngest/next";
 import { inngest } from "@/lib/inngest/client";
+import { runJob } from "@/lib/inngest/functions";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const { GET, POST, PUT } = serve({ client: inngest, functions: [] });
+const { GET, POST, PUT } = serve({ client: inngest, functions: [runJob] });
 
 export { GET, POST, PUT };
