@@ -10,6 +10,13 @@ import type { JobStatus } from "@/lib/jobs/types";
 const POLL_INTERVAL_MS = 2000;
 /** Maximum poll attempts before giving up (~5 minutes) */
 const MAX_POLL_ATTEMPTS = 150;
+/**
+ * Maximum poll attempts a job may remain in `queued` before giving up (~30s).
+ * A job that has not even started running after this long almost certainly
+ * failed to dispatch (see CR-02) — give up faster than the 5-minute cap so
+ * the user is not stranded watching a hard failure masquerade as a slow job.
+ */
+const MAX_QUEUED_POLL_ATTEMPTS = 15;
 /** After this many ms without a stage change, surface "slow-but-healthy" state */
 const SLOW_THRESHOLD_MS = 20_000;
 /**
@@ -158,6 +165,19 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
             setStatus(data.status);
             setProgress(data.progress ?? null);
             setStage(data.stage ?? null);
+
+            // Fast give-up for a job stuck in `queued`: if it has not started
+            // running after MAX_QUEUED_POLL_ATTEMPTS (~30s), it almost
+            // certainly failed to dispatch (CR-02). Surface the timed-out
+            // give-up now rather than after the full ~5-minute cap.
+            if (
+              data.status === "queued" &&
+              attemptsRef.current >= MAX_QUEUED_POLL_ATTEMPTS
+            ) {
+              clearPollInterval();
+              setPollState("timed-out");
+              return;
+            }
 
             // Track stage change for slow-but-healthy detection
             if (data.stage !== lastStageRef.current) {
