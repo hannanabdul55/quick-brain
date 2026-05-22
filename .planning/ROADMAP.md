@@ -187,7 +187,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 05-04-PLAN.md — Generic Inngest function + POST trigger route + GET status polling route
+- [x] 05-04-PLAN.md — Generic Inngest function + POST trigger route + GET status polling route
 
 **Wave 3** *(blocked on Wave 2 completion)*
 
@@ -299,7 +299,7 @@ Plans:
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
-| 5. Background Jobs | v2.0 | 3/5 | In Progress|  |
+| 5. Background Jobs | v2.0 | 4/5 | In Progress|  |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
