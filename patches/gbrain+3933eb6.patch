@@ -1,0 +1,56 @@
+diff --git a/src/core/think/gather.ts b/src/core/think/gather.ts
+--- a/src/core/think/gather.ts
++++ b/src/core/think/gather.ts
+@@ -34,6 +34,12 @@
+   questionEmbedding?: Float32Array;
+   /** When set, MCP-bound calls forward this allow-list to takes_search. Local CLI leaves unset. */
+   takesHoldersAllowList?: string[];
++  /**
++   * QuickBrain D-12 patch: scope retrieval to a single source partition.
++   * Passed to hybridSearch and searchTakes so only pages/takes from this
++   * source are returned. Patch: patches/gbrain+3933eb6.patch.
++   */
++  sourceId?: string;
+ }
+
+ export interface ThinkGatherResult {
+@@ -110,6 +116,7 @@
+   const pagesPromise = hybridSearch(engine, opts.question, {
+     limit: gatherLimit,
+     expansion: false,  // think provides its own anchor + graph context; no need for re-expansion
++    sourceId: opts.sourceId,  // QuickBrain D-12: scope to a single source partition
+   }).catch((e) => {
+     process.stderr.write(`[think.gather] hybrid stream failed: ${(e as Error).message}\n`);
+     return [] as SearchResult[];
+@@ -119,6 +126,7 @@
+   const takesKwPromise = engine.searchTakes(opts.question, {
+     limit: takesLimit,
+     takesHoldersAllowList: opts.takesHoldersAllowList,
++    sourceId: opts.sourceId,  // QuickBrain D-12: scope to a single source partition
+   }).catch((e) => {
+     process.stderr.write(`[think.gather] takes-keyword stream failed: ${(e as Error).message}\n`);
+     return [] as TakeHit[];
+diff --git a/src/core/think/index.ts b/src/core/think/index.ts
+--- a/src/core/think/index.ts
++++ b/src/core/think/index.ts
+@@ -47,6 +47,12 @@
+   until?: string;
+   /** When set, MCP-bound calls forward this to the gather phase (server-side filter). */
+   takesHoldersAllowList?: string[];
++  /**
++   * QuickBrain D-12 patch: scope retrieval to a single source partition.
++   * Threads through to runGather → hybridSearch / searchTakes.
++   * Patch: patches/gbrain+3933eb6.patch — invalidated by a gbrain version bump.
++   */
++  sourceId?: string;
+   /** Inject an LLM client (for tests). Defaults to a fresh Anthropic SDK client. */
+   client?: ThinkLLMClient;
+   /** Inject a question-embedding function. When omitted, vector takes search is skipped. */
+@@ -189,6 +195,7 @@
+     anchor: opts.anchor,
+     questionEmbedding,
+     takesHoldersAllowList: opts.takesHoldersAllowList,
++    sourceId: opts.sourceId,
+   });
+
+   // Render evidence blocks for the prompt
