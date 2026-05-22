@@ -12,6 +12,12 @@ const POLL_INTERVAL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 150;
 /** After this many ms without a stage change, surface "slow-but-healthy" state */
 const SLOW_THRESHOLD_MS = 20_000;
+/**
+ * Consecutive 5xx responses before treating the status route as down.
+ * A single 500 may be transient; this many in a row (~10s) is a real outage,
+ * not a momentary blip — surface an error instead of polling silently for 5m.
+ */
+const MAX_CONSECUTIVE_SERVER_ERRORS = 5;
 
 // ---------------------------------------------------------------------------
 // Types
@@ -69,6 +75,8 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
   const attemptsRef = useRef(0);
   const lastStageRef = useRef<string | null>(null);
   const lastStageTimeRef = useRef<number>(Date.now());
+  // Counts consecutive 5xx responses; reset to 0 on any ok/404 response.
+  const serverErrorStreakRef = useRef(0);
 
   const clearPollInterval = useCallback(() => {
     if (intervalRef.current !== null) {
@@ -94,6 +102,7 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
       attemptsRef.current = 0;
       lastStageRef.current = null;
       lastStageTimeRef.current = Date.now();
+      serverErrorStreakRef.current = 0;
       setIsSlow(false);
       setPollState("polling");
 
@@ -112,14 +121,35 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
             if (!res.ok) {
               // 404 means the job ID is unknown — treat as terminal error
               if (res.status === 404) {
+                serverErrorStreakRef.current = 0;
                 clearPollInterval();
                 setError("Job not found.");
                 setStatus("error");
                 setPollState("stopped");
+                return null;
               }
-              // Other non-ok responses: keep polling (transient network blip)
+              // 5xx: the SERVER is broken, not the job. A single 5xx may be a
+              // transient blip, but a sustained streak is a real outage —
+              // surface an error instead of polling silently for ~5 minutes.
+              if (res.status >= 500) {
+                serverErrorStreakRef.current += 1;
+                if (
+                  serverErrorStreakRef.current >=
+                  MAX_CONSECUTIVE_SERVER_ERRORS
+                ) {
+                  clearPollInterval();
+                  setError("We're having trouble reaching the server.");
+                  setStatus("error");
+                  setPollState("stopped");
+                }
+                return null;
+              }
+              // Other non-ok responses (4xx other than 404): keep polling
+              // (transient — e.g. a momentary 502 from a CDN edge).
               return null;
             }
+            // Successful response — clear any accumulated server-error streak.
+            serverErrorStreakRef.current = 0;
             return res.json() as Promise<JobStatusResponse>;
           })
           .then((data) => {
