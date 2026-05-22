@@ -90,7 +90,7 @@ describe("lib/gbrain/engine", () => {
     });
   });
 
-  describe("Test 2: engine pool reuses same reference for same tenantId", () => {
+  describe("Test 2: engine pool uses a single shared engine (T-06-25 / Phase 6 multi-tenant fix)", () => {
     it("returns the same engine object for two calls with the same tenantId", async () => {
       const engine1 = await createGBrainEngine("tenant-pool-test");
       const engine2 = await createGBrainEngine("tenant-pool-test");
@@ -100,12 +100,16 @@ describe("lib/gbrain/engine", () => {
       expect(mockedCreateEngine).toHaveBeenCalledTimes(1);
     });
 
-    it("creates separate engines for different tenantIds", async () => {
+    it("returns the SAME engine for different tenantIds (single shared pool, T-06-25)", async () => {
+      // Phase 6: engine pool collapsed from per-tenantId to a single shared engine.
+      // All tenants share one engine; per-call sourceId provides the isolation (AUTH-05).
+      // Creating engines for two different tenantIds should result in only ONE createEngine call.
       const engineA = await createGBrainEngine("tenant-a");
       const engineB = await createGBrainEngine("tenant-b");
-      // Different tenants get different engine instances
-      expect(mockedCreateEngine).toHaveBeenCalledTimes(2);
-      // They may or may not be the same object (depends on mock) — but createEngine called twice
+      // Both should be the same engine instance (single shared pool)
+      expect(engineA).toBe(engineB);
+      // createEngine should only have been called once across all tenantId calls
+      expect(mockedCreateEngine).toHaveBeenCalledTimes(1);
     });
   });
 
