@@ -46,10 +46,15 @@ export const JOB_REGISTRY: Record<JobKind, JobOperation> = {
       if (event.type === "stage") {
         // Fire-and-forget: do NOT await the DB write inside the sync emit callback.
         // Blocking here would stall the orchestrator's sleep/tick loop.
+        // Store the stage ID (e.g. "creating-brain"), NOT the human label.
+        // JobProgress matches the stage-checklist on StageItem.id — storing
+        // event.label here would never match and pin the checklist at stage 0.
         void reportProgress({
-          stage: event.label,
+          stage: event.stage,
           percent: Math.round(event.progress * 100),
-        });
+        }).catch((e) =>
+          console.error("[jobs] progress write failed", e),
+        );
       }
       // "done" and "error" events are handled by the Inngest function wrapper
       // (finishJob / failJob) — no action needed here.
