@@ -2,14 +2,14 @@
 gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Real-World Foundation
-status: planning
-stopped_at: Phase 5 context gathered
-last_updated: "2026-05-22T01:27:34.965Z"
-last_activity: 2026-05-21
+status: executing
+stopped_at: Phase 5 UI-SPEC approved
+last_updated: "2026-05-22T02:06:17.359Z"
+last_activity: 2026-05-22 -- Phase 5 planning complete
 progress:
   total_phases: 10
   completed_phases: 4
-  total_plans: 11
+  total_plans: 16
   completed_plans: 11
   percent: 40
 ---
@@ -27,8 +27,8 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 
 Phase: 5
 Plan: Not started
-Status: Ready to plan
-Last activity: 2026-05-21
+Status: Ready to execute
+Last activity: 2026-05-22 -- Phase 5 planning complete
 
 Progress: [████░░░░░░] 40% — 4 of 10 phases
 
@@ -99,7 +99,7 @@ active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forw
 
 ## Session Continuity
 
-Last session: 2026-05-22T01:27:34.951Z
-Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-background-jobs/05-CONTEXT.md
+Last session: 2026-05-22T01:40:41.242Z
+Stopped at: Phase 5 UI-SPEC approved
+Resume file: .planning/phases/05-background-jobs/05-UI-SPEC.md
 Resume command: `/gsd:plan-phase 4` — `vercel link` precondition done; the plan must externalize gbrain for the Next.js server build.
