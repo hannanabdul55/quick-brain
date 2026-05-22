@@ -77,6 +77,18 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
     }
   }, []);
 
+  // Reset the full state set. Used by BOTH the jobId-change effect and
+  // restart() so a retry never flashes stale status/progress/stage from
+  // the previous run before the first new poll response arrives.
+  const resetState = useCallback(() => {
+    setStatus(null);
+    setProgress(null);
+    setStage(null);
+    setResult(undefined);
+    setError(null);
+    setIsSlow(false);
+  }, []);
+
   const startPolling = useCallback(
     (id: string) => {
       attemptsRef.current = 0;
@@ -159,28 +171,24 @@ export function useJobStatus(jobId: string | null): UseJobStatusResult {
     }
 
     // Reset state for the new job
-    setStatus(null);
-    setProgress(null);
-    setStage(null);
-    setResult(undefined);
-    setError(null);
-    setIsSlow(false);
+    resetState();
     clearPollInterval();
     startPolling(jobId);
 
     return () => {
       clearPollInterval();
     };
-  }, [jobId, clearPollInterval, startPolling]);
+  }, [jobId, clearPollInterval, startPolling, resetState]);
 
-  // restart() — re-arms the loop (used after timed-out "Check again" action)
+  // restart() — re-arms the loop (used after timed-out "Check again" action).
+  // Resets the FULL state set (not just error/isSlow) so the retry never
+  // flashes a stale percent/stage from the previous run.
   const restart = useCallback(() => {
     if (!jobId) return;
     clearPollInterval();
-    setError(null);
-    setIsSlow(false);
+    resetState();
     startPolling(jobId);
-  }, [jobId, clearPollInterval, startPolling]);
+  }, [jobId, clearPollInterval, startPolling, resetState]);
 
   return {
     status,
