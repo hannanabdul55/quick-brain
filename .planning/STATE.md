@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Real-World Foundation
 status: executing
-stopped_at: "Phase 6 research complete — auto-advance PAUSED: research overturned D-11 (gbrain RLS does not isolate tenants); needs user decision on the source_id isolation model + AUTH-05 wording before planning"
-last_updated: "2026-05-22T16:44:52.065Z"
-last_activity: 2026-05-22 -- Phase 6 planning complete
+stopped_at: "Completed 06-01: Auth Foundation — jose+resend installed, DDL script + CRUD layer built"
+last_updated: "2026-05-22T17:46:57.728Z"
+last_activity: 2026-05-22
 progress:
   total_phases: 10
   completed_phases: 5
   total_plans: 21
-  completed_plans: 16
+  completed_plans: 17
   percent: 50
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** A non-technical small-business owner can connect their real business data and get a live, queryable business brain — useful answers about their own books — without ever touching a terminal, persistent across sessions.
-**Current focus:** Phase 6 — auth + multi tenant isolation
+**Current focus:** Phase 6 — Auth + Multi-Tenant Isolation
 
 ## Current Position
 
-Phase: 6
-Plan: Not started
+Phase: 6 (Auth + Multi-Tenant Isolation) — EXECUTING
+Plan: 2 of 5
 Status: Ready to execute
-Last activity: 2026-05-22 -- Phase 6 planning complete
+Last activity: 2026-05-22
 
-Progress: [████░░░░░░] 40% — 4 of 10 phases
+Progress: [████████░░] 81%
 
 ## Performance Metrics
 
@@ -54,6 +54,7 @@ Progress: [████░░░░░░] 40% — 4 of 10 phases
 | 9. Hackathon Artifact Removal | TBD | Not started |
 | 10. CLAUDE.md + Codebase Hygiene | TBD | Not started |
 | Phase 04 P03 | 45 | 6 tasks | 3 files |
+| Phase 06-auth-multi-tenant-isolation P01 | 25m | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Active v2.0 highlights:
 - [Phase ?]: Bun runtime bun@1.2.0 required for Vercel functions loading gbrain raw .ts
 - [Phase ?]: Hobby→Pro upgrade trigger: first commercial user (commercial use prohibited on Hobby), NOT a function timeout (300s default all plans)
 - [Phase ?]: Secrets blocker: Vercel Production env config has no variables despite user confirming secrets loaded — gbrainDb probe fails on deployed URL
+- [Phase ?]: jose@6.2.3 and resend@6.12.3 verified legitimate (blocking-human checkpoint); installed as Phase 6 auth stack dependencies
+- [Phase ?]: sql singleton exported from lib/auth/store.ts; lib/auth/session.ts imports it (no second postgres() client)
+- [Phase ?]: consumeMagicLink uses atomic UPDATE...WHERE used=false + rows.count (TOCTOU-free, D-07)
 
 ### Pending Todos
 
@@ -99,7 +103,7 @@ active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forw
 
 ## Session Continuity
 
-Last session: 2026-05-22T05:42:53.917Z
-Stopped at: Phase 6 research complete — auto-advance PAUSED: research overturned D-11 (gbrain RLS does not isolate tenants); needs user decision on the source_id isolation model + AUTH-05 wording before planning
-Resume file: .planning/phases/06-auth-multi-tenant-isolation/06-RESEARCH.md
+Last session: 2026-05-22T17:46:57.720Z
+Stopped at: Completed 06-01: Auth Foundation — jose+resend installed, DDL script + CRUD layer built
+Resume file: None
 Resume command: `/gsd:plan-phase 4` — `vercel link` precondition done; the plan must externalize gbrain for the Next.js server build.

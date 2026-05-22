@@ -64,7 +64,7 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 - [ ] **AUTH-05**: A user's brain data cannot be read or queried by another user — isolation is enforced by session-derived source-scoping: every gbrain query is hard-scoped to the authenticated user's gbrain `source_id`. *(Amended 2026-05-22: the original "gbrain row-level security" mechanism was disproven by Phase 6 research — gbrain RLS only denies the anon key; see `06-RESEARCH.md`.)*
 - [ ] **AUTH-06**: Routes that expose tenant data require an authenticated session; unauthenticated requests are redirected to sign-in.
 - [ ] **AUTH-07**: A user can sign out, ending the session.
-- [ ] **AUTH-08**: The user store (email → brain mapping, session and magic-link records) lives in Supabase Postgres, not a local file.
+- [x] **AUTH-08**: The user store (email → brain mapping, session and magic-link records) lives in Supabase Postgres, not a local file.
 - [ ] **AUTH-09**: Magic-link requests are rate-limited per email address to prevent abuse and email flooding.
 
 ### QBO — QuickBooks Online ingest
@@ -151,7 +151,7 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 | AUTH-05 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
 | AUTH-06 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
 | AUTH-07 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
-| AUTH-08 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
+| AUTH-08 | Phase 6: Auth + Multi-Tenant Isolation | Complete |
 | AUTH-09 | Phase 6: Auth + Multi-Tenant Isolation | Pending |
 | QBO-01 | Phase 7: QuickBooks Online Ingest | Pending |
 | QBO-02 | Phase 7: QuickBooks Online Ingest | Pending |
