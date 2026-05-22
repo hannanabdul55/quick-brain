@@ -222,7 +222,7 @@ Plans:
 **Wave 1**
 
 - [x] 06-01-PLAN.md — Supabase Postgres app store: jose+resend installs (legitimacy-gated), app.users/sessions/magic_links DDL, lib/auth/store.ts + session.ts (AUTH-08)
-- [ ] 06-02-PLAN.md — gbrain source-scoping: patch-package + committed patch threading sourceId through gbrain think; shim + engine/client sourceId plumbing (AUTH-05 foundation)
+- [x] 06-02-PLAN.md — gbrain source-scoping: patch-package + committed patch threading sourceId through gbrain think; shim + engine/client sourceId plumbing (AUTH-05 foundation)
 
 **Wave 2** *(blocked on 06-01)*
 
@@ -318,7 +318,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 1/5 | In Progress|  |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 2/5 | In Progress|  |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
