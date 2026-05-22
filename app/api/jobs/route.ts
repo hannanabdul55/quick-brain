@@ -7,6 +7,8 @@
  * Responses:
  *   202  { jobId: string }             — job created and dispatched (async work)
  *   400  { error: "validation_failed"; issues: [...] }  — invalid body
+ *   502  { error: "dispatch_failed"; jobId: string }    — Inngest send failed;
+ *        the job row is marked 'error' so polling surfaces it terminally
  *
  * Security notes:
  *   - T-05-10: zod validates `kind` against the registry enum; unknown kinds
@@ -24,7 +26,7 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 import { inngest } from "@/lib/inngest/client";
-import { createJob } from "@/lib/jobs/store";
+import { createJob, failJob } from "@/lib/jobs/store";
 import { jobRequestSchema } from "@/lib/jobs/schemas";
 
 export async function POST(req: Request): Promise<Response> {
@@ -54,14 +56,29 @@ export async function POST(req: Request): Promise<Response> {
   // ── 3. Create job row (status=queued) + dispatch Inngest event ────────────
   const jobId = await createJob(parsed.data.kind, parsed.data.params);
 
-  await inngest.send({
-    name: "app/job.requested",
-    data: {
-      jobId,
-      kind: parsed.data.kind,
-      params: parsed.data.params,
-    },
-  });
+  // If inngest.send() throws (network failure, missing INNGEST_EVENT_KEY,
+  // Inngest outage) the job row would otherwise be stranded forever in
+  // 'queued' with no consumer and no error surface. Mark it failed so the
+  // status route reports `error` (the poll hook handles `error` terminally)
+  // and return 502 so the client knows dispatch — not the job — failed.
+  try {
+    await inngest.send({
+      name: "app/job.requested",
+      data: {
+        jobId,
+        kind: parsed.data.kind,
+        params: parsed.data.params,
+      },
+    });
+  } catch (err) {
+    await failJob(jobId, "Failed to dispatch background job. Please retry.");
+    // Log only kind + jobId — never params (T-05-12: params may contain PII)
+    console.error(
+      `[jobs] dispatch failed kind=${parsed.data.kind} jobId=${jobId}`,
+      err,
+    );
+    return Response.json({ error: "dispatch_failed", jobId }, { status: 502 });
+  }
 
   // Log only kind + jobId — never params (T-05-12: params may contain PII)
   console.log(`[jobs] dispatched kind=${parsed.data.kind} jobId=${jobId}`);
