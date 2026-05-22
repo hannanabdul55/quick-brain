@@ -43,6 +43,7 @@ A non-technical small-business owner can connect their real business data and ge
 - [x] Canonical `docs/brain-schema.md` ingest contract (binds the QBO transformer) *(v1.1, Phase 4)*
 - [x] Per-tenant insight isolation — `computeAndCache` resolves `sourceDir` per tenant *(v1.1, Phase 4)*
 - [x] Deployed to Vercel — real public URL, secrets in Vercel encrypted config, `/api/health` 3-subsystem probe, Sentry instrumentation *(v2.0, Phase 4)*
+- [x] Background-job path for gbrain operations that exceed the serverless timeout — measured-latency threshold, generic Inngest job runner, bounded-poll `JobProgress` UI *(v2.0, Phase 5; deployed-URL smoke test pending — see `05-HUMAN-UAT.md`)*
 
 ### Active
 
@@ -51,7 +52,6 @@ A non-technical small-business owner can connect their real business data and ge
 - [ ] Automated test suite + CI gate (Vitest + GitHub Actions) covering the v1.x smoke scripts and the migration
 - [ ] gbrain migrated to Supabase Postgres — `gbrain migrate --to supabase`, runtime via the Supavisor pooler, no plaintext secret in brain config
 - [ ] Brain assets on Supabase Storage (binary files via gbrain's `files` subsystem); markdown pages live in Postgres
-- [ ] Background-job path for gbrain queries that exceed the serverless function timeout
 - [ ] Email magic-link sign-in with per-user persistent tenants
 - [ ] Multi-tenant data isolation — one user's brain cannot be read by another (lean on gbrain RLS)
 - [ ] QuickBooks Online OAuth + ingest into a per-tenant hosted brain
@@ -137,4 +137,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-21 — Phase 4 (Vercel Deploy + Observability) complete; app live at quickbrain-brown.vercel.app. Deployed-chat end-to-end answer deferred to Phase 6 (tenant-registry persistence — see `.planning/todos/pending/tenant-registry-deploy-persistent.md`).*
+*Last updated: 2026-05-22 — Phase 5 (Background Jobs) complete: measured-latency threshold doc, generic Inngest job runner (trigger + status routes), Supabase `app.jobs` store, bounded-poll `JobProgress` UI. Code verified 4/4 and code-review-clean; deployed-URL end-to-end smoke test pending (see `05-HUMAN-UAT.md`). Phase 4 (Vercel Deploy + Observability) complete; app live at quickbrain-brown.vercel.app.*
