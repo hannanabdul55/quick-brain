@@ -1,12 +1,9 @@
 export { spawnGBrain, query, think, type GBrainResult, type SpawnGBrainOpts } from "./client.ts";
 export { onboard, type ProgressEvent, type Phase, type OnboardOpts } from "./onboard.ts";
 export {
-  init as initTenants,
-  reload as reloadTenants,
-  get as getTenant,
+  getBySlug,
+  getBySourceId,
   list as listTenants,
-  upsert as upsertTenant,
-  remove as removeTenant,
   isSeed,
   type TenantRecord,
   type TenantStatus,

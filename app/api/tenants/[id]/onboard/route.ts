@@ -42,10 +42,9 @@ export async function GET(
   }
 
   // ------------------------------------------------------------------
-  // 2. Verify the tenant exists in the registry
+  // 2. Verify the tenant exists in the Postgres registry
   // ------------------------------------------------------------------
-  await tenants.init();
-  const tenant = tenants.get(id);
+  const tenant = await tenants.getBySlug(id);
   if (!tenant) {
     return Response.json(
       { error: "tenant_not_found", message: `No tenant with id: ${id}` },

@@ -61,8 +61,7 @@ export async function POST(
   const tenantId = slugResult.data;
 
   // ── 2. Verify tenant exists ───────────────────────────────────────────────
-  await tenants.init();
-  if (!tenants.get(tenantId)) {
+  if (!await tenants.getBySlug(tenantId)) {
     return Response.json(
       { error: "tenant_not_found", message: `No tenant with id: ${tenantId}` },
       { status: 404 },

@@ -53,11 +53,10 @@ export async function GET(
   // ── 2. Verify tenant exists ───────────────────────────────────────────────
   // Special-case: seed tenant is a fixed constant that always exists.
   // The brains/seed/ directory is pre-seeded and its cache is pre-warmed.
-  // For other tenants, verify against the filesystem-backed registry.
+  // For other tenants, verify against the Postgres-backed registry.
   const isSeed = tenantId === SEED_TENANT_ID;
   if (!isSeed) {
-    await tenants.init();
-    const tenant = tenants.get(tenantId);
+    const tenant = await tenants.getBySlug(tenantId);
     if (!tenant) {
       return Response.json(
         { error: "tenant_not_found", message: `No tenant registered with id: ${tenantId}` },

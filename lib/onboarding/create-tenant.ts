@@ -5,8 +5,8 @@
  * 1. Slugify businessName (collision-safe, shell-special-char-free, HARN-06).
  * 2. Verify brains/seed/ exists; throw SEED_MISSING if not.
  * 3. Copy brains/seed/ → brains/<slug>/ using node:fs/promises cp.
- * 4. Register the new tenant in the in-memory Map via tenants.upsert().
- * 5. Return { tenantId, slug }.
+ * 4. Return { tenantId, slug }.
+ *    (Registry is now Postgres-backed via app.users — no in-memory upsert needed)
  *
  * No Next.js imports — this module is Next.js-agnostic and fully testable
  * in isolation.
@@ -60,12 +60,15 @@ function slugify(businessName: string): string {
 }
 
 /**
- * Check whether a slug candidate is already taken:
- * - Registered in the in-memory tenants Map, OR
- * - Has a corresponding directory on disk (defensive against partial state).
+ * Check whether a slug candidate is already taken by checking on disk
+ * (the Postgres-backed registry is the source of truth for registered tenants,
+ * but the filesystem is the ground truth for brain directories that may have
+ * been created without a DB row — e.g. the seed brain).
  */
 async function isSlugTaken(slug: string): Promise<boolean> {
-  if (tenants.get(slug) !== undefined) return true;
+  // Check Postgres registry first
+  if (await tenants.getBySlug(slug) !== null) return true;
+  // Defensive: also check filesystem in case a brain dir exists without a DB row
   try {
     await access(brainHome(slug));
     return true;
@@ -86,8 +89,7 @@ async function isSlugTaken(slug: string): Promise<boolean> {
 export async function createTenant(
   body: CreateTenantBody,
 ): Promise<{ tenantId: string; slug: string }> {
-  // Ensure the in-memory registry is populated from disk on first call.
-  await tenants.init();
+  // Registry is Postgres-backed — no init() needed; queries run on-demand.
 
   // ── Step 1: Build a unique, safe slug ──────────────────────────────────────
   let baseSlug = slugify(body.businessName);
@@ -146,17 +148,9 @@ export async function createTenant(
     );
   }
 
-  // ── Step 4: Register in-memory ────────────────────────────────────────────
-  tenants.upsert({
-    id: slug,
-    brainHome: brainHome(slug),
-    status: "ready",
-    createdAt: Date.now(),
-    name: body.businessName,
-    businessType: body.businessType,
-    ownerName: body.ownerName,
-  });
-
-  // ── Step 5: Return ─────────────────────────────────────────────────────────
+  // ── Step 4: Return ────────────────────────────────────────────────────────
+  // Registry is Postgres-backed — the app.users row is created by the auth
+  // verify route on first sign-in (provision.ts). The filesystem brain dir
+  // is the physical layer; the DB row is the registry.
   return { tenantId: slug, slug };
 }

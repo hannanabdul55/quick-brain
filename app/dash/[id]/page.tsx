@@ -1,6 +1,5 @@
-import { notFound } from "next/navigation"
-import { tenantSlugSchema } from "@/lib/gbrain/slug"
-import * as tenants from "@/lib/gbrain/tenants"
+import { redirect, notFound } from "next/navigation"
+import { resolveTenant } from "@/lib/auth/resolve-tenant"
 import { ChatSurface } from "@/components/chat/chat-surface"
 import { InsightCardsRow } from "@/components/insights/insight-cards-row"
 
@@ -11,21 +10,26 @@ interface DashPageProps {
 export default async function DashPage({ params }: DashPageProps) {
   const { id } = await params
 
-  const parsed = tenantSlugSchema.safeParse(id)
-  if (!parsed.success) {
-    notFound()
+  // Session gate — D-11: tenant identity comes only from the verified session.
+  // Never from the URL slug (Shared Pattern E, T-06-18).
+  const ctx = await resolveTenant()
+  if (!ctx.authenticated) {
+    redirect("/sign-in")
   }
 
-  await tenants.init()
-  const tenant = tenants.get(parsed.data)
-  if (!tenant) {
-    notFound()
+  // Slug mismatch guard: if the URL slug doesn't match the session-resolved slug,
+  // the user is either trying to view another user's dashboard (T-06-18) or landed
+  // on a stale URL. Redirect them to their own dashboard.
+  if (id !== ctx.brainSlug) {
+    redirect(`/dash/${ctx.brainSlug}`)
   }
 
+  // At this point ctx.brainSlug === id and the user is authenticated.
+  // Use the session-resolved sourceId for all gbrain calls (never the URL slug).
   return (
     <>
-      <InsightCardsRow tenantId={tenant.id} />
-      <ChatSurface tenantId={tenant.id} businessName={tenant.id} />
+      <InsightCardsRow tenantId={ctx.brainSlug} />
+      <ChatSurface tenantId={ctx.brainSlug} businessName={ctx.brainSlug} />
     </>
   )
 }

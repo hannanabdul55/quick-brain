@@ -49,9 +49,8 @@ export async function POST(
     );
   }
 
-  // ── 3. Verify tenant exists in in-memory registry ─────────────────────────
-  await tenants.init();
-  const existing = tenants.get(tenantId);
+  // ── 3. Verify tenant exists in Postgres registry ─────────────────────────
+  const existing = await tenants.getBySlug(tenantId);
   if (!existing) {
     return Response.json(
       { error: "tenant_not_found", message: `No tenant registered with id: ${tenantId}` },
@@ -94,17 +93,9 @@ export async function POST(
   // ── 7. Invalidate insight cache ────────────────────────────────────────────
   invalidate(tenantId);
 
-  // ── 8. Re-register tenant in memory ───────────────────────────────────────
-  tenants.upsert({
-    id: tenantId,
-    brainHome: brainHome(tenantId),
-    status: "ready",
-    createdAt: Date.now(),
-    // Preserve display metadata from the existing record if available.
-    name: existing.name,
-    businessType: existing.businessType,
-    ownerName: existing.ownerName,
-  });
+  // ── 8. No re-registration needed ──────────────────────────────────────────
+  // The registry is now Postgres-backed — app.users row persists across resets.
+  // The filesystem brain dir was reset above; the DB record is unchanged.
 
   const durationMs = Date.now() - t0;
   console.log(`[reset] complete tenant=${tenantId} duration_ms=${durationMs}`);

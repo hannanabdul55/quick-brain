@@ -128,9 +128,9 @@ export async function runOnboarding(
   options?: RunOnboardingOptions,
 ): Promise<void> {
   // ------------------------------------------------------------------
-  // 0. Verify the tenant exists
+  // 0. Verify the tenant exists (Postgres-backed registry)
   // ------------------------------------------------------------------
-  const tenant = tenants.get(tenantId);
+  const tenant = await tenants.getBySlug(tenantId);
   if (!tenant) {
     emit({ type: "error", stage: "init", message: "tenant not found" });
     return;
