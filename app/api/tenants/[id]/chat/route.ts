@@ -2,7 +2,7 @@
  * POST /api/tenants/[id]/chat
  *
  * Accepts { question } JSON body, calls `think()` in-process against the
- * tenant's brain, and streams the response as a single SSE event.
+ * authenticated user's brain, and streams the response as a single SSE event.
  * Emits exactly one frame (answer or error), then closes.
  *
  * SSE event format:
@@ -11,29 +11,28 @@
  *
  * HTTP status codes:
  *   200   — SSE stream started (body may contain an error frame)
- *   400   — invalid tenant slug or invalid/missing JSON body
- *   404   — valid slug but tenant not registered
+ *   400   — invalid JSON body
+ *   401   — unauthenticated (no valid session cookie)
+ *   403   — URL slug does not match the session-resolved brain slug
  *   405   — method not allowed (OPTIONS returns 204)
  *
  * Route Handler constraints:
  * - runtime = "nodejs" — gbrain's postgres client requires Node.js runtime
- *   (not edge-compatible). Previously this was required for child_process.spawn;
- *   with in-process gbrain on Postgres the Node.js requirement remains.
+ *   (not edge-compatible).
  * - dynamic = "force-dynamic" — no caching; POST has side-effects
  *
- * CHAT-02: in-process think() via engine pool, streams single SSE event.
- * CHAT-05: system-prompt scaffold via buildThinkArgs() (env-var gated, retained
- *   for compatibility — see lib/chat/system-prompt.ts comment).
- * CHAT-06: in-process think() completes or errors naturally; no 30s SIGKILL
- *   (subprocess timeout is gone). Phase 5 will add AbortController timeout for
- *   serverless environments.
+ * AUTH-05 (D-11): identity is resolved from the verified session cookie via
+ * resolveTenant(). The URL [id] slug is NEVER trusted for identity — it is
+ * only used for optional slug-mismatch guard. The session-derived sourceId is
+ * passed to think() so the gbrain query is hard-scoped to this user's brain
+ * (D-12 patch applies the scope through runThink → runGather → hybridSearch).
  *
- * INPROC-04: spawnGBrain removed from the chat request path. think() is
- *   now in-process via lib/gbrain/engine.ts + gbrain/core/think/index.
+ * CHAT-02: in-process think() via engine pool, streams single SSE event.
+ * CHAT-06: in-process think() completes or errors naturally; no SIGKILL.
+ * INPROC-04: spawnGBrain removed from the chat request path.
  */
 
-import * as tenants from "@/lib/gbrain/tenants";
-import { tenantSlugSchema } from "@/lib/gbrain/slug";
+import { resolveTenant } from "@/lib/auth/resolve-tenant";
 import { think } from "@/lib/gbrain/client";
 import { sseEventStream } from "@/lib/onboarding/sse";
 import { chatQuestionSchema } from "@/lib/chat/schemas";
@@ -49,23 +48,23 @@ export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  // ── 1. Validate tenant ID ─────────────────────────────────────────────────
-  const { id } = await ctx.params;
-  const slugResult = tenantSlugSchema.safeParse(id);
-  if (!slugResult.success) {
-    return Response.json(
-      { error: "invalid_tenant_id", message: slugResult.error.issues[0]?.message ?? "invalid slug" },
-      { status: 400 },
-    );
+  // ── 1. Resolve identity from the session (D-11 / AUTH-05) ─────────────────
+  // The session cookie — not the URL slug — is the authoritative identity source.
+  // Returning 401 before the SSE stream opens is correct defense-in-depth
+  // (middleware already gates unauthenticated requests, but routes must not trust that).
+  const tenantCtx = await resolveTenant();
+  if (!tenantCtx.authenticated) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
   }
-  const tenantId = slugResult.data;
+  const { sourceId, brainSlug } = tenantCtx;
 
-  // ── 2. Verify tenant exists ───────────────────────────────────────────────
-  if (!await tenants.getBySlug(tenantId)) {
-    return Response.json(
-      { error: "tenant_not_found", message: `No tenant with id: ${tenantId}` },
-      { status: 404 },
-    );
+  // ── 2. Optional slug mismatch guard ──────────────────────────────────────
+  // Identity is taken from the session regardless. If the URL slug does not match
+  // the session-resolved brain slug, return 403. (An attacker naming another
+  // user's slug would fail here — T-06-23.)
+  const { id } = await ctx.params;
+  if (id !== brainSlug) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
   // ── 3. Parse + validate request body ─────────────────────────────────────
@@ -90,14 +89,15 @@ export async function POST(
 
   const stream = sseEventStream(async (write) => {
     try {
-      // think() runs in-process via the engine pool and per-tenant mutex (INPROC-04).
-      // No timeoutMs — in-process think has no subprocess to kill. Phase 5 will add
-      // an AbortController-based timeout for Vercel's 10s limit.
-      const result = await think(tenantId, question, { model: "haiku" });
+      // think() runs in-process via the shared engine pool (T-06-25 fixed: single
+      // shared engine, no per-user connection accumulation). The session-derived
+      // sourceId scopes this query to the authenticated user's brain only (D-12,
+      // AUTH-05, T-06-22). No other user's pages are reachable from this call.
+      const result = await think(brainSlug, question, { model: "haiku", sourceId });
 
       const durationMs = Date.now() - startMs;
       // Log metadata only — do NOT log the question text (operator privacy).
-      console.log("[chat]", { tenantId, questionLen: question.length, exitCode: result.code, durationMs });
+      console.log("[chat]", { brainSlug, questionLen: question.length, exitCode: result.code, durationMs });
 
       if (result.code !== 0) {
         // think() returned code 1 — gbrain error (model error, gather failure, etc.)
@@ -112,7 +112,7 @@ export async function POST(
       write("answer", { markdown: result.stdout.trim() });
     } catch (err: unknown) {
       const durationMs = Date.now() - startMs;
-      console.log("[chat:error]", { tenantId, questionLen: question.length, durationMs, err: String(err) });
+      console.log("[chat:error]", { brainSlug, questionLen: question.length, durationMs, err: String(err) });
 
       // For in-process think, errors come from network issues, DB connection
       // failures, or unexpected throws — surface as error frame.

@@ -1,9 +1,9 @@
 /**
  * GET /api/tenants/[id]/insights
  *
- * Batch endpoint returning the three insight card bundles for a given tenant.
- * Cache-first: serves the pre-warmed InsightBundle from lib/insights/cache.ts
- * on cache hit (<5ms); computes + caches on first miss (~50-100ms).
+ * Batch endpoint returning the three insight card bundles for the authenticated
+ * user's brain. Cache-first: serves the pre-warmed InsightBundle from
+ * lib/insights/cache.ts on cache hit (<5ms); computes + caches on first miss.
  *
  * Response shape (200):
  *   {
@@ -15,17 +15,25 @@
  *
  * HTTP status codes:
  *   200  — InsightBundle JSON (cache hit or freshly computed)
- *   400  — invalid tenant slug (fails TENANT_SLUG_REGEX)
- *   404  — valid slug but no tenant brain dir found
+ *   401  — unauthenticated (no valid session cookie)
+ *   403  — URL slug does not match the session-resolved brain slug
  *   500  — fixture parse error (corrupt data files)
+ *
+ * AUTH-05 (D-11): identity is resolved from the verified session cookie via
+ * resolveTenant(). The URL [id] slug is NEVER trusted for identity. For real
+ * authenticated tenants, insight computation is scoped to the session-derived
+ * sourceId (T-06-26). A real user's brain is empty until Phase 7 QBO ingest —
+ * an empty insight result is the correct, acceptable outcome for Phase 6 (D-02).
+ *
+ * The AUTH_ENABLED=0 seed path reads from FIXTURES_ROOT (static fixture dir)
+ * and is the only path that does NOT require a session (dev bypass, D-03).
  *
  * INSI-01: serves the 3 insight cards on dashboard mount.
  * No gbrain CLI spawn — pure in-process static-file computation.
  */
 
 import { join } from "node:path";
-import { tenantSlugSchema } from "@/lib/gbrain/slug";
-import * as tenants from "@/lib/gbrain/tenants";
+import { resolveTenant } from "@/lib/auth/resolve-tenant";
 import { FIXTURES_ROOT, SEED_TENANT_ID, brainHome } from "@/lib/gbrain/paths";
 import { getCachedInsights, computeAndCache } from "@/lib/insights/cache";
 
@@ -34,55 +42,61 @@ import { getCachedInsights, computeAndCache } from "@/lib/insights/cache";
 import "@/lib/insights/prewarm";
 
 export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 export async function GET(
   _req: Request,
   ctx: { params: Promise<{ id: string }> },
 ): Promise<Response> {
-  // ── 1. Validate tenant slug ───────────────────────────────────────────────
   const { id } = await ctx.params;
-  const parsed = tenantSlugSchema.safeParse(id);
-  if (!parsed.success) {
-    return Response.json(
-      { error: "invalid_slug", issues: parsed.error.issues },
-      { status: 400 },
-    );
-  }
-  const tenantId = parsed.data;
 
-  // ── 2. Verify tenant exists ───────────────────────────────────────────────
-  // Special-case: seed tenant is a fixed constant that always exists.
-  // The brains/seed/ directory is pre-seeded and its cache is pre-warmed.
-  // For other tenants, verify against the Postgres-backed registry.
-  const isSeed = tenantId === SEED_TENANT_ID;
-  if (!isSeed) {
-    const tenant = await tenants.getBySlug(tenantId);
-    if (!tenant) {
-      return Response.json(
-        { error: "tenant_not_found", message: `No tenant registered with id: ${tenantId}` },
-        { status: 404 },
-      );
+  // ── AUTH_ENABLED=0 seed bypass (D-03) ─────────────────────────────────────
+  // Dev-only path: the seed tenant is served without auth. Phase 9 removes this.
+  const isDevBypass = process.env.AUTH_ENABLED === "0" && id === SEED_TENANT_ID;
+
+  if (isDevBypass) {
+    // Seed tenant: read from the static fixture dir (data/maras-coffee/)
+    let bundle = getCachedInsights(SEED_TENANT_ID);
+    if (!bundle) {
+      try {
+        bundle = await computeAndCache(SEED_TENANT_ID, FIXTURES_ROOT);
+      } catch (err: unknown) {
+        console.error("[insights] seed compute failed", err);
+        return Response.json(
+          { error: "compute_failed", message: err instanceof Error ? err.message : String(err) },
+          { status: 500 },
+        );
+      }
     }
+    return Response.json(bundle, { status: 200 });
+  }
+
+  // ── 1. Resolve identity from the session (D-11 / AUTH-05) ─────────────────
+  const tenantCtx = await resolveTenant();
+  if (!tenantCtx.authenticated) {
+    return Response.json({ error: "unauthorized" }, { status: 401 });
+  }
+  const { brainSlug } = tenantCtx;
+
+  // ── 2. Optional slug mismatch guard ───────────────────────────────────────
+  if (id !== brainSlug) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
   }
 
   // ── 3. Cache-first read ───────────────────────────────────────────────────
-  // The seed tenant's bundle is pre-warmed at boot by lib/insights/prewarm.ts.
-  // Other tenants compute on first dashboard mount and cache for subsequent loads.
-  //
-  // sourceDir resolution (T-04-02-01 fix):
-  //   - seed tenant: reads from the static fixture dir (data/maras-coffee/)
-  //   - real tenants: reads from their gbrain-populated brain-repo dir
-  //     (brains/<tenantId>/brain-repo/ — where the smb-audit skill writes concept pages)
-  const sourceDir = isSeed
-    ? FIXTURES_ROOT
-    : join(brainHome(tenantId), "brain-repo");
+  // Real authenticated tenant: reads from their brain dir. A real user's brain
+  // is empty until Phase 7 QBO ingest — computeAndCache returns an empty bundle
+  // (no vendors, no P&L, no anomalies). That is the correct Phase 6 outcome (D-02).
+  // T-06-26: insight computation is scoped to the session-resolved brain slug
+  // (brainHome(brainSlug)); no other user's data is reachable.
+  const sourceDir = join(brainHome(brainSlug), "brain-repo");
 
-  let bundle = getCachedInsights(tenantId);
+  let bundle = getCachedInsights(brainSlug);
   if (!bundle) {
     try {
-      bundle = await computeAndCache(tenantId, sourceDir);
+      bundle = await computeAndCache(brainSlug, sourceDir);
     } catch (err: unknown) {
-      console.error("[insights] compute failed for", tenantId, err);
+      console.error("[insights] compute failed for", brainSlug, err);
       return Response.json(
         {
           error: "compute_failed",
