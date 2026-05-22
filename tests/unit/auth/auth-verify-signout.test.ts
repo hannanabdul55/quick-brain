@@ -78,7 +78,11 @@ describe("app/auth/verify/route.ts", () => {
   it("sets cookie with 30-day maxAge (D-05)", async () => {
     const src = await Bun.file("app/auth/verify/route.ts").text();
     // 30 days = 60*60*24*30 = 2592000
-    expect(src).toMatch(/maxAge.*2592000|30.*days|60\*60\*24\*30/);
+    // The constant may be defined inline or as a named constant — either is acceptable.
+    // Accept: literal 2592000, "30 days", 60 * 60 * 24 * 30, or SESSION_COOKIE_MAX_AGE
+    expect(src).toMatch(
+      /2592000|30[- ]days?|60\s*\*\s*60\s*\*\s*24\s*\*\s*30|SESSION_COOKIE_MAX_AGE/,
+    );
   });
 
   it("redirects to /dash/<brainSlug> on successful verify", async () => {
