@@ -13,8 +13,9 @@
  *   and raw DB columns are never included. `result` is only present when
  *   status === "done" (small structured payload, e.g. { tenantId }). `error` is
  *   only present when status === "error" (already sanitized by failJob — sliced
- *   to 500 chars, postgres:// URLs stripped). No stack traces or DB internals
- *   reach the browser.
+ *   to 500 chars, postgres:// URLs stripped); if the DB error column is NULL for
+ *   an errored job, a generic fallback message is sent so the UI never renders a
+ *   blank error card. No stack traces or DB internals reach the browser.
  *
  * `jobId` is a gen_random_uuid() (122-bit) — not guessable, acts as a
  * capability token pre-auth. Phase 6 adds per-user scoping (V4).
@@ -42,12 +43,22 @@ export async function GET(
     );
   }
 
-  // Project only browser-safe fields — never return params, created_at, updated_at
+  // Project only browser-safe fields — never return params, created_at, updated_at.
+  // This shape MUST satisfy JobStatusResponse in lib/jobs/use-job-status.ts:
+  //   - progress: app.jobs.progress is NOT NULL DEFAULT 0, so it is always a
+  //     number; emit it raw (satisfies `number | null`).
+  //   - result:  only present when done.
+  //   - error:   only present when status==='error'. If the DB error column is
+  //     NULL for an errored job (a code path set status without failJob), fall
+  //     back to a generic message so the UI never renders a blank error card.
   return Response.json({
     status: job.status,
     progress: job.progress,
     stage: job.stage,
     result: job.status === "done" ? job.result : undefined,
-    error: job.status === "error" ? job.error : undefined,
+    error:
+      job.status === "error"
+        ? (job.error ?? "The job failed. Please retry.")
+        : undefined,
   });
 }
