@@ -230,7 +230,7 @@ Plans:
 
 **Wave 3** *(blocked on 06-03)*
 
-- [ ] 06-04-PLAN.md — middleware coarse gate, sign-in/link-used pages, sign-out button, landing CTA, dashboard session gate, Postgres-backed tenant registry (AUTH-03, AUTH-06, AUTH-07, AUTH-04)
+- [x] 06-04-PLAN.md — middleware coarse gate, sign-in/link-used pages, sign-out button, landing CTA, dashboard session gate, Postgres-backed tenant registry (AUTH-03, AUTH-06, AUTH-07, AUTH-04)
 
 **Wave 4** *(blocked on 06-02, 06-03, 06-04)*
 
@@ -318,7 +318,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 3/5 | In Progress|  |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 4/5 | In Progress|  |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
