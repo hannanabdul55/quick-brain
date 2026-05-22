@@ -89,8 +89,14 @@ describe("lib/auth/provision.ts", () => {
 
   it("provisionBrain source code does NOT call initSchema per user", async () => {
     const src = await Bun.file("lib/auth/provision.ts").text();
-    // initSchema is DB-wide and only called once at startup, not per user
-    expect(src).not.toContain("initSchema()");
+    // initSchema is DB-wide and only called once at startup, not per user.
+    // Filter out comment lines before checking — comments explaining what NOT
+    // to do will contain the forbidden string but are not actual code calls.
+    const codeLines = src
+      .split("\n")
+      .filter((line) => !line.trim().startsWith("*") && !line.trim().startsWith("//"))
+      .join("\n");
+    expect(codeLines).not.toContain("initSchema()");
   });
 });
 
