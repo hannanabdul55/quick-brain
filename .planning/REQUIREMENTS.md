@@ -61,7 +61,7 @@ Take QuickBrain from a single-laptop hackathon demo to a hosted multi-tenant pro
 - [ ] **AUTH-02**: The magic link is single-use and time-limited; a second or expired click shows a clear message with a resend path.
 - [ ] **AUTH-03**: A signed-in user persists across browser sessions and devices via a secure session cookie.
 - [ ] **AUTH-04**: Each user has exactly one brain; signing in always routes them to their own brain, auto-provisioned on first sign-in.
-- [ ] **AUTH-05**: A user's brain data cannot be read or queried by another user — isolation is enforced at the database layer via gbrain's row-level security.
+- [ ] **AUTH-05**: A user's brain data cannot be read or queried by another user — isolation is enforced by session-derived source-scoping: every gbrain query is hard-scoped to the authenticated user's gbrain `source_id`. *(Amended 2026-05-22: the original "gbrain row-level security" mechanism was disproven by Phase 6 research — gbrain RLS only denies the anon key; see `06-RESEARCH.md`.)*
 - [ ] **AUTH-06**: Routes that expose tenant data require an authenticated session; unauthenticated requests are redirected to sign-in.
 - [ ] **AUTH-07**: A user can sign out, ending the session.
 - [ ] **AUTH-08**: The user store (email → brain mapping, session and magic-link records) lives in Supabase Postgres, not a local file.

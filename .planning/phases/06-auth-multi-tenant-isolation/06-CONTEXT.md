@@ -106,13 +106,35 @@ option. They are defaults the planner may refine with research, not hard locks.
   (`TOKEN_ENCRYPTION_KEY` ≥32 bytes). This is not scope creep — it is explicitly
   in the phase precondition; only the *columns* land, the OAuth flow is Phase 7.
 
-### Multi-Tenant Isolation (carried forward — STATE.md / ROADMAP)
-- **D-11:** Cross-tenant isolation leans on gbrain's auto-enabled RLS (Spike
-  005: RLS on 41/41 public tables), not a custom app-layer scheme. AUTH-05's
-  test (User A cannot read User B's data) verifies the DB-layer block.
-  App-owned tables (`app.users`, `app.sessions`, `app.magic_links`) live in the
-  `app` schema — clear of gbrain's auto-RLS event trigger; their access control
-  is the session check, not RLS.
+### Multi-Tenant Isolation (REVISED 2026-05-22 — research + user decision superseded the original D-11)
+- **D-11:** Cross-tenant isolation uses **per-user gbrain `source_id`
+  partitioning + application-enforced scoping**. Each user's brain = one row in
+  gbrain's `sources` table inside the shared Supabase Postgres DB; the
+  `source_id` IS the brain identity (stored on the `users` registry row — this
+  is what D-01's `brain_id` resolves to). Every gbrain query/think call is
+  hard-scoped to the authenticated user's `source_id`, resolved exactly once
+  from the verified session in a single `lib/auth/resolve-tenant.ts` chokepoint
+  — never from request input. **NOT gbrain RLS:** Phase 6 research
+  (`06-RESEARCH.md` BLOCKING FINDING) found gbrain's auto-enabled RLS only
+  denies the Supabase anon key — there are zero per-user policies, and
+  QuickBrain connects as the `BYPASSRLS` service role, so RLS provides no
+  inter-tenant isolation. The isolation boundary is the application. App-owned
+  tables (`app.users`, `app.sessions`, `app.magic_links`) still live in the
+  `app` schema, clear of gbrain's auto-RLS event trigger.
+
+### gbrain Chat-Path Patch (NEW 2026-05-22 — from research spike addendum + user decision)
+- **D-12:** gbrain's `think` path (the chat surface — `lib/gbrain/client.ts::think`
+  → `runThink`) does **not** accept a `source_id` scope: `RunThinkOpts`,
+  `ThinkGatherOpts`, and `runGather` carry no source field, so chat would
+  synthesize over every user's pages. Phase 6 **patches gbrain via
+  `patch-package`** to thread `sourceId` through `RunThinkOpts` → `runThink` →
+  `ThinkGatherOpts` → `runGather` and into its `hybridSearch` / `searchTakes`
+  calls (~10–15 mechanical lines; the primitives already accept `sourceId`). A
+  committed `patch-package` patch against the SHA-pinned `gbrain` dependency was
+  chosen (user decision) over a fork (maintenance cost) or an upstream PR
+  (maintainer-timeline dependency). The query/retrieval path needs no patch —
+  `hybridSearch` already accepts `sourceId` natively. See `06-RESEARCH.md`
+  §Spike Addendum.
 
 ### Claude's Discretion
 - Exact table and column names, the verify-route path name, the magic-link
@@ -213,16 +235,13 @@ option. They are defaults the planner may refine with research, not hard locks.
 <specifics>
 ## Specific Ideas
 
-**Open question the researcher MUST resolve before planning:**
-
-HOW is a per-user gbrain brain represented in the shared Supabase Postgres such
-that gbrain's RLS actually isolates one user's brain from another's? Spike 005
-confirmed RLS is *enabled* (41/41 tables), but the per-user brain-partitioning
-model is unverified — is it one gbrain DB role per user, one brain row with an
-owner column, gbrain's native multi-tenancy, or one Postgres schema per brain?
-This directly shapes both D-01 (registry) and D-02 (provisioning) and the
-AUTH-05 isolation test. The researcher must establish gbrain's actual
-multi-tenant model first.
+**RESOLVED (2026-05-22) — gbrain multi-tenant model.** Research + a read-only
+spike established it: gbrain RLS does NOT isolate tenants (it only denies the
+anon key); the viable model is per-user `source_id` partitioning (see revised
+D-11). The `think`/chat path additionally needs a `patch-package` patch to
+accept the scope (see D-12). Full evidence in `06-RESEARCH.md` (BLOCKING
+FINDING + Spike Addendum). The remaining operator precondition below still
+stands.
 
 Also confirm: Resend free-tier sending limits and whether the operator's
 verified Resend domain is ready (the `RESEND_API_KEY` precondition is an

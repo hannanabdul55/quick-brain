@@ -2,7 +2,7 @@
 
 ## Overview
 
-QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended with a gbrain skill (v1.1, Phase 4). As of 2026-05-19 it pivots from a single-laptop demo to a hosted multi-tenant product. v2.0 "Real-World Foundation" resets phase numbering to 1 and delivers ten sequential capability layers: a regression net (TEST), gbrain migrated to Supabase Postgres with durable asset storage (INFRA + STOR), the app refactored to call gbrain in-process so it survives serverless (INPROC), a real Vercel deployment with observability (DEPLOY), background-job execution for long-running operations (JOBS), email magic-link auth with per-tenant isolation enforced by gbrain RLS (AUTH), live QuickBooks Online data ingest (QBO), smb-audit validated at real scale (AUDIT), hackathon artifacts removed (CLEAN x2). Each phase unblocks the next; nothing reaches a real user until AUTH gates the door.
+QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended with a gbrain skill (v1.1, Phase 4). As of 2026-05-19 it pivots from a single-laptop demo to a hosted multi-tenant product. v2.0 "Real-World Foundation" resets phase numbering to 1 and delivers ten sequential capability layers: a regression net (TEST), gbrain migrated to Supabase Postgres with durable asset storage (INFRA + STOR), the app refactored to call gbrain in-process so it survives serverless (INPROC), a real Vercel deployment with observability (DEPLOY), background-job execution for long-running operations (JOBS), email magic-link auth with per-tenant isolation via per-user source-scoping (AUTH), live QuickBooks Online data ingest (QBO), smb-audit validated at real scale (AUDIT), hackathon artifacts removed (CLEAN x2). Each phase unblocks the next; nothing reaches a real user until AUTH gates the door.
 
 ## Milestones
 
@@ -19,7 +19,7 @@ QuickBrain started as a 7.5-hour hackathon demo (v1.0, Phases 1-3) and extended 
 - [x] **Phase 3: In-Process gbrain Refactor** — Replace `spawn("gbrain")` CLI shell-out with in-process library calls (`createEngine`/`hybridSearch`/`think`); SHA-pin gbrain as a dependency. Prerequisite for serverless (Spike 006)
 - [x] **Phase 4: Vercel Deploy + Observability** — Real URL, secrets in Vercel config, `/api/health`, Sentry error tracking
 - [ ] **Phase 5: Background Jobs** — Measure what exceeds the serverless timeout; route long work through Inngest (or equivalent) with visible browser progress
-- [ ] **Phase 6: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation enforced by gbrain RLS
+- [ ] **Phase 6: Auth + Multi-Tenant Isolation** — Email magic-link sign-in via Resend; per-user brain provisioning; isolation via per-user gbrain source-scoping
 - [ ] **Phase 7: QuickBooks Online Ingest** — Intuit OAuth 2.0; ingest invoices/vendors/transactions into a per-tenant hosted brain as a background job
 - [ ] **Phase 8: smb-audit Scale Validation** — Run smb-audit against real-scale QBO data; measure and fix quality or timeout regressions
 - [ ] **Phase 9: Hackathon Artifact Removal** — Delete panic-reset, synthetic-data generator, AUTH_ENABLED bypass, and demo-specific copy
@@ -203,7 +203,7 @@ Plans:
 **Requirements**: AUTH-01, AUTH-02, AUTH-03, AUTH-04, AUTH-05, AUTH-06, AUTH-07, AUTH-08, AUTH-09
 **Context** (Spike 005 + v1.x auth research):
 
-  - gbrain auto-enables RLS on all 41 tables and installs an auto-RLS event trigger. Multi-tenant isolation leans on gbrain RLS, not a separate app-layer scheme. Spike 005 confirmed: `[OK] rls: RLS enabled on 41/41 public tables`.
+  - Multi-tenant isolation uses per-user gbrain `source_id` partitioning + application-enforced scoping — **NOT gbrain RLS**. Phase 6 research (`06-RESEARCH.md` BLOCKING FINDING) found gbrain's auto-enabled RLS only denies the Supabase anon key (zero per-user policies); QuickBrain connects as the `BYPASSRLS` service role, so RLS provides no inter-tenant isolation. Each user's brain = one gbrain `sources` row; every query is hard-scoped to the session-derived `source_id`. gbrain's `think`/chat path is patched (`patch-package`) to accept the same scope.
   - Auth stack: `jose` (pure Web Crypto, no native bindings, works in middleware) + Supabase Postgres for user/session/token store (AUTH-08 requires this — not `bun:sqlite`, which was the local-demo choice). Resend for transactional email.
   - HS256 is the practical JWT algorithm for a single-server Next.js app; one `JWT_SECRET` env var vs. a key-pair. Upgrade to ES256 is a comment-documented path.
 
@@ -213,7 +213,7 @@ Plans:
   2. Clicking the link establishes a 30-day session cookie; a second or expired click shows a clear "already used" message with a resend path
   3. A signed-in user is routed to their own brain dashboard on every device and browser session; the brain is auto-provisioned on first sign-in
   4. Route handlers and pages that expose tenant data redirect unauthenticated requests to sign-in
-  5. A test confirms User A cannot query, read, or list any data belonging to User B — cross-tenant access is blocked at the database layer via gbrain RLS
+  5. A test confirms User A cannot query, read, or list any data belonging to User B — cross-tenant access is blocked by session-derived source-scoping (every gbrain query hard-scoped to the user's `source_id`)
   6. A user can sign out; accessing a protected link after sign-out redirects to sign-in
   7. More than one magic-link request per email per 60 seconds is rate-limited; the email is not sent again
 
