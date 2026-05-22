@@ -20,7 +20,7 @@
  * already force-bundled via next.config.ts outputFileTracingIncludes. NO bun add.
  */
 
-import postgres from "postgres";
+import postgres, { type JSONValue } from "postgres";
 import type { JobKind, JobProgress, JobStatus } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -68,10 +68,9 @@ export async function createJob(
   kind: JobKind,
   params: Record<string, unknown>,
 ): Promise<string> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const rows = await sql<{ id: string }[]>`
     INSERT INTO app.jobs (kind, params)
-    VALUES (${kind}, ${sql.json(params as any)})
+    VALUES (${kind}, ${sql.json(params as unknown as JSONValue)})
     RETURNING id
   `;
   const row = rows[0];
@@ -119,10 +118,9 @@ export async function finishJob(
   jobId: string,
   result: unknown,
 ): Promise<void> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   await sql`
     UPDATE app.jobs
-    SET status = 'done', progress = 100, result = ${sql.json(result as any)},
+    SET status = 'done', progress = 100, result = ${sql.json(result as unknown as JSONValue)},
         updated_at = now()
     WHERE id = ${jobId}
   `;
