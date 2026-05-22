@@ -217,7 +217,25 @@ Plans:
   6. A user can sign out; accessing a protected link after sign-out redirects to sign-in
   7. More than one magic-link request per email per 60 seconds is rate-limited; the email is not sent again
 
-**Plans**: TBD
+**Plans**: 5 plans
+Plans:
+**Wave 1**
+
+- [ ] 06-01-PLAN.md — Supabase Postgres app store: jose+resend installs (legitimacy-gated), app.users/sessions/magic_links DDL, lib/auth/store.ts + session.ts (AUTH-08)
+- [ ] 06-02-PLAN.md — gbrain source-scoping: patch-package + committed patch threading sourceId through gbrain think; shim + engine/client sourceId plumbing (AUTH-05 foundation)
+
+**Wave 2** *(blocked on 06-01)*
+
+- [ ] 06-03-PLAN.md — Magic-link auth backend: tokens, Resend email, resolve-tenant chokepoint, send-link/verify/sign-out routes, per-user brain provisioning (AUTH-01, AUTH-02, AUTH-04, AUTH-09)
+
+**Wave 3** *(blocked on 06-03)*
+
+- [ ] 06-04-PLAN.md — middleware coarse gate, sign-in/link-used pages, sign-out button, landing CTA, dashboard session gate, Postgres-backed tenant registry (AUTH-03, AUTH-06, AUTH-07, AUTH-04)
+
+**Wave 4** *(blocked on 06-02, 06-03, 06-04)*
+
+- [ ] 06-05-PLAN.md — Session-scoped gbrain calls across all tenant routes, engine-pool fix, AUTH-05 cross-tenant isolation test, deployed-URL verification (AUTH-05)
+
 **UI hint**: yes
 
 ### Phase 7: QuickBooks Online Ingest
@@ -300,7 +318,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 0/5 | Planned | - |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
@@ -310,4 +328,4 @@ v1.x phases (shipped): see `.planning/archive/v1.x/ROADMAP.md`.
 
 ---
 
-*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17 · v2.0 phases defined (numbering reset): 2026-05-20 · Phase 4 replanned: 2026-05-20*
+*Roadmap created: 2026-05-16 · Extended for v1.1: 2026-05-17 · v2.0 phases defined (numbering reset): 2026-05-20 · Phase 4 replanned: 2026-05-20 · Phase 6 planned: 2026-05-22*
