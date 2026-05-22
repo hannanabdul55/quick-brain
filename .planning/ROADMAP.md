@@ -234,7 +234,7 @@ Plans:
 
 **Wave 4** *(blocked on 06-02, 06-03, 06-04)*
 
-- [ ] 06-05-PLAN.md — Session-scoped gbrain calls across all tenant routes, engine-pool fix, AUTH-05 cross-tenant isolation test, deployed-URL verification (AUTH-05)
+- [x] 06-05-PLAN.md — Session-scoped gbrain calls across all tenant routes, engine-pool fix, AUTH-05 cross-tenant isolation test, deployed-URL verification (AUTH-05)
 
 **UI hint**: yes
 
@@ -318,7 +318,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 4/5 | In Progress|  |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 5/5 | Complete   | 2026-05-22 |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
