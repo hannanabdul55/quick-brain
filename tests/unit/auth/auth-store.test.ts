@@ -145,7 +145,13 @@ describe("lib/auth/session.ts structure", () => {
   });
 
   it("does NOT call postgres() directly (must import sql from store.ts)", () => {
-    expect(sessionSource).not.toMatch(/postgres\s*\(/);
+    // Match only actual import-style invocations of postgres() — not doc-comment references.
+    // The pattern looks for `postgres(` on a non-comment line (no leading * or //).
+    const nonCommentLines = sessionSource
+      .split("\n")
+      .filter((line) => !line.trimStart().startsWith("*") && !line.trimStart().startsWith("//"));
+    const hasPostgresCall = nonCommentLines.some((line) => /\bpostgres\s*\(/.test(line));
+    expect(hasPostgresCall).toBe(false);
   });
 
   it("uses randomUUID from node:crypto for opaque session IDs (T-06-03)", () => {
