@@ -62,7 +62,13 @@ export const runJob = inngest.createFunction(
       await step.run("mark-done", () => finishJob(jobId, result));
     } catch (err: unknown) {
       // ── Step 3b: mark error, then re-throw so Inngest records the failure ──
-      await step.run("mark-error", () => failJob(jobId, String(err)));
+      // Extract the real message/stack — String(err) on a non-Error throw
+      // (object, undefined) yields "[object Object]"/"undefined". failJob
+      // already truncates to 500 chars and strips postgres:// URLs, so
+      // passing the stack is safe and more diagnostic. Mirrors orchestrator.ts.
+      const message =
+        err instanceof Error ? (err.stack ?? err.message) : String(err);
+      await step.run("mark-error", () => failJob(jobId, message));
       throw err;
     }
   },
