@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Real-World Foundation
 status: planning
-stopped_at: Phase 6 context gathered
-last_updated: "2026-05-22T03:50:48.816Z"
+stopped_at: "Phase 6 research complete — auto-advance PAUSED: research overturned D-11 (gbrain RLS does not isolate tenants); needs user decision on the source_id isolation model + AUTH-05 wording before planning"
+last_updated: "2026-05-22T05:42:53.930Z"
 last_activity: 2026-05-22
 progress:
   total_phases: 10
@@ -99,7 +99,7 @@ active. Phase 4 (Vercel Deploy) precondition `vercel link` is done. Carried-forw
 
 ## Session Continuity
 
-Last session: 2026-05-22T03:50:48.808Z
-Stopped at: Phase 6 context gathered
-Resume file: .planning/phases/06-auth-multi-tenant-isolation/06-CONTEXT.md
+Last session: 2026-05-22T05:42:53.917Z
+Stopped at: Phase 6 research complete — auto-advance PAUSED: research overturned D-11 (gbrain RLS does not isolate tenants); needs user decision on the source_id isolation model + AUTH-05 wording before planning
+Resume file: .planning/phases/06-auth-multi-tenant-isolation/06-RESEARCH.md
 Resume command: `/gsd:plan-phase 4` — `vercel link` precondition done; the plan must externalize gbrain for the Next.js server build.
