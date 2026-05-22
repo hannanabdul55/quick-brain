@@ -226,7 +226,7 @@ Plans:
 
 **Wave 2** *(blocked on 06-01)*
 
-- [ ] 06-03-PLAN.md — Magic-link auth backend: tokens, Resend email, resolve-tenant chokepoint, send-link/verify/sign-out routes, per-user brain provisioning (AUTH-01, AUTH-02, AUTH-04, AUTH-09)
+- [x] 06-03-PLAN.md — Magic-link auth backend: tokens, Resend email, resolve-tenant chokepoint, send-link/verify/sign-out routes, per-user brain provisioning (AUTH-01, AUTH-02, AUTH-04, AUTH-09)
 
 **Wave 3** *(blocked on 06-03)*
 
@@ -318,7 +318,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 2/5 | In Progress|  |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 3/5 | In Progress|  |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
