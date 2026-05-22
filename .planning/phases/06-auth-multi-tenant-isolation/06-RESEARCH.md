@@ -935,3 +935,70 @@ the plan locks — A3 and A4 in particular gate the isolation architecture.**
 versions and Resend pricing if planning slips past 7 days. The gbrain findings
 are pinned to the SHA-locked `gbrain@github:garrytan/gbrain#3933eb6` dependency
 and stay valid as long as that pin holds.
+
+---
+
+## Spike Addendum — Open Question 2 resolved (`source_id` retrofit depth)
+
+**Added:** 2026-05-22 — read-only verification against `node_modules/gbrain@0.35.1.0`.
+This resolves Open Question 2 / Assumption A4. The answer is **two-tiered** and
+the chat half is worse than A4's "Medium-High" estimate.
+
+### Verified — the QUERY/retrieval path is source-scopable (easy)
+
+- `hybridSearch(engine, query, opts)` — `opts: HybridSearchOpts extends SearchOpts`;
+  `SearchOpts` declares `sourceId?: string` and `sourceIds?: string[]`
+  (`[VERIFIED: src/core/types.ts:415,470,482]`). `hybridSearch` threads
+  `opts.sourceId`/`opts.sourceIds` to the SQL layer as a `WHERE source_id`
+  filter (`[VERIFIED: src/core/search/hybrid.ts:286-293,503]`).
+- QuickBrain's shim `HybridSearchOpts` (`types/gbrain.ts:76-81`) has a
+  `[key: string]: unknown` index signature, so passing `{ sourceId }` already
+  type-checks. Cleanest: add explicit `sourceId?` / `sourceIds?` to the shim.
+- **Cost:** small — add `sourceId` to the shim, thread the session-derived
+  `source_id` through `queryInProcess` (`lib/gbrain/engine.ts:147`). The
+  retrieval/insight path can be hard-scoped.
+
+### ⚠ Verified — the CHAT/`think` path CANNOT be source-scoped without modifying gbrain
+
+QuickBrain's chat surface uses `runThink` (`lib/gbrain/client.ts:209`). Tracing it:
+
+- `RunThinkOpts` (`[VERIFIED: src/core/think/index.ts:33-56]`) — **no `sourceId` /
+  `sourceIds` field.**
+- `runThink` calls `runGather(engine, { question, anchor, questionEmbedding,
+  takesHoldersAllowList })` (`[VERIFIED: think/index.ts:189-194]`) — no source scope.
+- `ThinkGatherOpts` (`[VERIFIED: src/core/think/gather.ts:23-37]`) — **no `sourceId`
+  field either.**
+- `runGather` issues its retrieval streams **bare**: `hybridSearch(engine, q,
+  { limit, expansion:false })` and `engine.searchTakes(q, { limit,
+  takesHoldersAllowList })` — **no `sourceId` passed** (`[VERIFIED:
+  think/gather.ts:108-136]`). For QuickBrain's chat (no `anchor`, no
+  `embedQuestion`) the live streams are unscoped page search + unscoped takes
+  keyword search.
+- gbrain's `operations.ts` `ctx.sourceId` / `sourceScopeOpts(ctx)` hardening
+  (`[VERIFIED: src/core/operations.ts:240-415]`) scopes the *operations* layer
+  (`put_page`, MCP-bound reads) — **`think`/`runGather` do not go through it.**
+- The engine is **not** source-bindable: scoping is per-call `opts`, and gbrain
+  filters by literal `WHERE source_id = $opts.sourceId`, not a Postgres session
+  variable. No `engine.withSource()` mechanism exists.
+
+**Consequence:** with two users as two `sources` in one gbrain DB, the chat
+(`think`) surface would synthesize answers over **all users' pages** — a
+cross-tenant leak through chat specifically. AUTH-05 cannot be met for the chat
+surface by `source_id` opts alone.
+
+### Options for the chat path (a real decision — surface to the user)
+
+| Option | What it is | Cost / risk |
+|--------|-----------|-------------|
+| **A. Patch/fork gbrain to thread `sourceId` through `think`** | Add `sourceId` to `RunThinkOpts` + `ThinkGatherOpts`, pass it into the 3 `runGather` streams. The primitives already accept it — the change is ~10-15 mechanical lines. Apply via `patch-package`, a fork of the SHA pin, or an upstream PR to `garrytan/gbrain`. | Small code change, but it **modifies the pinned dependency**. `patch-package` survives reinstall; a fork moves the pin; an upstream PR depends on maintainer timeline. gbrain already ships a `check:source-id-projection` guard — it cares about this, so a PR may land. |
+| **B. Bypass gbrain `think` for chat** | Reimplement synthesis in QuickBrain: source-scoped `hybridSearch` + own prompt + direct Anthropic call. | Throws away gbrain `think` (takes fusion, citations, graph, sanitization). Phase 3 (INPROC-04) deliberately wired `think` in-process for answer quality — this is a quality regression + real rework. |
+| **C. One gbrain *brain* (database) per user** | True physical isolation. | Not viable — Supabase free tier is one project = one database. Rejected (matches the main research finding). |
+
+**Recommendation:** Option A — it is the smallest change that keeps gbrain-quality
+chat AND closes the leak. The planner should treat "thread `sourceId` through
+gbrain `think`" as an explicit, isolated task (with the patch-vs-fork-vs-PR
+mechanism chosen by the user), gated before the AUTH-05 chat-isolation test.
+This is a scope addition Phase 6 did not originally anticipate — it must reach
+the user before the plan locks.
+
+*Spike performed: 2026-05-22 (autonomous, read-only — no code changed).*
