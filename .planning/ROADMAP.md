@@ -181,9 +181,9 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Install Inngest (legitimacy-gated) + client singleton + serve route
-- [ ] 05-02-PLAN.md — Benchmark script (p50/p95 of query/think/import) + 300s threshold doc
-- [ ] 05-03-PLAN.md — Generic job contract: types/schema/registry + app.jobs table + Postgres store
+- [x] 05-01-PLAN.md — Install Inngest (legitimacy-gated) + client singleton + serve route
+- [x] 05-02-PLAN.md — Benchmark script (p50/p95 of query/think/import) + 300s threshold doc
+- [x] 05-03-PLAN.md — Generic job contract: types/schema/registry + app.jobs table + Postgres store
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -299,7 +299,7 @@ Plans:
 | 2. gbrain on Supabase + Asset Storage | v2.0 | 2/2 | Complete | 2026-05-20 |
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
-| 5. Background Jobs | v2.0 | 0/5 | Not started | - |
+| 5. Background Jobs | v2.0 | 3/5 | In Progress|  |
 | 6. Auth + Multi-Tenant Isolation | v2.0 | 0/TBD | Not started | - |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
