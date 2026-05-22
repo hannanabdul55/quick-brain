@@ -18,17 +18,20 @@
 import { Resend } from "resend";
 
 // ---------------------------------------------------------------------------
-// Module-level guard — fail loudly at startup, not at first send
+// Lazy Resend client — construct at first send, not at module load.
+//
+// `next build` ("Collecting page data") imports every route module, which
+// transitively imports this file. A module-top-level throw breaks the build
+// whenever RESEND_API_KEY is absent from the build env. Reading at call time
+// keeps the build green and still fails loudly the first time email runs.
 // ---------------------------------------------------------------------------
-const resendApiKey = process.env.RESEND_API_KEY;
-if (!resendApiKey) {
-  throw new Error(
-    "lib/auth/email.ts: RESEND_API_KEY must be set",
-  );
+function getResend(): Resend {
+  const key = process.env.RESEND_API_KEY;
+  if (!key) {
+    throw new Error("lib/auth/email.ts: RESEND_API_KEY must be set");
+  }
+  return new Resend(key);
 }
-
-// Module-level singleton (mirrors lib/inngest/client.ts pattern)
-const resend = new Resend(resendApiKey);
 
 // ---------------------------------------------------------------------------
 // sendMagicLink
@@ -48,7 +51,7 @@ export async function sendMagicLink(
   email: string,
   verifyUrl: string,
 ): Promise<void> {
-  const { error } = await resend.emails.send({
+  const { error } = await getResend().emails.send({
     from: "QuickBrain <noreply@quickbrain.ai>",
     to: [email],
     subject: "Your QuickBrain sign-in link",

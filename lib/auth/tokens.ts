@@ -18,16 +18,23 @@
 import { SignJWT, jwtVerify, errors } from "jose";
 
 // ---------------------------------------------------------------------------
-// Module-level secret guard — fail loudly at startup, not at first request
+// Lazy secret loader — fail at first issue/verify, not at module load.
+//
+// `next build` ("Collecting page data") imports every route module, which
+// transitively imports this file. A module-top-level throw breaks the build
+// whenever JWT_SECRET is absent from the build env (which it should be —
+// secrets belong in runtime config, not build config). Reading at call time
+// keeps the build green and still fails loudly the first time auth runs.
 // ---------------------------------------------------------------------------
-const jwtSecretEnv = process.env.JWT_SECRET;
-if (!jwtSecretEnv) {
-  throw new Error(
-    "lib/auth/tokens.ts: JWT_SECRET must be set (>=32 bytes for HS256)",
-  );
+function getSecret(): Uint8Array {
+  const env = process.env.JWT_SECRET;
+  if (!env) {
+    throw new Error(
+      "lib/auth/tokens.ts: JWT_SECRET must be set (>=32 bytes for HS256)",
+    );
+  }
+  return new TextEncoder().encode(env);
 }
-
-const secret = new TextEncoder().encode(jwtSecretEnv);
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,7 +72,7 @@ export async function issueMagicToken(email: string): Promise<IssueResult> {
     .setIssuedAt()
     .setExpirationTime("15m")
     .setJti(jti)
-    .sign(secret);
+    .sign(getSecret());
   return { token, jti };
 }
 
@@ -87,7 +94,7 @@ export async function issueMagicToken(email: string): Promise<IssueResult> {
  */
 export async function verifyMagicToken(token: string): Promise<VerifyResult> {
   try {
-    const { payload } = await jwtVerify(token, secret, {
+    const { payload } = await jwtVerify(token, getSecret(), {
       clockTolerance: "30s",
     });
     const email = payload["email"] as string | undefined;

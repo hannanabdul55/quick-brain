@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { Suspense, useEffect, useId, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import {
   Card,
@@ -29,7 +29,11 @@ type PageState =
 // Sign-in page
 // ---------------------------------------------------------------------------
 
-export default function SignInPage() {
+// Next.js 15 requires `useSearchParams()` callers in client components to
+// sit inside a Suspense boundary, otherwise the entire route deopts during
+// static prerender. The exported page wraps the form in <Suspense> so the
+// build can statically prerender the shell.
+function SignInForm() {
   const searchParams = useSearchParams();
   // Read ?next= opaquely — never render it as visible copy (T-06-20)
   const next = searchParams.get("next") ?? undefined;
@@ -249,5 +253,13 @@ export default function SignInPage() {
         )}
       </div>
     </main>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInForm />
+    </Suspense>
   );
 }
