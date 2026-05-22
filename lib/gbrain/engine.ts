@@ -141,12 +141,13 @@ export async function disconnectEngine(tenantId: string): Promise<void> {
 export async function queryInProcess(
   tenantId: string,
   question: string,
-  opts?: { noExpand?: boolean },
+  opts?: { noExpand?: boolean; sourceId?: string },
 ): Promise<SearchResult[]> {
   const engine = await createGBrainEngine(tenantId);
   const results = await hybridSearch(engine, question, {
     expandFn: opts?.noExpand ? undefined : expandQuery,
     expansion: !opts?.noExpand,
+    sourceId: opts?.sourceId,
   });
   return results;
 }

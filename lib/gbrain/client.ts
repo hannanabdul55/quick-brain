@@ -152,11 +152,12 @@ async function runOnce(args: string[], opts: SpawnGBrainOpts): Promise<GBrainRes
 export async function query(
   tenantId: string,
   question: string,
-  opts?: Partial<SpawnGBrainOpts> & { noExpand?: boolean },
+  opts?: Partial<SpawnGBrainOpts> & { noExpand?: boolean; sourceId?: string },
 ): Promise<string> {
   return withTenantLock(tenantId, async () => {
     const results = await queryInProcess(tenantId, question, {
       noExpand: opts?.noExpand ?? false,
+      sourceId: opts?.sourceId,
     });
     if (results.length === 0) return "No results.\n";
     return (
@@ -197,7 +198,7 @@ export async function query(
 export async function think(
   tenantId: string,
   question: string,
-  opts?: { model?: string; timeoutMs?: number },
+  opts?: { model?: string; timeoutMs?: number; sourceId?: string },
 ): Promise<GBrainResult> {
   const model = opts?.model ?? "haiku";
   // createGBrainEngine ensures configureGateway ran (gateway singleton init).
@@ -209,6 +210,7 @@ export async function think(
       const result = await runThink(engine, {
         question,
         model,
+        sourceId: opts?.sourceId,
       });
       return {
         code: 0,

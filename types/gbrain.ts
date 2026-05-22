@@ -77,6 +77,10 @@ export interface HybridSearchOpts {
   expansion?: boolean;
   expandFn?: (query: string) => Promise<string[]>;
   limit?: number;
+  /** Scope results to a single source partition (tenant isolation). */
+  sourceId?: string;
+  /** Federated multi-source scope; wins over scalar sourceId when set. */
+  sourceIds?: string[];
   [key: string]: unknown;
 }
 
@@ -171,6 +175,14 @@ export interface RunThinkOpts {
   model?: string;
   since?: string;
   until?: string;
+  /**
+   * Scope chat synthesis to a single source partition (tenant isolation — D-12).
+   *
+   * This field is threaded into gbrain's think path via patches/gbrain+3933eb6.patch.
+   * A gbrain version bump invalidates the patch; re-run `diff -u` against the new
+   * gbrain source and update patches/gbrain+3933eb6.patch after any bump.
+   */
+  sourceId?: string;
   /** Inject an LLM client (for tests — avoids real Anthropic calls). */
   client?: unknown;
   /** Pure-test escape: return synthesized payload without calling any LLM. */
