@@ -28,14 +28,24 @@ import type { JobKind, JobProgress, JobStatus } from "./types";
 // Mirrors engine.ts singleton precedent.
 // URL resolution: exact fallback chain from lib/health/probes.ts / engine.ts buildConfig()
 // ---------------------------------------------------------------------------
-const sql = postgres(
-  (process.env.GBRAIN_DATABASE_URL ?? process.env.SUPABASE_DB_URL_POOLER) as string,
-  {
-    // prepare:false is MANDATORY — port 6543 is Supavisor pooler, not direct Postgres.
-    // gbrain's db.ts does this too; probes.ts line 104 sets the same.
-    prepare: false,
-  },
-);
+// Validate the connection URL before constructing the client. A bare
+// `as string` cast on an undefined env var lies to the type system —
+// postgres(undefined) does not fail at import but produces an opaque
+// driver error on first query, far from the real cause (missing config).
+// Mirrors the explicit guard in scripts/setup-jobs-table.ts.
+const databaseUrl =
+  process.env.GBRAIN_DATABASE_URL ?? process.env.SUPABASE_DB_URL_POOLER;
+if (!databaseUrl) {
+  throw new Error(
+    "lib/jobs/store.ts: GBRAIN_DATABASE_URL or SUPABASE_DB_URL_POOLER must be set",
+  );
+}
+
+const sql = postgres(databaseUrl, {
+  // prepare:false is MANDATORY — port 6543 is Supavisor pooler, not direct Postgres.
+  // gbrain's db.ts does this too; probes.ts line 104 sets the same.
+  prepare: false,
+});
 
 // ---------------------------------------------------------------------------
 // Row type (reflects the app.jobs schema from setup-jobs-table.ts)
