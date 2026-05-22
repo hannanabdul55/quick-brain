@@ -15,10 +15,10 @@ export default function Home() {
           setup, no technical skills required.
         </p>
         <Link
-          href="/onboard"
+          href="/sign-in"
           className={cn(buttonVariants({ variant: "default", size: "lg" }), "text-base px-8 py-4 h-auto")}
         >
-          Start your business brain
+          Sign in
         </Link>
       </div>
     </main>
