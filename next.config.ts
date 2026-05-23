@@ -27,13 +27,17 @@ const nextConfig: NextConfig = {
   // the function bundle — working locally but MODULE_NOT_FOUND on Vercel.
   // These globs force the tracer to include them regardless.
   //
+  // GLOB-KEY CONVENTION (critical — debug resolution: gbrain-not-found-on-verify.md):
+  // Next.js's collect-build-traces.js matches these glob keys against the route's
+  // **normalized URL path** (e.g. "/api/auth/verify", "/api/tenants/[id]/chat"),
+  // NOT the source file path. The previous key "app/api/**/route.ts" looks like a
+  // file glob but never matches any URL path — picomatch returns false — so the
+  // include set is silently empty for every API route. The correct shape is the
+  // URL-path glob "/api/**" which matches every API route's normalized path.
   // All four WASM-dep packages are verified at top-level node_modules/ (not
   // nested under node_modules/gbrain/node_modules/) as of 2026-05-20.
-  // Every gbrain-touching route handler lives under app/api/** — including the
-  // magic-link verify route (Phase 6 moved it there to satisfy this glob +
-  // vercel.json's Bun runtime glob).
   outputFileTracingIncludes: {
-    "app/api/**/route.ts": GBRAIN_RUNTIME_DEPS,
+    "/api/**": GBRAIN_RUNTIME_DEPS,
   },
 
   // Type the webpack fn using Parameters/ReturnType rather than importing
