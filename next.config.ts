@@ -27,15 +27,13 @@ const nextConfig: NextConfig = {
   // the function bundle — working locally but MODULE_NOT_FOUND on Vercel.
   // These globs force the tracer to include them regardless.
   //
-  // Globs cover every route handler that touches gbrain:
-  // - app/api/**/route.ts        — tenants/* + future API routes (Phase 3/4)
-  // - app/auth/**/route.ts       — verify route provisions a per-user gbrain
-  //                                 source on first sign-in (Phase 6)
   // All four WASM-dep packages are verified at top-level node_modules/ (not
   // nested under node_modules/gbrain/node_modules/) as of 2026-05-20.
+  // Every gbrain-touching route handler lives under app/api/** — including the
+  // magic-link verify route (Phase 6 moved it there to satisfy this glob +
+  // vercel.json's Bun runtime glob).
   outputFileTracingIncludes: {
     "app/api/**/route.ts": GBRAIN_RUNTIME_DEPS,
-    "app/auth/**/route.ts": GBRAIN_RUNTIME_DEPS,
   },
 
   // Type the webpack fn using Parameters/ReturnType rather than importing

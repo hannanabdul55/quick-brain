@@ -3,9 +3,6 @@
   "functions": {
     "app/api/**/*.ts": {
       "runtime": "bun@1.2.0"
-    },
-    "app/auth/**/*.ts": {
-      "runtime": "bun@1.2.0"
     }
   }
 }

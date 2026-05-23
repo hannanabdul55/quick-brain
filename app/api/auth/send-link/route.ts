@@ -69,7 +69,7 @@ export async function POST(req: Request): Promise<Response> {
   // ── 6. Build the verify URL ───────────────────────────────────────────────
   // Use the request origin so it works on any deployed URL (not hardcoded domain).
   const origin = new URL(req.url).origin;
-  const verifyUrl = new URL(`${origin}/auth/verify`);
+  const verifyUrl = new URL(`${origin}/api/auth/verify`);
   verifyUrl.searchParams.set("token", token);
   // Only append ?next= when it passes the same-origin guard (T-06-12)
   if (next && isSafeNextPath(next)) {
