@@ -51,8 +51,16 @@ export async function sendMagicLink(
   email: string,
   verifyUrl: string,
 ): Promise<void> {
+  // From-address is env-driven so test mode (no verified domain) and
+  // production (verified domain) can swap without a code change.
+  // Default: Resend's shared dev sender — works without owning a domain,
+  // but Resend will only deliver to addresses verified in your Resend
+  // dashboard until you set RESEND_FROM_ADDRESS to a verified-domain address.
+  const fromAddress =
+    process.env.RESEND_FROM_ADDRESS ?? "QuickBrain <onboarding@resend.dev>";
+
   const { error } = await getResend().emails.send({
-    from: "QuickBrain <noreply@quickbrain.ai>",
+    from: fromAddress,
     to: [email],
     subject: "Your QuickBrain sign-in link",
     html: buildEmailHtml(verifyUrl),
