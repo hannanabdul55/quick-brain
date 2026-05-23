@@ -30,14 +30,24 @@ const nextConfig: NextConfig = {
   // GLOB-KEY CONVENTION (critical — debug resolution: gbrain-not-found-on-verify.md):
   // Next.js's collect-build-traces.js matches these glob keys against the route's
   // **normalized URL path** (e.g. "/api/auth/verify", "/api/tenants/[id]/chat"),
-  // NOT the source file path. The previous key "app/api/**/route.ts" looks like a
-  // file glob but never matches any URL path — picomatch returns false — so the
-  // include set is silently empty for every API route. The correct shape is the
-  // URL-path glob "/api/**" which matches every API route's normalized path.
+  // NOT the source file path. A "app/api/**/route.ts"-style key never matches any
+  // URL — picomatch returns false — so the include set is silently empty.
+  //
+  // SCOPE — must be narrow enough to stay under Vercel's 250 MB unzipped function
+  // limit. gbrain + pglite + tree-sitter-wasms collectively are ~150–200 MB; a
+  // catch-all "/api/**" key pushes every API function (including ones that don't
+  // touch gbrain) over the cap. Only the routes that actually call into gbrain at
+  // runtime carry the include:
+  //   - /api/tenants/**       — chat/insights/onboard/reset all call lib/gbrain/*
+  //   - /api/auth/verify      — Phase 6 first-sign-in provisioning (engine.executeRaw)
+  // Routes deliberately EXCLUDED (don't need gbrain, would bust the size limit):
+  //   /api/auth/send-link, /api/auth/sign-out, /api/jobs/**, /api/health, /api/inngest.
+  //
   // All four WASM-dep packages are verified at top-level node_modules/ (not
   // nested under node_modules/gbrain/node_modules/) as of 2026-05-20.
   outputFileTracingIncludes: {
-    "/api/**": GBRAIN_RUNTIME_DEPS,
+    "/api/tenants/**": GBRAIN_RUNTIME_DEPS,
+    "/api/auth/verify": GBRAIN_RUNTIME_DEPS,
   },
 
   // Type the webpack fn using Parameters/ReturnType rather than importing
