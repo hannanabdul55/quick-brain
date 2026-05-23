@@ -1,6 +1,17 @@
 import type { NextConfig } from "next";
 import { withSentryConfig } from "@sentry/nextjs";
 
+// Runtime deps that the Vercel file tracer cannot discover via static analysis
+// (gbrain uses webpackIgnore + computed dynamic imports). Listed once; applied
+// to every route-handler glob that imports gbrain.
+const GBRAIN_RUNTIME_DEPS = [
+  "node_modules/gbrain/**",
+  "node_modules/postgres/**",
+  "node_modules/@electric-sql/pglite/**",
+  "node_modules/tree-sitter-wasms/**",
+  "node_modules/web-tree-sitter/**",
+];
+
 const nextConfig: NextConfig = {
   // gbrain ships raw .ts + WASM deps (@electric-sql/pglite, tree-sitter-wasms,
   // web-tree-sitter); load from node_modules at runtime, do not bundle into the
@@ -15,16 +26,16 @@ const nextConfig: NextConfig = {
   // node_modules/gbrain/** and the WASM deps would be silently excluded from
   // the function bundle — working locally but MODULE_NOT_FOUND on Vercel.
   // These globs force the tracer to include them regardless.
+  //
+  // Globs cover every route handler that touches gbrain:
+  // - app/api/**/route.ts        — tenants/* + future API routes (Phase 3/4)
+  // - app/auth/**/route.ts       — verify route provisions a per-user gbrain
+  //                                 source on first sign-in (Phase 6)
   // All four WASM-dep packages are verified at top-level node_modules/ (not
   // nested under node_modules/gbrain/node_modules/) as of 2026-05-20.
   outputFileTracingIncludes: {
-    "app/api/**/route.ts": [
-      "node_modules/gbrain/**",
-      "node_modules/postgres/**",
-      "node_modules/@electric-sql/pglite/**",
-      "node_modules/tree-sitter-wasms/**",
-      "node_modules/web-tree-sitter/**",
-    ],
+    "app/api/**/route.ts": GBRAIN_RUNTIME_DEPS,
+    "app/auth/**/route.ts": GBRAIN_RUNTIME_DEPS,
   },
 
   // Type the webpack fn using Parameters/ReturnType rather than importing
