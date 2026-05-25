@@ -95,13 +95,14 @@ export async function provisionBrain(
 ): Promise<void> {
   const engine = await createGBrainEngine(sourceId);
   // engine.executeRaw is a gbrain BrainEngine method (see node_modules/gbrain/src/core/sql-query.ts).
-  // The BrainEngine interface uses [key: string]: unknown for extensibility;
-  // cast here to access the method type-safely.
-  const execRaw = engine["executeRaw"] as (
-    sql: string,
-    params: unknown[],
-  ) => Promise<unknown>;
-  await execRaw(
+  // The BrainEngine interface uses [key: string]: unknown for extensibility; cast the
+  // engine to access the method type-safely. Call as `engine.executeRaw(...)` rather than
+  // aliasing — extracting the method into a variable detaches `this`, and the method
+  // body reads `this.sql`, which then throws "undefined is not an object".
+  const typedEngine = engine as unknown as {
+    executeRaw: (sql: string, params: unknown[]) => Promise<unknown>;
+  };
+  await typedEngine.executeRaw(
     `INSERT INTO sources (id, name, config) VALUES ($1, $2, $3::jsonb) ON CONFLICT (id) DO NOTHING`,
     [sourceId, displayName, JSON.stringify({ federated: false })],
   );
