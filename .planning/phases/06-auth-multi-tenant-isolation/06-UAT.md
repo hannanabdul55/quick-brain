@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 06-auth-multi-tenant-isolation
 source: [06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 06-04-SUMMARY.md, 06-05-SUMMARY.md]
 started: 2026-05-23T00:00:00Z
@@ -99,10 +99,18 @@ blocked: 0
 
 - truth: "Insights cards render empty (or 200 with empty data) for a fresh authenticated tenant with no ingested data — D-02 accepted no-data case"
   status: failed
-  reason: "User reported: GET /api/tenants/<slug>/insights returns 500 with 'ENOENT: no such file or directory, scandir .../brains/<slug>/brain-repo/originals'. For a fresh tenant the brain-repo/originals dir doesn't exist; the insights compute path (lib/insights/cache.ts::computeAndCache → file walker) throws instead of returning empty. Per D-02 + 06-05 SUMMARY, missing data should yield empty insights gracefully (not a 500). Chat works correctly — issue is scoped to the insights compute path."
+  reason: "User reported: GET /api/tenants/<slug>/insights returns 500 with 'ENOENT: no such file or directory, scandir .../brains/<slug>/brain-repo/originals'."
   severity: major
   test: 11
-  root_cause: ""     # Filled by diagnosis
-  artifacts: []      # Filled by diagnosis
-  missing: []        # Filled by diagnosis
-  debug_session: ""  # Filled by diagnosis
+  root_cause: "lib/insights/top-vendors.ts:17 calls `readdir(join(fixturesDir, \"originals\"))` unguarded. app/api/tenants/[id]/insights/route.ts:92 invokes it via computeAndCache(...) with sourceDir = `brainHome(brainSlug)/brain-repo` for authenticated tenants. Fresh tenants have no `originals/` subdir → ENOENT throws → propagates through unguarded Promise.all in lib/insights/cache.ts:25-44 → route catch-block returns `compute_failed` 500 instead of empty insights. Verdict A (missing dir guard) and B (compute hard-codes fixture-shape filenames) both confirmed. Fixture leakage (C) and stale cache (D) ruled out — cache is tenantId-keyed and the failure precedes cache.set."
+  artifacts:
+    - path: "lib/insights/top-vendors.ts"
+      issue: "Line 17: readdir(join(fixturesDir, 'originals')) unguarded against ENOENT."
+    - path: "lib/insights/cache.ts"
+      issue: "Lines 25-44: Promise.all wraps three computers without per-promise error handling — first ENOENT rejects the whole bundle."
+    - path: "app/api/tenants/[id]/insights/route.ts"
+      issue: "Line 92 (authenticated branch): no fs.stat guard on sourceDir/originals before computeAndCache. Catch-block surfaces ENOENT as compute_failed 500 instead of returning empty bundle."
+  missing:
+    - "Guard the authenticated insights branch: if `<brainHome(slug)>/brain-repo/originals` does not exist (fs.stat ENOENT), return an empty insights bundle (200) instead of calling computeAndCache. Seed/AUTH_ENABLED=0 path unaffected."
+    - "Optionally also harden lib/insights/cache.ts Promise.all to per-promise catch — defensive against future similar bugs."
+  debug_session: ".planning/debug/06-insights-enoent-fresh-tenant.md"
