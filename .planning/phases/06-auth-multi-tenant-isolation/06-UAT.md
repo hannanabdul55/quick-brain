@@ -1,5 +1,5 @@
 ---
-status: partial
+status: diagnosed
 phase: 06-auth-multi-tenant-isolation
 source: [06-01-SUMMARY.md, 06-02-SUMMARY.md, 06-03-SUMMARY.md, 06-04-SUMMARY.md, 06-05-SUMMARY.md]
 started: 2026-05-23T00:00:00Z
@@ -87,12 +87,15 @@ blocked: 5
 
 - truth: "Clicking the magic link signs the user in: GET /auth/verify consumes the token, provisions a brain on first sign-in, sets the qb_session cookie, and redirects to /dash/<brainSlug> without a 500"
   status: failed
-  reason: "User reported: GET /auth/verify 500s with 'Stripping types is currently unsupported for files under node_modules' for node_modules/gbrain/src/core/ai/gateway.ts. The verify route imports gbrain which ships raw .ts in node_modules; under Node.js runtime, Node 24's --experimental-strip-types refuses to strip TS types from node_modules. Recent commits (297c326 pin Bun runtime for app/auth/**/*.ts, a0aad1e move verify route to app/api/auth/verify) addressed this for deployed Vercel functions via vercel.ts outputFileTracingIncludes + runtime config, but local `bun dev` does NOT honor those platform-level pins — the route still runs under Node when the Next.js dev server respects export const runtime = 'nodejs'."
+  reason: "User reported: GET /auth/verify 500s with 'Stripping types is currently unsupported for files under node_modules' for node_modules/gbrain/src/core/ai/gateway.ts. Local dev only — deployed Vercel function is fixed by the four recent commits."
   severity: blocker
   test: 6
-  root_cause: ""     # Filled by diagnosis
-  artifacts: []      # Filled by diagnosis
-  missing: []        # Filled by diagnosis
-  debug_session: ""  # Filled by diagnosis
+  root_cause: "`package.json:7` declares `\"dev\": \"next dev\"`. Bun's `bun run` respects the `next` CLI shebang (`#!/usr/bin/env node`), so `bun dev` actually launches Next.js under Node 24, not Bun. The verify route's `nodejs` runtime then runs under that Node host. Its import chain (provision.ts → engine.ts → @/types/gbrain::configureGateway) dynamically imports `gbrain/ai/gateway`; with `serverExternalPackages: [\"gbrain\"]` keeping webpack out, resolution falls to Node's loader, which refuses to TS-strip files under node_modules. Send-link route passes because it never imports gbrain."
+  artifacts:
+    - path: "package.json"
+      issue: "Line 7 dev script uses `next dev` (Node host) instead of `bun --bun next dev` (Bun host). Existing start script already uses the Bun form — dev script is inconsistent."
+  missing:
+    - "Change `package.json` dev script to `bun --bun next dev` to match start script and the gbrain shim's documented Bun-runtime contract (types/gbrain.ts:22–25)."
+  debug_session: ".planning/debug/06-verify-route-ts-strip.md"
 
 [Operator action still required to re-save the (currently empty-string) Vercel env vars for JWT_SECRET / RESEND_API_KEY / TOKEN_ENCRYPTION_KEY in Preview + Production before deploying — separately noted from test 3.]
