@@ -33,6 +33,7 @@
  */
 
 import { join } from "node:path";
+import { stat } from "node:fs/promises";
 import { resolveTenant } from "@/lib/auth/resolve-tenant";
 import { FIXTURES_ROOT, SEED_TENANT_ID, brainHome } from "@/lib/gbrain/paths";
 import { getCachedInsights, computeAndCache } from "@/lib/insights/cache";
@@ -93,17 +94,32 @@ export async function GET(
 
   let bundle = getCachedInsights(brainSlug);
   if (!bundle) {
-    try {
-      bundle = await computeAndCache(brainSlug, sourceDir);
-    } catch (err: unknown) {
-      console.error("[insights] compute failed for", brainSlug, err);
-      return Response.json(
-        {
-          error: "compute_failed",
-          message: err instanceof Error ? err.message : String(err),
-        },
-        { status: 500 },
-      );
+    // D-02 (gap closed 06-06): fresh tenants with no originals/ dir return empty
+    // bundle (not 500). See .planning/debug/06-insights-enoent-fresh-tenant.md.
+    // One stat syscall per cache miss — negligible. Once Phase 7 QBO ingest
+    // populates the brain, computeAndCache caches the result and stat is skipped.
+    const originalsExists = await stat(join(sourceDir, "originals"))
+      .then((s) => s.isDirectory())
+      .catch(() => false);
+
+    if (!originalsExists) {
+      bundle = { topVendors: [], pnl: null, anomalies: [], computedAt: Date.now() };
+      // Intentionally NOT calling cache.set — leaves cache empty so the first
+      // request after Phase 7 ingest triggers a fresh compute (Open Question 2,
+      // debug session 06-insights-enoent-fresh-tenant.md).
+    } else {
+      try {
+        bundle = await computeAndCache(brainSlug, sourceDir);
+      } catch (err: unknown) {
+        console.error("[insights] compute failed for", brainSlug, err);
+        return Response.json(
+          {
+            error: "compute_failed",
+            message: err instanceof Error ? err.message : String(err),
+          },
+          { status: 500 },
+        );
+      }
     }
   }
 

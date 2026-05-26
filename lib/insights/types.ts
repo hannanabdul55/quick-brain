@@ -29,7 +29,7 @@ export type AnomalyRow = {
 
 export type InsightBundle = {
   topVendors: TopVendorRow[];
-  pnl: PnlSnapshot;
+  pnl: PnlSnapshot | null;
   anomalies: AnomalyRow[];
   computedAt: number; // Date.now()
 };
