@@ -57,9 +57,12 @@ result: pass
 
 ### 11. Chat Returns Real Answer for Your Brain (not tenant_not_found)
 expected: Sign in again (fresh session). On your dashboard, ask a chat question. The chat returns a real gbrain answer (or an empty/no-data answer if Phase 7 QBO ingest hasn't run — that's expected). It does NOT return "tenant_not_found" or 401/403/500. Insights cards render (may be empty for a fresh tenant with no ingested data — D-02 accepted).
-result: issue
+result: pass
 reported: "Chat returns a real gbrain answer (PASS half). Insights cards FAIL: 'Insights API error: 500 {\"error\":\"compute_failed\",\"message\":\"ENOENT: no such file or directory, scandir /Users/abdulhannankanji/Git repos/quick-brain/brains/u-748ccc135b0073/brain-repo/originals\"}'. The insights compute is scandir'ing a directory that doesn't exist for a fresh tenant. Per design D-02, missing data should yield empty insights, not 500."
 severity: major
+resolved: "2026-05-25 — gap closure 06-06 landed. Re-run confirmation (commits b1a6e68 / 766f9ea / 2934c54 / e54d608): (1) tests/unit/insights/route-empty-bundle.test.ts + pnl-card-null.test.ts → 5/5 GREEN through the real route handler under mocked auth, asserting 200 + empty bundle for a fresh tenant with no originals/ subdir, plus 403 slug-mismatch and seed-bypass non-empty positive-control. (2) Live dev server probe at /api/tenants/u-748ccc135b0073/insights → 401 unauthorized (no 500 — auth gate intact). (3) AUTH_ENABLED=0 seed bypass at /api/tenants/seed/insights → 200 with full Mara coffee bundle (no demo regression). (4) Bun-runtime simulation of the new fs.stat guard against a non-existent brain dir → returns {topVendors:[], pnl:null, anomalies:[], computedAt} exactly as the route now would. Behavioral fix verified end-to-end."
+fixed_in: ["b1a6e68", "766f9ea", "2934c54", "e54d608"]
+status_resolved: passed
 
 ### 12. Cross-Tenant Isolation Spot Check
 expected: Sign in as User A and ask a chat question with a unique marker phrase. Sign out. Sign in as a SECOND email (User B — fresh brain). Ask the same question. User B should NOT see User A's data or marker. Each user's chat/insights are scoped to their own session-derived source_id.
@@ -69,8 +72,8 @@ reason: "User skipped; no reason provided. Note: cross-tenant isolation is struc
 ## Summary
 
 total: 12
-passed: 10
-issues: 1
+passed: 11
+issues: 0
 pending: 0
 skipped: 1
 blocked: 0
