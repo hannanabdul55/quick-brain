@@ -217,7 +217,7 @@ Plans:
   6. A user can sign out; accessing a protected link after sign-out redirects to sign-in
   7. More than one magic-link request per email per 60 seconds is rate-limited; the email is not sent again
 
-**Plans**: 5 plans
+**Plans**: 6 plans
 Plans:
 **Wave 1**
 
@@ -235,6 +235,10 @@ Plans:
 **Wave 4** *(blocked on 06-02, 06-03, 06-04)*
 
 - [x] 06-05-PLAN.md — Session-scoped gbrain calls across all tenant routes, engine-pool fix, AUTH-05 cross-tenant isolation test, deployed-URL verification (AUTH-05)
+
+**Wave 5** *(gap closure — blocked on 06-05; closes UAT test 11 gap)*
+
+- [x] 06-06-PLAN.md — Fresh-tenant empty insights: fs.stat guard in the authenticated insights branch + InsightBundle.pnl widened to PnlSnapshot | null + PnlCard "no data yet" empty state (AUTH-05 / D-02 gap)
 
 **UI hint**: yes
 
@@ -318,7 +322,7 @@ Plans:
 | 3. In-Process gbrain Refactor | v2.0 | 2/3 | In Progress|  |
 | 4. Vercel Deploy + Observability | v2.0 | 3/3 | Complete   | 2026-05-21 |
 | 5. Background Jobs | v2.0 | 5/5 | Complete   | 2026-05-22 |
-| 6. Auth + Multi-Tenant Isolation | v2.0 | 5/5 | Complete   | 2026-05-22 |
+| 6. Auth + Multi-Tenant Isolation | v2.0 | 6/6 | Complete   | 2026-05-26 |
 | 7. QuickBooks Online Ingest | v2.0 | 0/TBD | Not started | - |
 | 8. smb-audit Scale Validation | v2.0 | 0/TBD | Not started | - |
 | 9. Hackathon Artifact Removal | v2.0 | 0/TBD | Not started | - |
