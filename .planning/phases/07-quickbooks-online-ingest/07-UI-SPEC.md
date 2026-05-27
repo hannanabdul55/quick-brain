@@ -1,10 +1,11 @@
 ---
 phase: 7
 slug: quickbooks-online-ingest
-status: draft
+status: approved
 shadcn_initialized: true
 preset: base-nova
 created: 2026-05-26
+reviewed_at: 2026-05-26T00:00:00Z
 ---
 
 # Phase 7 — UI Design Contract
@@ -222,7 +223,7 @@ All from `components/ui/` (shadcn `base-nova`) unless noted.
 - Body: one-sentence explanation (see Copywriting).
 - Last-synced line (if previously synced): shown as above.
 - `Button variant="default"` "Reconnect QuickBooks" — initiates OAuth flow.
-- `Button variant="destructive" variant="outline"` "Remove connection" —
+- `Button variant="destructive"` "Remove connection" —
   opens disconnect confirmation modal. (Destructive styling applies because this
   wipes the stored credentials; use `variant="destructive"` per the color
   contract.)
