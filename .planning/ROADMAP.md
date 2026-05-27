@@ -263,7 +263,32 @@ Plans:
   4. When the access token expires it is transparently refreshed; a revoked or failed connection surfaces a clear reconnect prompt
   5. Subsequent syncs correctly update changed records without creating duplicates
 
-**Plans**: TBD
+**Plans**: 9 plans
+Plans:
+**Wave 1**
+
+- [ ] 07-01-PLAN.md — DB migration + connector types + crypto helper + QBO endpoints (QBO-01, QBO-02)
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 07-02-PLAN.md — Intuit OAuth client + QBO entity types (QBO-01, QBO-02, QBO-05)
+- [ ] 07-03-PLAN.md — QBO API client + transformer + fixtures + transformer tests (QBO-03, QBO-05)
+- [ ] 07-04-PLAN.md — Connector-blind writer + gbrain shim importFromContent extension (QBO-03, QBO-06)
+
+**Wave 3** *(blocked on Wave 2 completion)*
+
+- [ ] 07-05-PLAN.md — qboIngest Inngest function + job registry + serve route update (QBO-03, QBO-04, QBO-06)
+
+**Wave 4** *(blocked on Wave 3 completion)*
+
+- [ ] 07-06-PLAN.md — QBO API route handlers (start, callback, resync, disconnect) (QBO-01, QBO-02, QBO-04, QBO-05)
+- [ ] 07-07-PLAN.md — Dashboard banner + empty callout + sync-progress screen + connections page + modals (QBO-01, QBO-04, QBO-05)
+- [ ] 07-08-PLAN.md — Insights + chat 409 connector_revoked gate (QBO-05, QBO-06)
+
+**Wave 5** *(blocked on Wave 4 completion)*
+
+- [ ] 07-09-PLAN.md — Integration tests + token-logging enforcement + Sentry strip (QBO-02, QBO-03, QBO-04, QBO-05, QBO-06)
+
 **UI hint**: yes
 
 ### Phase 8: smb-audit Scale Validation
