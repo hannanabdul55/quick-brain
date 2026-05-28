@@ -1,0 +1,423 @@
+{
+  "spike": "008",
+  "finishedAt": "2026-05-28T20:20:09.548Z",
+  "totalMs": 6850,
+  "verdicts": {
+    "allBurstsClean": true,
+    "all200ConcurrentSucceeded": true,
+    "inngestSimAllOk": true,
+    "distinctSupavisorBackends": 9
+  },
+  "burstResults": [
+    {
+      "n": 1,
+      "totalMs": 71,
+      "successCount": 1,
+      "errorCount": 0,
+      "p50Ms": 71,
+      "p99Ms": 71,
+      "maxMs": 71,
+      "errors": []
+    },
+    {
+      "n": 5,
+      "totalMs": 74,
+      "successCount": 5,
+      "errorCount": 0,
+      "p50Ms": 65,
+      "p99Ms": 74,
+      "maxMs": 74,
+      "errors": []
+    },
+    {
+      "n": 10,
+      "totalMs": 80,
+      "successCount": 10,
+      "errorCount": 0,
+      "p50Ms": 79,
+      "p99Ms": 80,
+      "maxMs": 80,
+      "errors": []
+    },
+    {
+      "n": 20,
+      "totalMs": 162,
+      "successCount": 20,
+      "errorCount": 0,
+      "p50Ms": 127,
+      "p99Ms": 162,
+      "maxMs": 162,
+      "errors": []
+    },
+    {
+      "n": 50,
+      "totalMs": 407,
+      "successCount": 50,
+      "errorCount": 0,
+      "p50Ms": 223,
+      "p99Ms": 407,
+      "maxMs": 407,
+      "errors": []
+    },
+    {
+      "n": 100,
+      "totalMs": 753,
+      "successCount": 100,
+      "errorCount": 0,
+      "p50Ms": 404,
+      "p99Ms": 753,
+      "maxMs": 753,
+      "errors": []
+    },
+    {
+      "n": 200,
+      "totalMs": 1897,
+      "successCount": 200,
+      "errorCount": 0,
+      "p50Ms": 841,
+      "p99Ms": 1895,
+      "maxMs": 1897,
+      "errors": []
+    }
+  ],
+  "inngestResults": [
+    {
+      "M": 1,
+      "totalMs": 595,
+      "failed": 0,
+      "jobs": [
+        {
+          "jobId": 0,
+          "ms": 595,
+          "stepLatencies": [
+            114,
+            124,
+            122,
+            117,
+            118
+          ]
+        }
+      ]
+    },
+    {
+      "M": 3,
+      "totalMs": 647,
+      "failed": 0,
+      "jobs": [
+        {
+          "jobId": 0,
+          "ms": 626,
+          "stepLatencies": [
+            128,
+            130,
+            121,
+            117,
+            129
+          ]
+        },
+        {
+          "jobId": 1,
+          "ms": 631,
+          "stepLatencies": [
+            128,
+            131,
+            122,
+            132,
+            118
+          ]
+        },
+        {
+          "jobId": 2,
+          "ms": 647,
+          "stepLatencies": [
+            140,
+            129,
+            120,
+            134,
+            124
+          ]
+        }
+      ]
+    },
+    {
+      "M": 5,
+      "totalMs": 694,
+      "failed": 0,
+      "jobs": [
+        {
+          "jobId": 0,
+          "ms": 681,
+          "stepLatencies": [
+            151,
+            145,
+            125,
+            131,
+            129
+          ]
+        },
+        {
+          "jobId": 1,
+          "ms": 654,
+          "stepLatencies": [
+            128,
+            127,
+            133,
+            133,
+            133
+          ]
+        },
+        {
+          "jobId": 2,
+          "ms": 690,
+          "stepLatencies": [
+            152,
+            144,
+            125,
+            130,
+            139
+          ]
+        }
+      ]
+    },
+    {
+      "M": 10,
+      "totalMs": 688,
+      "failed": 0,
+      "jobs": [
+        {
+          "jobId": 0,
+          "ms": 644,
+          "stepLatencies": [
+            130,
+            132,
+            121,
+            130,
+            131
+          ]
+        },
+        {
+          "jobId": 1,
+          "ms": 644,
+          "stepLatencies": [
+            127,
+            125,
+            126,
+            135,
+            131
+          ]
+        },
+        {
+          "jobId": 2,
+          "ms": 653,
+          "stepLatencies": [
+            131,
+            131,
+            121,
+            134,
+            136
+          ]
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-05-28T20:20:02.699Z",
+      "ms": 1,
+      "category": "setup",
+      "message": "Spike 008 starting"
+    },
+    {
+      "t": "2026-05-28T20:20:02.699Z",
+      "ms": 1,
+      "category": "setup",
+      "message": "Pooler host: aws-1-us-west-2.pooler.supabase.com:6543"
+    },
+    {
+      "t": "2026-05-28T20:20:02.699Z",
+      "ms": 1,
+      "category": "setup",
+      "message": "gbrain GBRAIN_POOL_SIZE=(default 10)"
+    },
+    {
+      "t": "2026-05-28T20:20:03.028Z",
+      "ms": 330,
+      "category": "setup",
+      "message": "Engine connected (max: 10 conn pool per gbrain default)"
+    },
+    {
+      "t": "2026-05-28T20:20:03.028Z",
+      "ms": 330,
+      "category": "pool-stat",
+      "message": "Baseline (cold engine): 30 concurrent pg_backend_pid() queries (parameterized)"
+    },
+    {
+      "t": "2026-05-28T20:20:03.469Z",
+      "ms": 771,
+      "category": "pool-stat",
+      "message": "Baseline: 9 distinct Supavisor backends in 441ms (gbrain max:10 = expected ceiling on local pool side)"
+    },
+    {
+      "t": "2026-05-28T20:20:03.469Z",
+      "ms": 771,
+      "category": "burst",
+      "message": "Ramping concurrency: N = 1, 5, 10, 20, 50, 100, 200"
+    },
+    {
+      "t": "2026-05-28T20:20:03.469Z",
+      "ms": 771,
+      "category": "burst",
+      "message": "Firing burst N=1"
+    },
+    {
+      "t": "2026-05-28T20:20:03.541Z",
+      "ms": 843,
+      "category": "burst",
+      "message": "N=1 → success=1/1 errors=0 total=71ms p50=71ms p99=71ms"
+    },
+    {
+      "t": "2026-05-28T20:20:03.542Z",
+      "ms": 844,
+      "category": "burst",
+      "message": "Firing burst N=5"
+    },
+    {
+      "t": "2026-05-28T20:20:03.616Z",
+      "ms": 918,
+      "category": "burst",
+      "message": "N=5 → success=5/5 errors=0 total=74ms p50=65ms p99=74ms"
+    },
+    {
+      "t": "2026-05-28T20:20:03.617Z",
+      "ms": 919,
+      "category": "burst",
+      "message": "Firing burst N=10"
+    },
+    {
+      "t": "2026-05-28T20:20:03.698Z",
+      "ms": 999,
+      "category": "burst",
+      "message": "N=10 → success=10/10 errors=0 total=80ms p50=79ms p99=80ms"
+    },
+    {
+      "t": "2026-05-28T20:20:03.698Z",
+      "ms": 1000,
+      "category": "burst",
+      "message": "Firing burst N=20"
+    },
+    {
+      "t": "2026-05-28T20:20:03.860Z",
+      "ms": 1162,
+      "category": "burst",
+      "message": "N=20 → success=20/20 errors=0 total=162ms p50=127ms p99=162ms"
+    },
+    {
+      "t": "2026-05-28T20:20:03.860Z",
+      "ms": 1162,
+      "category": "burst",
+      "message": "Firing burst N=50"
+    },
+    {
+      "t": "2026-05-28T20:20:04.267Z",
+      "ms": 1569,
+      "category": "burst",
+      "message": "N=50 → success=50/50 errors=0 total=407ms p50=223ms p99=407ms"
+    },
+    {
+      "t": "2026-05-28T20:20:04.267Z",
+      "ms": 1569,
+      "category": "burst",
+      "message": "Firing burst N=100"
+    },
+    {
+      "t": "2026-05-28T20:20:05.020Z",
+      "ms": 2322,
+      "category": "burst",
+      "message": "N=100 → success=100/100 errors=0 total=753ms p50=404ms p99=753ms"
+    },
+    {
+      "t": "2026-05-28T20:20:05.020Z",
+      "ms": 2322,
+      "category": "burst",
+      "message": "Firing burst N=200"
+    },
+    {
+      "t": "2026-05-28T20:20:06.917Z",
+      "ms": 4219,
+      "category": "burst",
+      "message": "N=200 → success=200/200 errors=0 total=1897ms p50=841ms p99=1895ms"
+    },
+    {
+      "t": "2026-05-28T20:20:06.917Z",
+      "ms": 4219,
+      "category": "inngest-sim",
+      "message": "Phase 7 shape: M concurrent ingest jobs × 5 step.run() each (serial inside job)"
+    },
+    {
+      "t": "2026-05-28T20:20:06.917Z",
+      "ms": 4219,
+      "category": "inngest-sim",
+      "message": "Firing M=1 concurrent Inngest-shaped jobs"
+    },
+    {
+      "t": "2026-05-28T20:20:07.512Z",
+      "ms": 4814,
+      "category": "inngest-sim",
+      "message": "M=1 → 1/1 jobs completed in 595ms (each ~5×50ms pg_sleep = ~250ms ideal serial; 5 queries total)"
+    },
+    {
+      "t": "2026-05-28T20:20:07.513Z",
+      "ms": 4815,
+      "category": "inngest-sim",
+      "message": "Firing M=3 concurrent Inngest-shaped jobs"
+    },
+    {
+      "t": "2026-05-28T20:20:08.160Z",
+      "ms": 5462,
+      "category": "inngest-sim",
+      "message": "M=3 → 3/3 jobs completed in 647ms (each ~5×50ms pg_sleep = ~250ms ideal serial; 15 queries total)"
+    },
+    {
+      "t": "2026-05-28T20:20:08.160Z",
+      "ms": 5462,
+      "category": "inngest-sim",
+      "message": "Firing M=5 concurrent Inngest-shaped jobs"
+    },
+    {
+      "t": "2026-05-28T20:20:08.854Z",
+      "ms": 6156,
+      "category": "inngest-sim",
+      "message": "M=5 → 5/5 jobs completed in 694ms (each ~5×50ms pg_sleep = ~250ms ideal serial; 25 queries total)"
+    },
+    {
+      "t": "2026-05-28T20:20:08.854Z",
+      "ms": 6156,
+      "category": "inngest-sim",
+      "message": "Firing M=10 concurrent Inngest-shaped jobs"
+    },
+    {
+      "t": "2026-05-28T20:20:09.542Z",
+      "ms": 6844,
+      "category": "inngest-sim",
+      "message": "M=10 → 10/10 jobs completed in 688ms (each ~5×50ms pg_sleep = ~250ms ideal serial; 50 queries total)"
+    },
+    {
+      "t": "2026-05-28T20:20:09.542Z",
+      "ms": 6844,
+      "category": "pool-stat",
+      "message": "Post-load probe SKIPPED (originally hung — see README for finding)"
+    },
+    {
+      "t": "2026-05-28T20:20:09.546Z",
+      "ms": 6848,
+      "category": "setup",
+      "message": "engine.disconnect() OK"
+    },
+    {
+      "t": "2026-05-28T20:20:09.547Z",
+      "ms": 6849,
+      "category": "summary",
+      "message": "Spike 008 complete"
+    }
+  ]
+}

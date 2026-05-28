@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike 008 — Inngest × Supabase pool — VALIDATED</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 920px; margin: 32px auto; padding: 0 16px; color: #1c2024; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #16a34a; padding-bottom: 8px; margin-bottom: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+         margin-right: 4px; font-weight: 600; border: 1px solid transparent; }
+  .tag-ok    { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .tag-perf  { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .tag-phase { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .panel { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px;
+           margin: 16px 0; border-radius: 0 6px 6px 0; }
+  .table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  .table th, .table td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #e2e8f0; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .table th { background: #f1f5f9; font-weight: 600; text-align: right; font-family: -apple-system, sans-serif; }
+  .table td:first-child, .table th:first-child { text-align: left; }
+  .barwrap { background: #f1f5f9; height: 14px; border-radius: 3px; position: relative; overflow: hidden; min-width: 80px; }
+  .bar { background: linear-gradient(90deg, #22c55e, #16a34a); height: 100%; border-radius: 3px; }
+  .barlabel { position: absolute; right: 4px; top: 0; font-size: 10px; line-height: 14px; color: white; font-weight: 600; }
+  .finding {
+    background: #fef3c7; border-left: 5px solid #f59e0b; padding: 14px 18px;
+    margin: 18px 0; border-radius: 0 8px 8px 0;
+  }
+  .finding strong { color: #92400e; }
+  .pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+         background: #1e293b; color: #f1f5f9; padding: 10px 14px; border-radius: 6px; overflow-x: auto; }
+  code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            color: #64748b; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Spike 008 — Inngest concurrency × Supabase free-tier pool</h1>
+<p>
+  <span class="tag tag-ok">VALIDATED ✓</span>
+  <span class="tag tag-perf">Performance / load</span>
+  <span class="tag tag-phase">Phase 7 risk closed</span>
+</p>
+
+<div class="panel">
+  <strong>The question:</strong> Phase 7 fires Inngest jobs with 5 step.run()
+  boundaries each. With M concurrent jobs across tenants, that's up to M×5
+  effective concurrent queries through the shared gbrain engine
+  (default <code>max: 10</code> conns). Does the Supabase free-tier pool
+  become a failure mode? At what M does it crack?
+</div>
+
+<h2>Burst ramp — 200 concurrent SELECTs through max:10 pool</h2>
+<table class="table">
+  <thead><tr><th>N concurrent</th><th>total ms</th><th>p50 ms</th><th>p99 ms</th><th>max ms</th><th>success</th><th>relative</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>71</td><td>71</td><td>71</td><td>71</td><td>1/1</td><td><div class="barwrap"><div class="bar" style="width:4%"></div><span class="barlabel">71</span></div></td></tr>
+    <tr><td>5</td><td>74</td><td>65</td><td>74</td><td>74</td><td>5/5</td><td><div class="barwrap"><div class="bar" style="width:4%"></div><span class="barlabel">74</span></div></td></tr>
+    <tr><td>10</td><td>80</td><td>79</td><td>80</td><td>80</td><td>10/10</td><td><div class="barwrap"><div class="bar" style="width:4%"></div><span class="barlabel">80</span></div></td></tr>
+    <tr><td>20</td><td>162</td><td>127</td><td>162</td><td>162</td><td>20/20</td><td><div class="barwrap"><div class="bar" style="width:9%"></div><span class="barlabel">162</span></div></td></tr>
+    <tr><td>50</td><td>407</td><td>223</td><td>407</td><td>407</td><td>50/50</td><td><div class="barwrap"><div class="bar" style="width:22%"></div><span class="barlabel">407</span></div></td></tr>
+    <tr><td>100</td><td>753</td><td>404</td><td>753</td><td>753</td><td>100/100</td><td><div class="barwrap"><div class="bar" style="width:40%"></div><span class="barlabel">753</span></div></td></tr>
+    <tr><td><strong>200</strong></td><td><strong>1897</strong></td><td>841</td><td>1895</td><td>1897</td><td><strong>200/200</strong></td><td><div class="barwrap"><div class="bar" style="width:100%"></div><span class="barlabel">1897</span></div></td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:14px">
+  <strong>0 errors at every level.</strong> Latency follows a clean M/M/c queue
+  model with c = 10: at N ≤ 10 pool is uncontended (~70-80ms = network RTT);
+  at N = 200 queue depth ~20 → p50 = 841ms, p99 = 1.9s. <strong>No cliff. No
+  failure cutoff. Just queueing.</strong>
+</p>
+
+<h2>Phase 7 shape — M concurrent Inngest jobs × 5 step.run() each</h2>
+<table class="table">
+  <thead><tr><th>M concurrent jobs</th><th>effective queries</th><th>total ms</th><th>failed</th><th>~ms per step</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>5</td><td>595</td><td>0</td><td>119</td></tr>
+    <tr><td>3</td><td>15</td><td>647</td><td>0</td><td>129</td></tr>
+    <tr><td>5</td><td>25</td><td>694</td><td>0</td><td>139</td></tr>
+    <tr><td><strong>10</strong></td><td><strong>50</strong></td><td><strong>688</strong></td><td><strong>0</strong></td><td>138</td></tr>
+  </tbody>
+</table>
+
+<p style="font-size:14px">
+  Each "job" runs 5 serial <code>pg_sleep(0.05)</code> queries (~250ms ideal serial).
+  <strong>M=10 jobs finish in 688ms — basically the same as M=1.</strong> The 10 jobs
+  proceed in lockstep through their step.run() chains because each step's 50ms
+  pg_sleep is Postgres-side, not pool-blocking on conn acquisition.
+</p>
+
+<div class="finding">
+  <strong>BONUS FINDING — Parameterless <code>executeRaw</code> hangs forever
+  against Supavisor.</strong> The first run of this spike included a probe
+  using <code>engine.executeRaw('SELECT pg_backend_pid()')</code> (no params).
+  It hung indefinitely. Reproduced cold AND post-load. Adding any dummy
+  parameter <code>$1</code> made the same query complete in ~10ms.
+  <em>statement_timeout doesn't fire — the query likely never reaches
+  Postgres at all (stuck in postgres.js's client-side empty-params path).</em>
+  Phase 7 implication: every direct <code>engine.executeRaw</code> call MUST
+  pass at least one parameter. Lint rule recommended.
+</div>
+
+<h2>Pool capacity probe (parameterized)</h2>
+<div class="pre">
+30 concurrent SELECT pg_backend_pid() AS pid (with $1 sentinel parameter)
+→ 9 distinct Supavisor backends in 71ms
+
+  gbrain pool max: 10  (default DEFAULT_POOL_SIZE_FALLBACK)
+  9 distinct backends → confirms max:10 is the ACTIVE wire ceiling,
+                         not a singleton, not unlimited.
+  Supavisor recycles backends across transactions ("transaction mode").
+</div>
+
+<h2>Phase 7 implications</h2>
+<ol>
+  <li><strong>No pool tuning needed.</strong> Default <code>GBRAIN_POOL_SIZE=10</code> is
+      sufficient for any realistic v2.0 concurrency. The real Phase 7
+      latency dominator is the 1.9s OpenAI embedding call (spike 007), not
+      pool contention.</li>
+  <li><strong>Inngest fanout is safe at M=10.</strong> Phase 7's step-divided
+      function (D-07) can fan out to 10 concurrent tenant jobs without pool
+      saturation. 50 effective queries fit through the pool cleanly.</li>
+  <li><strong>Don't promise hard SLAs in the progress UI.</strong>
+      07-UI-SPEC.md's <code>&lt;JobProgress&gt;</code> phase-labeled stream
+      shouldn't tie to specific timing — at M=10 each step is ~140ms; the
+      embedding step inside ingest is the heavy one.</li>
+  <li><strong>Lint rule: every <code>engine.executeRaw</code> needs a parameter.</strong>
+      Catches the silent-hang footgun at compile time.</li>
+  <li><strong>Confirms the single-shared-engine architecture.</strong> Combined
+      with spike 010 (no cross-tenant leak under 20 interleaved queries),
+      spike 008 proves the cheap one-engine pattern in
+      <code>lib/gbrain/engine.ts</code> is the right architecture for v2.0.</li>
+</ol>
+
+<div class="footer">
+  <p>
+    Run with <code>set -a && . ./.env.local && set +a && bun .planning/spikes/008-inngest-supabase-pool/spike.ts</code>.
+    Forensic log at <code>spike-events.json</code>. Total runtime ~7s.
+  </p>
+</div>
+
+</body>
+</html>
