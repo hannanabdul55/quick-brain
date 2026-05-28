@@ -1,0 +1,226 @@
+{
+  "spike": "010",
+  "finishedAt": "2026-05-28T20:04:28.293Z",
+  "totalMs": 12178,
+  "allPass": false,
+  "verdicts": [
+    {
+      "probe": "PROBE 1: composite-key getPage isolation",
+      "outcome": "PASS",
+      "detail": "A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "probe": "PROBE 2: 20 concurrent interleaved queries — no cross-tenant leak",
+      "outcome": "PASS",
+      "detail": "0/20 calls leaked other-tenant secrets"
+    },
+    {
+      "probe": "PROBE 3: unscoped hybridSearch behavior — what does \"forgot to pass sourceId\" do?",
+      "outcome": "PASS",
+      "detail": "Unscoped sees A=true B=true. LEAK CLASS: omitting sourceId returns federated rows across tenants."
+    },
+    {
+      "probe": "PROBE 4: getPage WITHOUT sourceId — which tenant's row wins?",
+      "outcome": "FAIL",
+      "detail": "Returns tenant A's page (LEAK: would expose other-tenant content if caller forgets to pass sourceId)"
+    },
+    {
+      "probe": "PROBE 5: listPages scope behavior",
+      "outcome": "PASS",
+      "detail": "unscoped=50 A=1 B=1. Includes other sources (default + seed)"
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-05-28T20:04:16.117Z",
+      "ms": 2,
+      "category": "setup",
+      "message": "Spike 010 starting",
+      "data": {
+        "tenants": [
+          "spike-010-tenant-a",
+          "spike-010-tenant-b"
+        ],
+        "slug": "originals/spike-010-shared-slug"
+      }
+    },
+    {
+      "t": "2026-05-28T20:04:16.118Z",
+      "ms": 3,
+      "category": "config",
+      "message": "configureGateway + createEngine + connect"
+    },
+    {
+      "t": "2026-05-28T20:04:16.689Z",
+      "ms": 574,
+      "category": "engine",
+      "message": "Engine ready (single shared instance — same pattern as lib/gbrain/engine.ts)"
+    },
+    {
+      "t": "2026-05-28T20:04:16.689Z",
+      "ms": 574,
+      "category": "ingest",
+      "message": "Pre-register both tenant source rows"
+    },
+    {
+      "t": "2026-05-28T20:04:16.897Z",
+      "ms": 782,
+      "category": "ingest",
+      "message": "Tenant A: importFromContent slug=originals/spike-010-shared-slug"
+    },
+    {
+      "t": "2026-05-28T20:04:18.270Z",
+      "ms": 2155,
+      "category": "ingest",
+      "message": "Tenant A wrote",
+      "data": {
+        "status": "imported",
+        "chunks": 1
+      }
+    },
+    {
+      "t": "2026-05-28T20:04:18.270Z",
+      "ms": 2155,
+      "category": "ingest",
+      "message": "Tenant B: importFromContent SAME slug=originals/spike-010-shared-slug (different content)"
+    },
+    {
+      "t": "2026-05-28T20:04:19.069Z",
+      "ms": 2954,
+      "category": "ingest",
+      "message": "Tenant B wrote",
+      "data": {
+        "status": "imported",
+        "chunks": 1
+      }
+    },
+    {
+      "t": "2026-05-28T20:04:19.069Z",
+      "ms": 2954,
+      "category": "leak-probe",
+      "message": "Probe 1: getPage(slug, {sourceId: A}) returns A's content"
+    },
+    {
+      "t": "2026-05-28T20:04:19.234Z",
+      "ms": 3119,
+      "category": "search",
+      "message": "✓ PROBE 1: composite-key getPage isolation — A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "t": "2026-05-28T20:04:19.234Z",
+      "ms": 3119,
+      "category": "concurrent",
+      "message": "Probe 2: 20 concurrent hybridSearch calls interleaved between tenants"
+    },
+    {
+      "t": "2026-05-28T20:04:26.824Z",
+      "ms": 10709,
+      "category": "concurrent",
+      "message": "20 concurrent calls completed in 7586ms"
+    },
+    {
+      "t": "2026-05-28T20:04:26.825Z",
+      "ms": 10710,
+      "category": "search",
+      "message": "✓ PROBE 2: 20 concurrent interleaved queries — no cross-tenant leak — 0/20 calls leaked other-tenant secrets"
+    },
+    {
+      "t": "2026-05-28T20:04:26.825Z",
+      "ms": 10710,
+      "category": "leak-probe",
+      "message": "Probe 3: hybridSearch WITHOUT sourceId (\"forgot to pass\" bug class)"
+    },
+    {
+      "t": "2026-05-28T20:04:27.821Z",
+      "ms": 11706,
+      "category": "leak-probe",
+      "message": "Unscoped search returned 10 results",
+      "data": [
+        {
+          "slug": "originals/spike-010-shared-slug",
+          "src": "spike-010-tenant-b",
+          "score": 0.8751442172207325
+        },
+        {
+          "slug": "originals/spike-010-shared-slug",
+          "src": "spike-010-tenant-a",
+          "score": 0.8580125596589911
+        },
+        {
+          "slug": "originals/invoice-beanstalk-roasters-br-2026-02-b",
+          "src": "default",
+          "score": 0.8186270077307425
+        },
+        {
+          "slug": "originals/invoice-beanstalk-roasters-br-2026-01-b",
+          "src": "default",
+          "score": 0.8062397864035394
+        },
+        {
+          "slug": "concepts/march-anomaly-summary",
+          "src": "default",
+          "score": 0.8062072627218815
+        }
+      ]
+    },
+    {
+      "t": "2026-05-28T20:04:27.821Z",
+      "ms": 11706,
+      "category": "search",
+      "message": "✓ PROBE 3: unscoped hybridSearch behavior — what does \"forgot to pass sourceId\" do? — Unscoped sees A=true B=true. LEAK CLASS: omitting sourceId returns federated rows across tenants."
+    },
+    {
+      "t": "2026-05-28T20:04:27.821Z",
+      "ms": 11706,
+      "category": "leak-probe",
+      "message": "Probe 4: getPage(slug) WITHOUT sourceId — which row does it return?"
+    },
+    {
+      "t": "2026-05-28T20:04:27.894Z",
+      "ms": 11779,
+      "category": "error",
+      "message": "✗ PROBE 4: getPage WITHOUT sourceId — which tenant's row wins? — Returns tenant A's page (LEAK: would expose other-tenant content if caller forgets to pass sourceId)"
+    },
+    {
+      "t": "2026-05-28T20:04:27.895Z",
+      "ms": 11780,
+      "category": "leak-probe",
+      "message": "Probe 5: listPages with no scope (admin-style enumeration)"
+    },
+    {
+      "t": "2026-05-28T20:04:28.216Z",
+      "ms": 12101,
+      "category": "leak-probe",
+      "message": "listPages counts",
+      "data": {
+        "unscoped": 50,
+        "tenantA": 1,
+        "tenantB": 1
+      }
+    },
+    {
+      "t": "2026-05-28T20:04:28.216Z",
+      "ms": 12101,
+      "category": "search",
+      "message": "✓ PROBE 5: listPages scope behavior — unscoped=50 A=1 B=1. Includes other sources (default + seed)"
+    },
+    {
+      "t": "2026-05-28T20:04:28.216Z",
+      "ms": 12101,
+      "category": "cleanup",
+      "message": "DELETE FROM sources WHERE id IN (...) — cascades pages + chunks"
+    },
+    {
+      "t": "2026-05-28T20:04:28.289Z",
+      "ms": 12174,
+      "category": "cleanup",
+      "message": "engine.disconnect()"
+    },
+    {
+      "t": "2026-05-28T20:04:28.293Z",
+      "ms": 12178,
+      "category": "setup",
+      "message": "Spike 010 complete"
+    }
+  ]
+}

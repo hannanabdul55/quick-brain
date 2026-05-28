@@ -222,7 +222,7 @@ Architecture not yet mapped. Follow existing patterns found in the codebase.
 <!-- GSD:skills-start source:skills/ -->
 ## Project Skills
 
-- **Spike findings for quick-brain** (implementation patterns, constraints, gotchas from spike sessions on outbound vendor emails + accounting connectors) → `Skill("spike-findings-quick-brain")`
+- **Spike findings for quick-brain** (implementation patterns, constraints, gotchas — covers v1.x outbound emails + accounting connectors + skill infra, AND v2.0 Supabase foundation + in-process gbrain + multi-tenant isolation) → `Skill("spike-findings-quick-brain")`
 <!-- GSD:skills-end -->
 
 <!-- GSD:workflow-start source:GSD defaults -->

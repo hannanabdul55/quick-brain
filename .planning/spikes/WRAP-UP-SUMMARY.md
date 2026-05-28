@@ -2,9 +2,10 @@
 
 **Initial wrap-up:** 2026-05-19 (spikes 001 + 002)
 **Appended:** 2026-05-19 (spikes 003 + 004 from frontier-mode pass)
-**Spikes processed:** 7 (2 standalone + 1 parent + 3 comparison children + 1 infrastructure)
-**Feature areas:** 3 — Outbound communications · Accounting connector strategy · gbrain skill infrastructure
-**Skill output:** `./.claude/skills/spike-findings-quick-brain/`
+**Appended:** 2026-05-28 (spikes 005 + 006 + 007 + 008 + 009 + 010 from v2.0 pre-execute integration + frontier pass)
+**Spikes processed:** 13 (v1.x: 2 standalone + 1 parent + 3 comparison children + 1 infrastructure + 1 CPA; v2.0: 6 spikes covering Supabase migration, in-process refactor validation, importFromContent write path, pool capacity, cold-start, multi-tenant isolation)
+**Feature areas:** 6 — Outbound communications · Accounting connector strategy · gbrain skill infrastructure · **v2.0 Supabase foundation · v2.0 in-process gbrain · v2.0 multi-tenant isolation**
+**Skill output:** `./.claude/skills/spike-findings-quick-brain/` (extended)
 **Auto-load:** wired into `CLAUDE.md`
 
 ## Processed Spikes
@@ -16,8 +17,14 @@
 | 002a | accounting-api-xero | comparison | VALIDATED ✓ (add in v1.2) | Accounting connector strategy |
 | 002b | accounting-api-wave | comparison | INVALIDATED ✗ | Accounting connector strategy |
 | 002c | accounting-api-freshbooks | comparison | PARTIAL ⚠ (freelancer-niche) | Accounting connector strategy |
-| 003 | minions-over-pglite | standard | VALIDATED ✓ | gbrain skill infrastructure |
+| 003 | minions-over-pglite | standard | VALIDATED ✓ (now obsoleted by Inngest pivot, but smb-audit findings still apply) | gbrain skill infrastructure |
 | 004 | accountant-facing-reports | standard | VALIDATED ✓ (leads v1.2) | Outbound communications |
+| 005 | gbrain-on-supabase | standard | VALIDATED ✓ | v2.0 Supabase foundation |
+| 006 | gbrain-in-process | standard | VALIDATED ✓ | v2.0 in-process gbrain |
+| 007 | gbrain-import-from-content | integration | VALIDATED ✓ | v2.0 in-process gbrain |
+| 008 | inngest-supabase-pool | integration | VALIDATED ✓ | v2.0 Supabase foundation |
+| 009 | vercel-fluid-coldstart | standard | VALIDATED ✓ | v2.0 in-process gbrain |
+| 010 | per-tenant-engine-rls | standard | PARTIAL ⚠ (silent-leak architectural finding) | v2.0 multi-tenant isolation |
 
 ## Key Findings
 
@@ -93,4 +100,65 @@ The wrap-up's v1.2 candidates refine:
 
 ---
 
-*Initial wrap-up: 2026-05-19. Frontier-spike append: 2026-05-19 (spikes 003 + 004).*
+## Wave 2 Key Findings (2026-05-28 — v2.0 pre-execute integration + frontier pass)
+
+Six spikes ran before Phase 7 execute to de-risk the v2.0 in-process + Supabase + multi-tenant architecture. Headline outcomes:
+
+**Spike 005 — gbrain on Supabase (VALIDATED ✓)**:
+- One-time `gbrain migrate --to supabase` is lossless, self-verifying, 45s wall on 48 pages.
+- Free tier sufficient (Postgres 17.6 + pgvector 0.8.0 + pg_trgm 1.6). Pro is zero-ops/backups preference, not a technical gate.
+- **Gotcha:** migrate writes the password in plaintext into `<brain>/.gbrain/config.json`. Prod must use `GBRAIN_DATABASE_URL` env var + gitignore the brain dir.
+- gbrain auto-enables RLS on every public table — but the role we connect as has BYPASSRLS (uncovered as critical in spike 010).
+
+**Spike 006 — in-process gbrain (VALIDATED ✓)**:
+- App can drop `spawn("gbrain", …)` entirely. `createEngine` + `connect` + `hybridSearch` runs 1.34s end-to-end on a warm engine, no child process.
+- gbrain's `package.json#exports` map is rich — `./engine-factory`, `./search/hybrid`, `./search/expansion`, `./ai/gateway`, etc. all importable.
+- Inserted the "in-process gbrain refactor" as Phase 3 before "Vercel Deploy" (Phase 4). All v2.0 follow-on work assumes this architecture.
+
+**Spike 007 — `importFromContent` write path (VALIDATED ✓)**:
+- The Phase 7 ingest entrypoint works in-process: 1.9s/page (incl. one OpenAI text-embedding-3-large call), idempotent on content_hash, isolated by sourceId.
+- **FINDING that would have bitten Phase 7 mid-execution:** `importFromContent` enforces FK `pages_source_id_fkey` — the QBO OAuth-connect handler MUST `INSERT INTO sources` before enqueuing the first ingest job. None of the 9 Phase 7 plans had this step.
+- Re-sync (D-08 "wipe-and-reingest") is one SQL: `DELETE FROM sources WHERE id = $1`. FK ON DELETE CASCADE sweeps pages + chunks + tags + links atomically in ~120ms.
+- `types/gbrain.ts` shim can be safely extended with `importFromContent` via the same `_load("import-file")` pattern as existing exports.
+
+**Spike 008 — Inngest × Supabase pool (VALIDATED ✓)**:
+- gbrain's default max:10 pool absorbs N=200 concurrent queries (0 errors, 1.9s wall) and M=10 concurrent Inngest-shaped 5-step jobs (50 queries, 688ms wall, 0 errors). No pool tuning needed for v2.0.
+- Latency follows a clean M/M/c queue model with c=10 — predictable, no cliff.
+- **Bonus finding (lint rule worthy):** parameterless `engine.executeRaw(template)` hangs indefinitely against the Supavisor transaction-mode pooler. statement_timeout doesn't fire because the query never leaves postgres.js's client-side path. Adding any dummy $1 param fixes it.
+
+**Spike 009 — Vercel Fluid Compute cold-start (VALIDATED ✓)**:
+- Cold path: 1.75s mean / warm path: 1.17s mean / ratio 1.5×.
+- **Surprise:** the actual cold infrastructure tax is only ~310ms (62ms Bun init + module load, 240ms Supabase connect, ~10ms create_engine). The other ~1.4s of "cold path" is the OpenAI embedding call — same cost on warm instances.
+- **Phase 4 ships without warm-pooling.** 310ms savings doesn't justify a scheduled keep-alive cron + complexity. Default Vercel Fluid Compute instance reuse handles 95%+ of requests.
+- Don't change `next.config.ts` `serverExternalPackages: ['gbrain']` — the 62ms gbrain-module-load timing assumes Bun loads raw `.ts` at runtime.
+
+**Spike 010 — per-tenant engine RLS (PARTIAL ⚠ — architectural finding)**:
+- **The big finding:** gbrain enables RLS on every table BUT the Supabase pooler role has `BYPASSRLS`. **RLS does NOT protect QuickBrain from in-app code that forgets to pass sourceId.** All tenant isolation lives in app-layer per-call sourceId scoping.
+- The single-shared-engine pattern in `lib/gbrain/engine.ts` SURVIVES 20 interleaved concurrent queries from 2 tenants with 0 cross-tenant leaks (positive validation).
+- **But the failure mode is silent:** `engine.getPage(slug)` / `deletePage` / `listPages` / `hybridSearch(engine, q)` without a sourceId arg silently returns / mutates / federates across all tenants. No exception, no warning, no audit trail.
+- **Required prerequisite for Phase 7:** `lib/gbrain/tenant-scoped.ts` wrapper functions + ESLint rule banning bare `engine.*` outside `lib/gbrain/`. Audit existing call sites in `lib/`, `app/`, `scripts/` before Phase 7 lands.
+
+## Action Items for Phase 7 (Before Execute) — derived from Wave 2 spikes
+
+Phase 7 plans must add or extend before its 9-plan rollout executes:
+
+1. **NEW plan**: build `lib/gbrain/tenant-scoped.ts` wrappers (`tenantSafeGetPage`, `tenantSafeDeletePage`, `tenantSafeListPages`, `tenantSafeHybridSearch`, `tenantSafeImportFromContent`). Each resolves `tenantId → sourceId` via `lib/auth/resolve-tenant.ts` and requires both args. (Spike 010)
+2. **NEW plan**: ESLint rule banning bare `engine.getPage(` / `engine.deletePage(` / `engine.listPages(` / bare `hybridSearch(` / bare `importFromContent(` outside `lib/gbrain/`. Compile-time defense against silent leaks. (Spike 010)
+3. **Audit task**: grep every existing `engine.*` and bare `hybridSearch` / `importFromContent` call in `lib/`, `app/`, `scripts/` — confirm each passes a per-request sourceId derived from `resolveTenant()`. Phase 6 shipped without this audit; any oversight is a live leak. (Spike 010)
+4. **Plan 07-01 (or similar)**: extend `types/gbrain.ts` with `importFromContent` shim wrapper using the existing `_load("import-file")` pattern. (Spike 007)
+5. **Plan 07-02 (QBO OAuth connect handler)**: register the source row via `INSERT INTO sources (id, name, config) VALUES ($1, $2, $3::jsonb) ON CONFLICT (id) DO NOTHING` BEFORE enqueuing the first ingest job. (Spike 007)
+6. **Plan 07-XX (re-sync)**: implement D-08 "wipe-and-reingest" as one `DELETE FROM sources WHERE id = $1` (FK cascade handles the rest). (Spike 007)
+7. **Lint rule**: any `engine.executeRaw(template)` call where the second arg is missing or `[]` is an error. (Spike 008)
+
+## Action Items for Phase 4 (Before Execute) — derived from Wave 2 spikes
+
+- **None functional.** Phase 4 ships with default Vercel Fluid Compute behavior. Set realistic chat-UX expectations ("typical 1-2s") in Phase 4's UI surface.
+- Do not change `next.config.ts` `serverExternalPackages: ['gbrain']`.
+
+## Phase 9+ Optimization Opportunity
+
+- **Query-embedding LRU cache** — currently every `hybridSearch` makes a fresh OpenAI `text-embedding-3-large` call. Common queries ("what was weird about last month?") run repeatedly. An LRU keyed by normalized query text → 3072-dim vector could halve warm-path latency (1.2s → 0.6s). Defer to Phase 9+ when there's real traffic to measure.
+
+---
+
+*Initial wrap-up: 2026-05-19. Frontier-spike append: 2026-05-19 (spikes 003 + 004). v2.0 pre-execute integration + frontier append: 2026-05-28 (spikes 005-010).*

@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike 007 — gbrain importFromContent — VALIDATED</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 880px; margin: 32px auto; padding: 0 16px; color: #1c2024; line-height: 1.5; }
+  h1 { border-bottom: 3px solid #4f46e5; padding-bottom: 8px; margin-bottom: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+         background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; margin-right: 4px; font-weight: 600; }
+  .panel { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px;
+           margin: 16px 0; border-radius: 0 6px 6px 0; }
+  .verdict-row { display: grid; grid-template-columns: 24px 1fr 90px; gap: 12px; padding: 8px 0;
+                 border-bottom: 1px solid #e2e8f0; align-items: center; }
+  .verdict-row:last-child { border-bottom: none; }
+  .v-pass { color: #16a34a; font-weight: 700; font-size: 16px; text-align: center; }
+  .v-fail { color: #dc2626; font-weight: 700; font-size: 16px; text-align: center; }
+  .v-time { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #64748b; text-align: right; }
+  .v-name { font-weight: 500; }
+  .v-detail { font-size: 12px; color: #475569; margin-top: 2px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 13px; }
+  th, td { padding: 6px 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f1f5f9; font-weight: 600; }
+  td.cat { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 11px; color: #64748b; }
+  td.ms { font-family: ui-monospace, "SF Mono", Menlo, monospace; text-align: right; font-size: 11px; color: #64748b; width: 70px; }
+  .finding { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 10px 14px;
+             margin: 12px 0; border-radius: 0 6px 6px 0; font-size: 14px; }
+  .finding strong { color: #92400e; }
+  code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            color: #64748b; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Spike 007 — gbrain <code>importFromContent</code></h1>
+<p>
+  <span class="tag">VALIDATED ✓</span>
+  <span class="tag" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd">Integration spike</span>
+  <span class="tag" style="background:#fef3c7;color:#92400e;border-color:#fcd34d">Phase 7 precondition</span>
+</p>
+
+<div class="panel">
+  <strong>The question:</strong> can the QuickBrain app call
+  <code>importFromContent(engine, slug, markdown, {sourceId, forceRechunk})</code>
+  in-process against the Supabase brain — proving Phase 7's QBO write path
+  works on the v2.0 architecture before its 9-plan rollout executes?
+</div>
+
+<h2>Acceptance probes</h2>
+
+<div class="verdict-row">
+  <span class="v-pass">✓</span>
+  <div>
+    <span class="v-name">Ingest succeeded</span>
+    <div class="v-detail">
+      <code>importFromContent</code> returned <code>{status: "imported", chunks: 1}</code>;
+      <code>engine.getPage()</code> confirmed persistence with sourceId=qbo-spike-007 + all
+      7 frontmatter keys round-tripped
+    </div>
+  </div>
+  <span class="v-time">1915 ms</span>
+</div>
+
+<div class="verdict-row">
+  <span class="v-pass">✓</span>
+  <div>
+    <span class="v-name">Idempotency honored (content-hash short-circuit)</span>
+    <div class="v-detail">
+      Re-import same content → <code>{status: "skipped", chunks: 0}</code> — no embedding
+      call, no chunk rewrite. The cheap-re-run primitive is live.
+    </div>
+  </div>
+  <span class="v-time">75 ms</span>
+</div>
+
+<div class="verdict-row">
+  <span class="v-pass">✓</span>
+  <div>
+    <span class="v-name">Retrieval round-trip via hybridSearch</span>
+    <div class="v-detail">
+      Search with <code>sourceId=qbo-spike-007</code> for "espresso bill from spike vendor"
+      → 1 result, score 0.896, target slug present
+    </div>
+  </div>
+  <span class="v-time">1528 ms</span>
+</div>
+
+<div class="verdict-row">
+  <span class="v-pass">✓</span>
+  <div>
+    <span class="v-name">Tenant isolation — negative probe held</span>
+    <div class="v-detail">
+      Same query under <code>sourceId="default"</code> → 5 unrelated results, spike target
+      <em>not</em> visible. Per-call sourceId scoping works for tenant isolation on writes.
+    </div>
+  </div>
+  <span class="v-time">1284 ms</span>
+</div>
+
+<div class="finding">
+  <strong>FINDING (would have bitten Phase 7 mid-execution):</strong>
+  <code>importFromContent</code> requires the <code>sourceId</code> to ALREADY exist as a row in the
+  <code>sources</code> table. gbrain enforces this via FK <code>pages_source_id_fkey</code>.
+  The first run threw <code>PostgresError: Key (source_id)=(qbo-spike-007) is not present in
+  table "sources"</code>. Phase 7's QBO OAuth-connect handler must
+  <code>INSERT INTO sources (id, name, config) VALUES ($1, $2, $3::jsonb) ON CONFLICT DO NOTHING</code>
+  BEFORE the first ingest job is enqueued. This was not in any of the 9 Phase 7 plans.
+</div>
+
+<div class="finding" style="background:#dbeafe;border-color:#3b82f6">
+  <strong>Re-sync primitive simplified:</strong> Phase 7 D-08 "wipe-and-reingest" can be
+  one SQL — <code>DELETE FROM sources WHERE id = $1</code>. The
+  <code>ON DELETE CASCADE</code> on <code>pages.source_id</code> sweeps every page,
+  chunk, tag, and link atomically. The cleanup probe at end of spike took 119ms.
+</div>
+
+<h2>End-to-end timeline (29 events)</h2>
+<table>
+  <thead><tr><th>+ms</th><th>category</th><th>event</th></tr></thead>
+  <tbody>
+    <tr><td class="ms">2</td><td class="cat">setup</td><td>Spike 007 starting (sourceId=qbo-spike-007, slug=originals/qbo-bill-spike-007)</td></tr>
+    <tr><td class="ms">5</td><td class="cat">setup</td><td>Env OK (pooler.supabase.com:6543)</td></tr>
+    <tr><td class="ms">75</td><td class="cat">config</td><td>configureGateway({env: process.env})</td></tr>
+    <tr><td class="ms">76</td><td class="cat">engine</td><td>createEngine(postgres)</td></tr>
+    <tr><td class="ms">97</td><td class="cat">engine</td><td>engine.connect() — PgBouncer transaction-mode pooler detected</td></tr>
+    <tr><td class="ms">481</td><td class="cat">engine</td><td>Connected — 48 pages / 48 chunks / 98 links in brain (seed)</td></tr>
+    <tr><td class="ms">481</td><td class="cat">ingest</td><td>Pre-register source row (FK requirement — finding)</td></tr>
+    <tr><td class="ms">603</td><td class="cat">ingest</td><td><strong>importFromContent</strong>(slug, sourceId=qbo-spike-007, forceRechunk=true)</td></tr>
+    <tr><td class="ms">2518</td><td class="cat">ingest</td><td>← {status: "imported", chunks: 1} — 1915ms (incl. OpenAI text-embedding-3-large)</td></tr>
+    <tr><td class="ms">2600</td><td class="cat">ingest</td><td>engine.getPage() — page persisted, all frontmatter present</td></tr>
+    <tr><td class="ms">2675</td><td class="cat">ingest</td><td>Re-import — ← {status: "skipped"} (content_hash gate)</td></tr>
+    <tr><td class="ms">2681</td><td class="cat">search</td><td>hybridSearch(query, sourceId=qbo-spike-007)</td></tr>
+    <tr><td class="ms">4209</td><td class="cat">search</td><td>← 1 result, score 0.896 — target retrieved ✓</td></tr>
+    <tr><td class="ms">4210</td><td class="cat">search</td><td>Negative probe: hybridSearch(same query, sourceId='default')</td></tr>
+    <tr><td class="ms">5494</td><td class="cat">search</td><td>← 5 results, target ABSENT — isolation OK ✓</td></tr>
+    <tr><td class="ms">5494</td><td class="cat">cleanup</td><td>DELETE FROM sources WHERE id=$1 — FK cascade swept pages + chunks</td></tr>
+    <tr><td class="ms">5613</td><td class="cat">cleanup</td><td>engine.disconnect()</td></tr>
+    <tr><td class="ms">5624</td><td class="cat">setup</td><td>Spike complete — total wall-clock 5.6s</td></tr>
+  </tbody>
+</table>
+
+<h2>Phase 7 implications</h2>
+<ol>
+  <li><strong>Add one connect-time step</strong>: on QBO OAuth success,
+      <code>INSERT INTO sources (id, name, config) VALUES ('qbo-&lt;userId&gt;', '&lt;display&gt;', '{"kind":"qbo"}'::jsonb)</code>
+      before enqueuing the first ingest job.</li>
+  <li><strong>Extend <code>types/gbrain.ts</code></strong> with a typed
+      <code>importFromContent(engine, slug, content, opts)</code> wrapper that delegates to
+      <code>_load("import-file")</code>. Pattern proven, zero runtime risk.</li>
+  <li><strong>Implement re-sync (D-08) as one SQL DELETE</strong> — no per-slug iteration.
+      The destructive-confirm modal in UI-SPEC.md is gating exactly the right primitive.</li>
+  <li><strong>Plan a vendor-first ingest order</strong>: bills wikilink to
+      <code>[[companies/&lt;slug&gt;]]</code> — emit company pages first or
+      accept that link edges are filled in by a later reconcile pass.</li>
+</ol>
+
+<div class="footer">
+  <p>
+    Run with <code>set -a && . ./.env.local && set +a && bun .planning/spikes/007-gbrain-import-from-content/spike.ts</code>.
+    Forensic log at <code>spike-events.json</code>.
+  </p>
+</div>
+
+</body>
+</html>
