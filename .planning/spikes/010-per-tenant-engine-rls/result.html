@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike 010 — per-tenant engine isolation — PARTIAL ⚠</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 900px; margin: 32px auto; padding: 0 16px; color: #1c2024; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #f59e0b; padding-bottom: 8px; margin-bottom: 4px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+         margin-right: 4px; font-weight: 600; border: 1px solid transparent; }
+  .tag-partial { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .tag-arch    { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .tag-block   { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+  .danger {
+    background: #fee2e2; border-left: 5px solid #dc2626; padding: 14px 18px;
+    margin: 18px 0; border-radius: 0 8px 8px 0;
+  }
+  .danger strong { color: #991b1b; }
+  .pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+         background: #1e293b; color: #f1f5f9; padding: 10px 14px; border-radius: 6px; overflow-x: auto; }
+  .matrix { width: 100%; border-collapse: collapse; margin: 14px 0; }
+  .matrix th, .matrix td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; font-size: 14px; vertical-align: top; }
+  .matrix th { background: #f1f5f9; font-weight: 600; }
+  .matrix tr.pass td.outcome { color: #16a34a; font-weight: 700; }
+  .matrix tr.fail td.outcome { color: #dc2626; font-weight: 700; background: #fef2f2; }
+  .matrix tr.fail td { background: #fef2f2; }
+  .matrix td.outcome { text-align: center; width: 90px; font-size: 16px; }
+  .matrix td.probe { font-weight: 500; }
+  .matrix td.detail { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; color: #475569; }
+  .compose-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0; }
+  .compose-panel { padding: 12px; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0; }
+  .compose-panel h3 { margin: 0 0 8px 0; font-size: 14px; color: #4338ca; }
+  .compose-panel code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .findings { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px;
+              margin: 14px 0; border-radius: 0 6px 6px 0; }
+  .findings strong { color: #166534; }
+  code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            color: #64748b; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Spike 010 — per-tenant engine context</h1>
+<p>
+  <span class="tag tag-partial">PARTIAL ⚠</span>
+  <span class="tag tag-arch">Architecture pivot</span>
+  <span class="tag tag-block">Phase 7 blocker</span>
+</p>
+
+<div class="danger">
+  <strong>HEADLINE FINDING:</strong> gbrain enables RLS on every table BUT the
+  Supabase pooler role we connect as has <code>BYPASSRLS</code>. RLS does NOT
+  protect QuickBrain from in-app code that forgets to pass <code>sourceId</code>.
+  All tenant isolation lives in app-layer per-call <code>sourceId</code>
+  scoping — and the failure mode of "forgot to pass <code>sourceId</code>" is
+  silent: returns one tenant's row arbitrarily, no exception, no warning.
+</div>
+
+<h2>Probe verdict matrix (4/5 pass)</h2>
+<table class="matrix">
+  <thead>
+    <tr><th style="width:60%">Probe</th><th>Outcome</th><th style="width:32%">Detail</th></tr>
+  </thead>
+  <tbody>
+    <tr class="pass">
+      <td class="probe"><strong>Probe 1.</strong> Composite-key <code>getPage</code> isolation —
+        write same slug under two sourceIds; <code>getPage(slug, {sourceId})</code> returns the right one.
+      </td>
+      <td class="outcome">✓</td>
+      <td class="detail">A→A=true, A→B=false, B→B=true, B→A=false. The <code>(source_id, slug)</code> composite key cleanly partitions rows.</td>
+    </tr>
+    <tr class="pass">
+      <td class="probe"><strong>Probe 2.</strong> 20 concurrent <code>hybridSearch</code> calls,
+        interleaved tenants every other call via <code>Promise.all</code>. None must see the other's secret marker.
+      </td>
+      <td class="outcome">✓</td>
+      <td class="detail">0/20 calls leaked. ~7.6s total (≈380ms each, pooled). The single-shared-engine pattern survives concurrent multi-tenant load.</td>
+    </tr>
+    <tr class="pass">
+      <td class="probe"><strong>Probe 3.</strong> <code>hybridSearch</code> WITHOUT sourceId —
+        what does the "forgot to pass" bug class do?
+      </td>
+      <td class="outcome">✓ <span style="font-size:11px">(informational)</span></td>
+      <td class="detail">Returned 10 federated results: both test tenants' shared-slug pages (scores 0.86 + 0.88) AND 8 unrelated rows from the seed brain's default source. <em>Behaves as documented; the leak class is real and depends on call-site discipline.</em></td>
+    </tr>
+    <tr class="fail">
+      <td class="probe"><strong>Probe 4.</strong> <code>engine.getPage(slug)</code> WITHOUT
+        sourceId on a slug that exists in BOTH tenants — which tenant's row wins?
+      </td>
+      <td class="outcome">✗</td>
+      <td class="detail">Silently returned <strong>tenant A's row</strong> (arbitrary winner). No exception, no warning, no audit. Any production code path that forgets to pass sourceId is a silent cross-tenant leak.</td>
+    </tr>
+    <tr class="pass">
+      <td class="probe"><strong>Probe 5.</strong> <code>listPages</code> scope —
+        with scope vs without.
+      </td>
+      <td class="outcome">✓</td>
+      <td class="detail">Scoped: <code>{sourceId: A}</code> = 1, <code>{sourceId: B}</code> = 1. Unscoped: 50 (federated). Same as Probe 3 — scoping works, no scoping = federated.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>Two takeaways, one architectural pivot</h2>
+
+<div class="compose-grid">
+  <div class="compose-panel">
+    <h3>✓ The design works (under load)</h3>
+    The single long-lived <code>BrainEngine</code> + per-call <code>sourceId</code>
+    pattern from <code>lib/gbrain/engine.ts</code> survives:
+    <ul>
+      <li>Concurrent multi-tenant queries (20 interleaved, 0 leaks)</li>
+      <li>Slug collisions across tenants (composite key isolates)</li>
+      <li>Mixed read + write through the same engine</li>
+    </ul>
+    Phase 4 keeps the cheap single-engine pattern. No per-tenant engine pool needed.
+  </div>
+  <div class="compose-panel">
+    <h3>✗ But every call site is a foot-gun</h3>
+    gbrain has <strong>no fail-safe default</strong> for sourceId. The bare
+    engine methods (<code>getPage</code>, <code>deletePage</code>, <code>listPages</code>,
+    <code>hybridSearch</code>) silently return / mutate / federate across all
+    tenants if you forget to pass scope. The CLI assumes single-tenant; the
+    multi-tenant QuickBrain context inverts that assumption.
+  </div>
+</div>
+
+<div class="findings">
+  <strong>Required structural change before Phase 7 lands:</strong>
+  <ol>
+    <li>Introduce <code>lib/gbrain/tenant-scoped.ts</code> — wrapper functions
+        <code>tenantSafeGetPage(tenantId, slug)</code> / <code>tenantSafeHybridSearch(tenantId, q)</code> /
+        <code>tenantSafeListPages(tenantId, filters)</code> that resolve tenantId → sourceId
+        via <code>lib/auth/resolve-tenant.ts</code> AND require both args.</li>
+    <li>Add an ESLint rule banning bare <code>engine.getPage(</code> /
+        <code>engine.deletePage(</code> / <code>engine.listPages(</code> outside <code>lib/gbrain/</code>.
+        All app callers go through tenant-safe wrappers. Compile-time enforcement.</li>
+    <li>Audit existing call sites NOW — grep every <code>engine.getPage</code>,
+        <code>engine.deletePage</code>, <code>engine.listPages</code>, <code>engine.getTags</code>, <code>hybridSearch</code> across <code>lib/</code>, <code>app/</code>, <code>scripts/</code>
+        and confirm each passes a per-request sourceId. Phase 6 shipped without this audit; oversight = live leak.</li>
+  </ol>
+</div>
+
+<h2>Concurrency timeline</h2>
+<div class="pre">
+[ 3119ms] Probe 2: 20 concurrent hybridSearch calls dispatched
+[ 7586ms elapsed]
+[10709ms] All 20 calls completed (~380ms each amortized)
+[10710ms] 0/20 calls leaked — single shared engine survives concurrency
+</div>
+
+<h2>The bad probe in numbers</h2>
+<div class="pre">
+expected: engine.getPage('originals/spike-010-shared-slug')  →  null
+actual:   engine.getPage('originals/spike-010-shared-slug')  →  tenant A's row
+
+Both tenants wrote the same slug. Neither tenant's slug lives under source_id='default'.
+gbrain's bare getPage returns the first matched row across all sources.
+There is no exception. There is no warning. There is no audit trail.
+</div>
+
+<div class="footer">
+  <p>
+    Run with <code>set -a && . ./.env.local && set +a && bun .planning/spikes/010-per-tenant-engine-rls/spike.ts</code>.
+    Forensic log at <code>spike-events.json</code>. Verdicts table embedded at top.
+  </p>
+</div>
+
+</body>
+</html>
