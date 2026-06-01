@@ -66,10 +66,48 @@ export interface EngineConfig {
   engine?: "postgres" | "pglite";
 }
 
+/**
+ * A page row scoped to a single source (tenant).
+ * Returned by BrainEngine.getPage / listPages.
+ */
+export interface PageRow {
+  slug: string;
+  type: string;
+  title: string;
+  source_id: string;
+  content_hash?: string;
+  frontmatter?: Record<string, unknown>;
+  compiled_truth?: string;
+  timeline?: string;
+}
+
+/**
+ * Filters for BrainEngine.listPages. sourceId is required for tenant isolation
+ * (spike 010 — silent leak class when omitted).
+ */
+export interface ListPagesFilters {
+  type?: string;
+  limit?: number;
+  offset?: number;
+}
+
 export interface BrainEngine {
   readonly kind: "postgres" | "pglite";
   connect(config: EngineConfig): Promise<void>;
   disconnect(): Promise<void>;
+
+  // Tenant-scoped data methods. ALL require a sourceId per spike 010
+  // (BYPASSRLS pooler role means RLS is not the isolation primitive — app-layer
+  // sourceId scoping is). Bare calls without sourceId silently leak across
+  // sources. lib/gbrain/tenant-scoped.ts is the single safe call site.
+  getPage(slug: string, opts: { sourceId: string }): Promise<PageRow | null>;
+  deletePage(slug: string, opts: { sourceId: string }): Promise<void>;
+  listPages(filters: ListPagesFilters & { sourceId: string }): Promise<PageRow[]>;
+
+  // Low-level SQL escape hatch. Spike 008 invariant: REQUIRES at least one $N
+  // parameter — parameterless calls hang indefinitely against Supavisor.
+  executeRaw<T = unknown>(sql: string, params: unknown[]): Promise<T[]>;
+
   [key: string]: unknown;
 }
 
@@ -222,4 +260,37 @@ export async function runThink(engine: BrainEngine, opts: RunThinkOpts): Promise
   const m = await _loadThink();
   // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
   return m.runThink(engine, opts) as Promise<ThinkResult>;
+}
+
+// ── ImportFromContent (Phase 7 — primary QBO ingest entrypoint) ───────────────
+//
+// gbrain's import-file subpath is in its package.json exports map (spike 007
+// confirmed). Loaded via the same _load("subpath") dynamic-import pattern as
+// every other entrypoint in this shim.
+
+export interface ImportFromContentOpts {
+  /** Required: scope to a single source (tenant isolation). Spike 010. */
+  sourceId?: string;
+  forceRechunk?: boolean;
+  noEmbed?: boolean;
+  filename?: string;
+  sourcePath?: string;
+}
+
+export interface ImportResult {
+  slug: string;
+  status: "imported" | "skipped" | "errored";
+  chunks: number;
+  error?: string;
+}
+
+export async function importFromContent(
+  engine: BrainEngine,
+  slug: string,
+  content: string,
+  opts: ImportFromContentOpts,
+): Promise<ImportResult> {
+  const m = await _load("import-file");
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+  return m.importFromContent(engine, slug, content, opts) as Promise<ImportResult>;
 }
