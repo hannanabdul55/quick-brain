@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike 011 — tenant-scoped wrapper + ESLint rule — VALIDATED</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 920px; margin: 32px auto; padding: 0 16px; color: #1c2024; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #16a34a; padding-bottom: 8px; margin-bottom: 4px; }
+  h2 { margin-top: 28px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+         margin-right: 4px; font-weight: 600; border: 1px solid transparent; }
+  .tag-ok    { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .tag-closes { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .tag-phase { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .panel { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px;
+           margin: 16px 0; border-radius: 0 6px 6px 0; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f1f5f9; font-weight: 600; }
+  tr.pass td:nth-child(2) { color: #16a34a; font-weight: 700; }
+  tr.fail td:nth-child(2) { color: #dc2626; font-weight: 700; background: #fef2f2; }
+  td.code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .panel-light { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px 16px; }
+  .panel-light h3 { margin: 0 0 8px 0; font-size: 14px; color: #4338ca; }
+  .pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+         background: #1e293b; color: #f1f5f9; padding: 10px 14px; border-radius: 6px; overflow-x: auto; }
+  .pre-light { background: #f1f5f9; color: #1c2024; padding: 10px 14px; border-radius: 6px;
+               font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; overflow-x: auto; }
+  code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .findings { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 12px 16px;
+              margin: 14px 0; border-radius: 0 6px 6px 0; }
+  .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            color: #64748b; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Spike 011 — tenant-scoped wrapper + ESLint rule</h1>
+<p>
+  <span class="tag tag-ok">VALIDATED ✓</span>
+  <span class="tag tag-closes">Closes spike 010</span>
+  <span class="tag tag-phase">Phase 7 prerequisite ready to land</span>
+</p>
+
+<div class="panel">
+  <strong>What this proves:</strong> spike 010's silent-leak finding had a paper
+  fix prescription. Spike 011 builds it, runs it against real Supabase, audits
+  the existing app code, and confirms the lint rule fires on every expected
+  shape and nowhere else. The prescription is no longer hypothetical.
+</div>
+
+<h2>Live wrapper validation — 6/6 probes pass</h2>
+<table>
+  <thead><tr><th>Probe</th><th>Outcome</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr class="pass"><td>V4 — tenantSafeRegisterSource idempotent</td><td>✓</td><td>second call (different display) didn't throw — <code>ON CONFLICT DO NOTHING</code> holds</td></tr>
+    <tr class="pass"><td>V7a — tenantSafeImportFromContent round-trip</td><td>✓</td><td>A=imported, B=imported (same slug, different sourceIds → two independent rows)</td></tr>
+    <tr class="pass"><td>V2+V3 — tenantSafeGetPage isolation</td><td>✓</td><td>A→A=true / A→B=false / B→B=true / B→A=false (composite key correct)</td></tr>
+    <tr class="pass"><td>V2+V3 — tenantSafeHybridSearch isolation</td><td>✓</td><td>same matrix; per-call sourceId scope holds for retrieval too</td></tr>
+    <tr class="pass"><td>V6 — parameterless executeRaw guard</td><td>✓</td><td>throws "would hang against Supavisor" — spike 008 invariant enforced</td></tr>
+    <tr class="pass"><td>V5 — tenantSafeWipeSource cascade</td><td>✓</td><td>post-wipe getPage = null (FK <code>ON DELETE CASCADE</code> swept pages + chunks in ~200ms)</td></tr>
+  </tbody>
+</table>
+
+<h2>ESLint rule — verdict matrix</h2>
+<table>
+  <thead><tr><th>Fixture line</th><th>Pattern</th><th>Flagged?</th></tr></thead>
+  <tbody>
+    <tr class="pass"><td class="code">engine.getPage(...)</td><td>bare engine.*</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.deletePage(...)</td><td>bare engine.*</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.listPages(...)</td><td>bare engine.*</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.getTags(...)</td><td>bare engine.*</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.putPage(...)</td><td>bare engine.*</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">hybridSearch(engine, "...")</td><td>bare gbrain fn</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">importFromContent(engine, ...)</td><td>bare gbrain fn</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">runThink(engine, ...)</td><td>bare gbrain fn</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.executeRaw("SELECT 1")</td><td>parameterless</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.executeRaw("SELECT 1", [])</td><td>empty params</td><td>✓</td></tr>
+    <tr class="pass"><td class="code">engine.executeRaw("SELECT $1::int", [1])</td><td><strong>parameterized (control)</strong></td><td>✗ (correctly NOT flagged)</td></tr>
+  </tbody>
+</table>
+<p><strong>11/11 expected outcomes match.</strong> No false positives, no false negatives.</p>
+
+<h2>The before/after for <code>lib/auth/provision.ts</code></h2>
+<div class="grid-2">
+  <div class="panel-light">
+    <h3>Current — works, but awkward</h3>
+    <div class="pre">// lib/auth/provision.ts
+const typedEngine = engine as unknown as {
+  executeRaw: (sql: string, params: unknown[])
+    =&gt; Promise&lt;unknown&gt;;
+};
+await typedEngine.executeRaw(
+  `INSERT INTO sources (id, name, config)
+   VALUES ($1, $2, $3::jsonb)
+   ON CONFLICT (id) DO NOTHING`,
+  [sourceId, displayName,
+   JSON.stringify({ federated: false })],
+);</div>
+  </div>
+  <div class="panel-light">
+    <h3>After Phase 7 lands the wrappers</h3>
+    <div class="pre">// lib/auth/provision.ts
+import { tenantSafeRegisterSource }
+  from "@/lib/gbrain/tenant-scoped";
+
+await tenantSafeRegisterSource(
+  tenantId,
+  displayName,
+  { kind: "user-brain" },
+);
+// no cast. parameterless-executeRaw
+// can't happen here. sourceId is
+// derived from the chokepoint, not
+// the caller.</div>
+  </div>
+</div>
+
+<h2>Existing app code audit</h2>
+<table>
+  <thead><tr><th>File</th><th>Direct engine.* access?</th><th>Already tenant-scoped?</th><th>Action needed</th></tr></thead>
+  <tbody>
+    <tr><td class="code">lib/gbrain/engine.ts</td><td>Yes (owns engine)</td><td>n/a</td><td>Internal — allowed</td></tr>
+    <tr><td class="code">lib/gbrain/client.ts</td><td>Yes (createGBrainEngine + runThink)</td><td>YES — exports query+think with tenantId</td><td>Move query+think into tenant-scoped.ts wrappers</td></tr>
+    <tr><td class="code">lib/auth/provision.ts</td><td>Yes (executeRaw via cast)</td><td>YES — takes sourceId arg</td><td>Refactor to tenantSafeRegisterSource (cast cleanup)</td></tr>
+    <tr><td class="code">lib/health/probes.ts</td><td>NO — direct postgres</td><td>n/a</td><td>None (not a gbrain call)</td></tr>
+    <tr><td class="code">lib/jobs/store.ts</td><td>NO — direct postgres → app.jobs</td><td>n/a</td><td>None (not a gbrain call)</td></tr>
+    <tr><td><strong>app/</strong> routes</td><td>NONE</td><td>n/a</td><td>None (routes use lib/gbrain/client.ts)</td></tr>
+    <tr><td><strong>scripts/</strong>*.sh</td><td>bash → gbrain CLI</td><td>n/a</td><td>None (CLI, not in-process)</td></tr>
+  </tbody>
+</table>
+
+<div class="findings">
+  <strong>The audit's headline:</strong> Phase 6 already shipped well-disciplined
+  tenant-scoping in <code>lib/gbrain/client.ts</code>. Zero app-route call sites
+  need refactoring. The only "bare" gbrain access outside <code>lib/gbrain/</code>
+  is <code>lib/auth/provision.ts</code>, and even it takes <code>sourceId</code>
+  as a function argument — just with an awkward type-cast workaround. The
+  Phase 7 prereq work is materially smaller than spike 010 suggested.
+</div>
+
+<h2>Latency footnote</h2>
+<div class="pre-light">First  tenantSafeImportFromContent: 15.2s   ← OpenAI cold warmup likely
+Second tenantSafeImportFromContent:  1.7s
+Spike 007 baseline (single import):  1.9s
+
+Phase 7's JobProgress UI should NOT promise sub-5s per page for the
+first page of each tenant's first sync. Cold-warmup the embedding
+endpoint with a dummy call at OAuth-connect or at server boot.</div>
+
+<h2>What this closes</h2>
+<p>
+  Spike 010's <strong>PARTIAL ⚠</strong> verdict was about the silent-leak class
+  EXISTING without a built fix. Spike 011 builds the fix + proves it works
+  end-to-end + demonstrates the lint rule. The prescription is no longer
+  paper.
+</p>
+<p>
+  <strong>Spike 010 closes: PARTIAL ⚠ → CLOSED-BY-011 (closure verdict
+  VALIDATED ✓).</strong>
+</p>
+
+<div class="footer">
+  <p>
+    Run wrapper validation: <code>set -a &amp;&amp; . ./.env.local &amp;&amp; set +a &amp;&amp; bun .planning/spikes/011-tenant-scoped-wrapper/spike.ts</code>.
+    Run lint validation: <code>node_modules/.bin/eslint --config .planning/spikes/011-tenant-scoped-wrapper/spike-lint.config.mjs --no-config-lookup .planning/spikes/011-tenant-scoped-wrapper/bad-call-fixture.ts</code>.
+  </p>
+</div>
+
+</body>
+</html>

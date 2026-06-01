@@ -1,0 +1,174 @@
+{
+  "spike": "011",
+  "finishedAt": "2026-06-01T00:37:32.813Z",
+  "totalMs": 20541,
+  "allPass": true,
+  "verdicts": [
+    {
+      "probe": "V4 — tenantSafeRegisterSource idempotent",
+      "ok": true,
+      "detail": "second call did not throw"
+    },
+    {
+      "probe": "V7a — tenantSafeImportFromContent writes round-trip",
+      "ok": true,
+      "detail": "A=imported B=imported"
+    },
+    {
+      "probe": "V2+V3 — tenantSafeGetPage positive + negative isolation",
+      "ok": true,
+      "detail": "A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "probe": "V2+V3 — tenantSafeHybridSearch positive + negative isolation",
+      "ok": true,
+      "detail": "A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "probe": "V6 — parameterless executeRaw guard throws (spike 008 invariant)",
+      "ok": true,
+      "detail": "PARAMETERLESS_GUARD: would hang against Supavisor"
+    },
+    {
+      "probe": "V5 — tenantSafeWipeSource cascade removes pages",
+      "ok": true,
+      "detail": "getPage after wipe = null/threw (OK)"
+    }
+  ],
+  "events": [
+    {
+      "t": "2026-06-01T00:37:12.273Z",
+      "ms": 1,
+      "category": "setup",
+      "message": "Spike 011 starting",
+      "data": {
+        "tenants": [
+          "spike-011-tenant-a",
+          "spike-011-tenant-b"
+        ]
+      }
+    },
+    {
+      "t": "2026-06-01T00:37:12.274Z",
+      "ms": 2,
+      "category": "wrapper",
+      "message": "tenantSafeRegisterSource for both tenants (FK pre-registration)"
+    },
+    {
+      "t": "2026-06-01T00:37:12.934Z",
+      "ms": 662,
+      "category": "wrapper",
+      "message": "Re-running registerSource (idempotency probe via ON CONFLICT DO NOTHING)"
+    },
+    {
+      "t": "2026-06-01T00:37:12.999Z",
+      "ms": 727,
+      "category": "isolation",
+      "message": "✓ V4 — tenantSafeRegisterSource idempotent — second call did not throw"
+    },
+    {
+      "t": "2026-06-01T00:37:13.000Z",
+      "ms": 728,
+      "category": "wrapper",
+      "message": "tenantSafeImportFromContent(spike-011-tenant-a, originals/spike-011-shared-slug)"
+    },
+    {
+      "t": "2026-06-01T00:37:28.188Z",
+      "ms": 15916,
+      "category": "wrapper",
+      "message": "Tenant A imported",
+      "data": {
+        "status": "imported",
+        "chunks": 1
+      }
+    },
+    {
+      "t": "2026-06-01T00:37:28.188Z",
+      "ms": 15916,
+      "category": "wrapper",
+      "message": "tenantSafeImportFromContent(spike-011-tenant-b, originals/spike-011-shared-slug) — SAME slug, different tenant"
+    },
+    {
+      "t": "2026-06-01T00:37:29.868Z",
+      "ms": 17596,
+      "category": "wrapper",
+      "message": "Tenant B imported",
+      "data": {
+        "status": "imported",
+        "chunks": 1
+      }
+    },
+    {
+      "t": "2026-06-01T00:37:29.868Z",
+      "ms": 17596,
+      "category": "isolation",
+      "message": "✓ V7a — tenantSafeImportFromContent writes round-trip — A=imported B=imported"
+    },
+    {
+      "t": "2026-06-01T00:37:29.868Z",
+      "ms": 17596,
+      "category": "isolation",
+      "message": "tenantSafeGetPage probes (positive + negative isolation)"
+    },
+    {
+      "t": "2026-06-01T00:37:30.000Z",
+      "ms": 17728,
+      "category": "isolation",
+      "message": "✓ V2+V3 — tenantSafeGetPage positive + negative isolation — A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "t": "2026-06-01T00:37:30.000Z",
+      "ms": 17728,
+      "category": "isolation",
+      "message": "tenantSafeHybridSearch probes"
+    },
+    {
+      "t": "2026-06-01T00:37:32.540Z",
+      "ms": 20268,
+      "category": "isolation",
+      "message": "✓ V2+V3 — tenantSafeHybridSearch positive + negative isolation — A→A=true A→B=false B→B=true B→A=false (want T T F F)"
+    },
+    {
+      "t": "2026-06-01T00:37:32.540Z",
+      "ms": 20268,
+      "category": "guard",
+      "message": "Spike 008 parameterless-executeRaw guard"
+    },
+    {
+      "t": "2026-06-01T00:37:32.541Z",
+      "ms": 20269,
+      "category": "isolation",
+      "message": "✓ V6 — parameterless executeRaw guard throws (spike 008 invariant) — PARAMETERLESS_GUARD: would hang against Supavisor"
+    },
+    {
+      "t": "2026-06-01T00:37:32.541Z",
+      "ms": 20269,
+      "category": "wrapper",
+      "message": "tenantSafeWipeSource for both tenants (cascade via FK)"
+    },
+    {
+      "t": "2026-06-01T00:37:32.740Z",
+      "ms": 20468,
+      "category": "isolation",
+      "message": "Verify wipe cascaded: tenantSafeGetPage returns null/throws (source row gone)"
+    },
+    {
+      "t": "2026-06-01T00:37:32.809Z",
+      "ms": 20537,
+      "category": "isolation",
+      "message": "✓ V5 — tenantSafeWipeSource cascade removes pages — getPage after wipe = null/threw (OK)"
+    },
+    {
+      "t": "2026-06-01T00:37:32.809Z",
+      "ms": 20537,
+      "category": "cleanup",
+      "message": "engine.disconnect()"
+    },
+    {
+      "t": "2026-06-01T00:37:32.812Z",
+      "ms": 20540,
+      "category": "setup",
+      "message": "Spike 011 complete"
+    }
+  ]
+}
