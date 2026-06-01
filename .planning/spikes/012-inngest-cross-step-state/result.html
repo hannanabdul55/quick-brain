@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Spike 012 — Inngest cross-step engine state — VALIDATED</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+         max-width: 920px; margin: 32px auto; padding: 0 16px; color: #1c2024; line-height: 1.55; }
+  h1 { border-bottom: 3px solid #16a34a; padding-bottom: 8px; margin-bottom: 4px; }
+  h2 { margin-top: 28px; }
+  .tag { display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 4px;
+         margin-right: 4px; font-weight: 600; border: 1px solid transparent; }
+  .tag-ok { background: #ecfdf5; color: #065f46; border-color: #a7f3d0; }
+  .tag-arch { background: #ede9fe; color: #5b21b6; border-color: #c4b5fd; }
+  .tag-phase { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+  .panel { background: #f8fafc; border-left: 4px solid #6366f1; padding: 12px 16px;
+           margin: 16px 0; border-radius: 0 6px 6px 0; }
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 14px 0; }
+  .shape-panel { padding: 14px 18px; border-radius: 8px; }
+  .shape-a { background: #fef2f2; border: 2px solid #fca5a5; }
+  .shape-b { background: #ecfdf5; border: 2px solid #6ee7b7; }
+  .shape-panel h3 { margin: 0 0 8px 0; font-size: 14px; }
+  .shape-panel .big { font-size: 28px; font-weight: 700; margin: 4px 0; }
+  .shape-a .big { color: #b91c1c; }
+  .shape-b .big { color: #16a34a; }
+  .shape-panel .sub { font-size: 12px; color: #475569; }
+  table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: 13px; }
+  th, td { padding: 8px 12px; text-align: right; border-bottom: 1px solid #e2e8f0;
+           font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  th { background: #f1f5f9; font-weight: 600; text-align: right; font-family: -apple-system, sans-serif; }
+  td:first-child, th:first-child { text-align: left; }
+  .findings { background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px 18px;
+              margin: 18px 0; border-radius: 0 6px 6px 0; }
+  .findings strong { color: #166534; }
+  .caveat { background: #fef9c3; border-left: 4px solid #ca8a04; padding: 12px 16px;
+            margin: 18px 0; border-radius: 0 6px 6px 0; font-size: 14px; }
+  .pre { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px;
+         background: #1e293b; color: #f1f5f9; padding: 10px 14px; border-radius: 6px; overflow-x: auto; }
+  code { background: #e2e8f0; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  .footer { margin-top: 36px; padding-top: 12px; border-top: 1px solid #e2e8f0;
+            color: #64748b; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<h1>Spike 012 — Inngest cross-step engine state</h1>
+<p>
+  <span class="tag tag-ok">VALIDATED ✓</span>
+  <span class="tag tag-arch">Architecture decision</span>
+  <span class="tag tag-phase">Phase 7 D-07 needs revision</span>
+</p>
+
+<div class="panel">
+  <strong>The question:</strong> Phase 7 D-07 prescribed 5 step.run() boundaries.
+  Phase 5's existing runJob uses 1 big step.run("execute"). Inngest's docs say
+  "each step is a separate HTTP request" — on Vercel, that means up to 5 cold
+  starts vs 1. Worth it?
+</div>
+
+<div class="compare-grid">
+  <div class="shape-panel shape-a">
+    <h3>Shape A — 5 step.run boundaries (Phase 7 D-07)</h3>
+    <div class="big">11092 ms</div>
+    <div class="sub">5 distinct process fingerprints — each step pays a fresh cold-start. 3383ms cold tax.</div>
+  </div>
+  <div class="shape-panel shape-b">
+    <h3>Shape B — 1 big step.run (Phase 5 runJob)</h3>
+    <div class="big">4823 ms</div>
+    <div class="sub">1 process — engine + gateway reused. 535ms cold tax (1× not 5×).</div>
+  </div>
+</div>
+
+<p style="font-size:15px;text-align:center">
+  <strong>Shape B is 2.30× faster — saves 6.3 seconds per ingest job.</strong>
+  <br>
+  <span style="color:#64748b">Avoidable cold-start tax in Shape A: <strong>2.8 seconds</strong></span>
+</p>
+
+<h2>Per-step timings (Shape A, worst case)</h2>
+<table>
+  <thead><tr><th>Step</th><th>Total ms</th><th>Cold tax</th><th>Work ms</th><th>PID</th></tr></thead>
+  <tbody>
+    <tr><td>1. connect</td><td>1113</td><td>~700</td><td>~70</td><td>41518</td></tr>
+    <tr><td>2. insert-source</td><td>844</td><td>~700</td><td>~70</td><td>41561</td></tr>
+    <tr><td>3. ingest page 1</td><td>3587</td><td>~700</td><td>~2700 (incl. OpenAI cold)</td><td>41569</td></tr>
+    <tr><td>4. ingest page 2</td><td>3127</td><td>~700</td><td>~2200 (incl. OpenAI cold)</td><td>41614</td></tr>
+    <tr><td>5. ingest page 3</td><td>2328</td><td>~700</td><td>~1400 (incl. OpenAI cold)</td><td>41691</td></tr>
+    <tr><td><strong>Total</strong></td><td><strong>11092</strong></td><td><strong>~3383</strong></td><td><strong>~6440</strong></td><td><strong>5 distinct</strong></td></tr>
+  </tbody>
+</table>
+
+<h2>Inngest's execution model (from official docs)</h2>
+<div class="pre">"Each step in your function is executed as a separate HTTP request"
+
+"The function is re-executed, this time with the event payload data
+ and the state of the previous execution in JSON."</div>
+<p>
+  In production: every <code>step.run()</code> boundary = separate HTTP request from
+  Inngest's runner. On Vercel, that's a Fluid Compute function invocation. Module
+  singletons (<code>enginePool</code>) persist ONLY when the same warm instance
+  handles consecutive requests — opportunistic, not guaranteed.
+</p>
+
+<div class="findings">
+  <strong>Recommendation for Phase 7's <code>qbo-ingest</code>:</strong> add it to
+  <code>JOB_REGISTRY</code> as a SINGLE entry (mirroring
+  <code>onboarding-import</code>'s shape), not as a separate Inngest function with
+  5 step.run boundaries. The whole gbrain operation runs inside Phase 5's existing
+  <code>runJob.execute</code> step. This pays the cold-start + first-OpenAI tax
+  ONCE per job rather than per phase.
+</div>
+
+<h2>When 5-step shape WOULD be worth it</h2>
+<p>
+  If an ingest can exceed Inngest's per-step timeout (30s default in serverless,
+  extendable to 5min on paid plans). With spike 007's 1.9s/page rate, that's
+  safe up to ~15 pages per step without batching. SMBs with 1000+ pages need
+  batched step.run boundaries — but split by BATCH (e.g. 10 pages per step), not
+  by PHASE (which is what D-07 prescribed).
+</p>
+
+<div class="caveat">
+  <strong>Honest caveat:</strong> the 11s measurement is the WORST CASE (no Vercel
+  Fluid Compute warm reuse). In production, instance reuse may rescue some cold
+  starts → realistic Shape A wall-clock is more like 6-8s. Shape B's 4.8s stays
+  the same. The real argument for Shape B is predictability, not just speed —
+  Shape B is deterministic; Shape A's wall-clock depends on Vercel's
+  instance-routing luck.
+</div>
+
+<h2>Production fingerprint validation</h2>
+<div class="pre">Shape A — 5 invocations, 5 distinct process IDs:
+  41518 → 41561 → 41569 → 41614 → 41691
+
+Each step ran in a fresh process. The Bun + gbrain import + Supabase
+connect was paid 5 separate times — no shared state. This is the
+worst-case mirror of Vercel without Fluid Compute warm reuse.</div>
+
+<div class="footer">
+  <p>
+    Run with <code>set -a &amp;&amp; . ./.env.local &amp;&amp; set +a &amp;&amp; bun .planning/spikes/012-inngest-cross-step-state/spike.ts</code>.
+    Each step = child <code>bun</code> process (faithful to Inngest's separate-HTTP-request semantics).
+    Forensic data at <code>spike-events.json</code>.
+  </p>
+</div>
+
+</body>
+</html>

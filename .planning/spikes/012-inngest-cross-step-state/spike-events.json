@@ -1,0 +1,390 @@
+{
+  "spike": "012",
+  "finishedAt": "2026-06-01T02:55:25.261Z",
+  "runId": "1780282508311",
+  "shapes": {
+    "a_five_step": {
+      "totalMs": 11092,
+      "distinctFingerprints": [
+        "41518-darwin",
+        "41561-darwin",
+        "41569-darwin",
+        "41614-darwin",
+        "41691-darwin"
+      ],
+      "steps": [
+        {
+          "step": "connect",
+          "fingerprint": "41518-darwin",
+          "totalMs": 1113,
+          "marks": {
+            "script_start": 0,
+            "gateway_loaded": 88,
+            "gateway_configured": 88,
+            "engine_created": 108,
+            "engine_connected": 785,
+            "work_done": 1109,
+            "disconnected": 1113
+          },
+          "phases": {
+            "gateway_load_ms": 88,
+            "gateway_configure_ms": 0,
+            "engine_create_ms": 20,
+            "engine_connect_ms": 677,
+            "work_ms": 324
+          },
+          "work": {
+            "page_count": 48,
+            "chunk_count": 48,
+            "embedded_count": 48,
+            "link_count": 98,
+            "tag_count": 44,
+            "timeline_entry_count": 0,
+            "pages_by_type": {
+              "invoice": 30,
+              "company": 5,
+              "concept": 4,
+              "bank-statement": 3,
+              "monthly-close": 3,
+              "vendor-email": 2,
+              "person": 1
+            }
+          }
+        },
+        {
+          "step": "insert",
+          "fingerprint": "41561-darwin",
+          "totalMs": 844,
+          "marks": {
+            "script_start": 1,
+            "gateway_loaded": 56,
+            "gateway_configured": 56,
+            "engine_created": 70,
+            "engine_connected": 729,
+            "work_done": 842,
+            "disconnected": 844
+          },
+          "phases": {
+            "gateway_load_ms": 55,
+            "gateway_configure_ms": 0,
+            "engine_create_ms": 14,
+            "engine_connect_ms": 659,
+            "work_ms": 113
+          },
+          "work": "source-inserted"
+        },
+        {
+          "step": "ingest",
+          "fingerprint": "41569-darwin",
+          "totalMs": 3587,
+          "marks": {
+            "script_start": 1,
+            "gateway_loaded": 59,
+            "gateway_configured": 60,
+            "engine_created": 74,
+            "engine_connected": 791,
+            "work_done": 3585,
+            "disconnected": 3587
+          },
+          "phases": {
+            "gateway_load_ms": 58,
+            "gateway_configure_ms": 1,
+            "engine_create_ms": 14,
+            "engine_connect_ms": 717,
+            "work_ms": 2794
+          },
+          "work": {
+            "slug": "originals/spike-012-1780282508311-1-41569",
+            "status": "imported",
+            "chunks": 1,
+            "parsedPage": {
+              "type": "bill",
+              "title": "Spike 012 1780282508311 1 41569",
+              "compiled_truth": "Bill for pid-41569. Spike 012 step worker.",
+              "timeline": "",
+              "frontmatter": {
+                "vendor": "spike-012-vendor",
+                "date": "2026-05-31",
+                "amount": 100,
+                "currency": "USD"
+              },
+              "tags": []
+            }
+          }
+        },
+        {
+          "step": "ingest",
+          "fingerprint": "41614-darwin",
+          "totalMs": 3127,
+          "marks": {
+            "script_start": 0,
+            "gateway_loaded": 51,
+            "gateway_configured": 51,
+            "engine_created": 64,
+            "engine_connected": 530,
+            "work_done": 3125,
+            "disconnected": 3127
+          },
+          "phases": {
+            "gateway_load_ms": 51,
+            "gateway_configure_ms": 0,
+            "engine_create_ms": 13,
+            "engine_connect_ms": 466,
+            "work_ms": 2595
+          },
+          "work": {
+            "slug": "originals/spike-012-1780282508311-2-41614",
+            "status": "imported",
+            "chunks": 1,
+            "parsedPage": {
+              "type": "bill",
+              "title": "Spike 012 1780282508311 2 41614",
+              "compiled_truth": "Bill for pid-41614. Spike 012 step worker.",
+              "timeline": "",
+              "frontmatter": {
+                "vendor": "spike-012-vendor",
+                "date": "2026-05-31",
+                "amount": 100,
+                "currency": "USD"
+              },
+              "tags": []
+            }
+          }
+        },
+        {
+          "step": "ingest",
+          "fingerprint": "41691-darwin",
+          "totalMs": 2328,
+          "marks": {
+            "script_start": 0,
+            "gateway_loaded": 55,
+            "gateway_configured": 55,
+            "engine_created": 69,
+            "engine_connected": 550,
+            "work_done": 2326,
+            "disconnected": 2328
+          },
+          "phases": {
+            "gateway_load_ms": 55,
+            "gateway_configure_ms": 0,
+            "engine_create_ms": 14,
+            "engine_connect_ms": 481,
+            "work_ms": 1776
+          },
+          "work": {
+            "slug": "originals/spike-012-1780282508311-3-41691",
+            "status": "imported",
+            "chunks": 1,
+            "parsedPage": {
+              "type": "bill",
+              "title": "Spike 012 1780282508311 3 41691",
+              "compiled_truth": "Bill for pid-41691. Spike 012 step worker.",
+              "timeline": "",
+              "frontmatter": {
+                "vendor": "spike-012-vendor",
+                "date": "2026-05-31",
+                "amount": 100,
+                "currency": "USD"
+              },
+              "tags": []
+            }
+          }
+        }
+      ],
+      "cold_tax_total_ms": 3383
+    },
+    "b_one_step": {
+      "totalMs": 4823,
+      "steps": [
+        {
+          "step": "all-in-one",
+          "fingerprint": "41792-darwin",
+          "totalMs": 4804,
+          "marks": {
+            "script_start": 0,
+            "gateway_loaded": 59,
+            "gateway_configured": 59,
+            "engine_created": 73,
+            "engine_connected": 535,
+            "source_inserted": 636,
+            "ingest_1_done": 2442,
+            "ingest_2_done": 3440,
+            "ingest_3_done": 4801,
+            "disconnected": 4804
+          },
+          "phases": {
+            "gateway_load_ms": 59,
+            "gateway_configure_ms": 0,
+            "engine_create_ms": 14,
+            "engine_connect_ms": 462,
+            "work_ms": 4266
+          },
+          "work": {
+            "r1": {
+              "slug": "originals/spike-012-1780282508311-page-1",
+              "status": "imported",
+              "chunks": 1,
+              "parsedPage": {
+                "type": "bill",
+                "title": "Spike 012 1780282508311 Page 1",
+                "compiled_truth": "Bill for page-1. Spike 012 step worker.",
+                "timeline": "",
+                "frontmatter": {
+                  "vendor": "spike-012-vendor",
+                  "date": "2026-05-31",
+                  "amount": 100,
+                  "currency": "USD"
+                },
+                "tags": []
+              }
+            },
+            "r2": {
+              "slug": "originals/spike-012-1780282508311-page-2",
+              "status": "imported",
+              "chunks": 1,
+              "parsedPage": {
+                "type": "bill",
+                "title": "Spike 012 1780282508311 Page 2",
+                "compiled_truth": "Bill for page-2. Spike 012 step worker.",
+                "timeline": "",
+                "frontmatter": {
+                  "vendor": "spike-012-vendor",
+                  "date": "2026-05-31",
+                  "amount": 100,
+                  "currency": "USD"
+                },
+                "tags": []
+              }
+            },
+            "r3": {
+              "slug": "originals/spike-012-1780282508311-page-3",
+              "status": "imported",
+              "chunks": 1,
+              "parsedPage": {
+                "type": "bill",
+                "title": "Spike 012 1780282508311 Page 3",
+                "compiled_truth": "Bill for page-3. Spike 012 step worker.",
+                "timeline": "",
+                "frontmatter": {
+                  "vendor": "spike-012-vendor",
+                  "date": "2026-05-31",
+                  "amount": 100,
+                  "currency": "USD"
+                },
+                "tags": []
+              }
+            }
+          }
+        }
+      ],
+      "cold_tax_total_ms": 535
+    }
+  },
+  "delta_ms": 6269,
+  "speedup": "2.30",
+  "avoidable_cold_tax_ms": 2848,
+  "events": [
+    {
+      "t": "2026-06-01T02:55:08.311Z",
+      "ms": 1,
+      "category": "setup",
+      "message": "Spike 012 starting — runId=1780282508311"
+    },
+    {
+      "t": "2026-06-01T02:55:08.312Z",
+      "ms": 2,
+      "category": "shape-a",
+      "message": "Shape A — 5 step.run boundaries, each a fresh process (worst case: no Vercel warm reuse)"
+    },
+    {
+      "t": "2026-06-01T02:55:09.445Z",
+      "ms": 1135,
+      "category": "shape-a",
+      "message": "  step 1 (connect)        — 1113ms — pid 41518-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:10.309Z",
+      "ms": 1999,
+      "category": "shape-a",
+      "message": "  step 2 (insert-source)  — 844ms — pid 41561-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:13.914Z",
+      "ms": 5604,
+      "category": "shape-a",
+      "message": "  step 3 (ingest page 1)  — 3587ms — pid 41569-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:17.062Z",
+      "ms": 8752,
+      "category": "shape-a",
+      "message": "  step 4 (ingest page 2)  — 3127ms — pid 41614-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:19.404Z",
+      "ms": 11094,
+      "category": "shape-a",
+      "message": "  step 5 (ingest page 3)  — 2328ms — pid 41691-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:19.404Z",
+      "ms": 11094,
+      "category": "shape-a",
+      "message": "TOTAL 11092ms — 5 distinct process fingerprints"
+    },
+    {
+      "t": "2026-06-01T02:55:19.955Z",
+      "ms": 11645,
+      "category": "shape-b",
+      "message": "Shape B — 1 big step.run, all gbrain work in one warm process (Phase 5 runJob pattern)"
+    },
+    {
+      "t": "2026-06-01T02:55:24.778Z",
+      "ms": 16468,
+      "category": "shape-b",
+      "message": "  one big step (4 ops)    — 4804ms — pid 41792-darwin"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "cleanup",
+      "message": "Final cleanup done"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Shape A (5 separate processes): 11092ms"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Shape B (1 process):            4823ms"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Delta:                           6269ms  (Shape B is 2.30× faster)"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Cold tax — Shape A (5 cold-starts): 3383ms"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Cold tax — Shape B (1 cold-start):  535ms"
+    },
+    {
+      "t": "2026-06-01T02:55:25.261Z",
+      "ms": 16951,
+      "category": "summary",
+      "message": "Avoidable cold-start tax in Shape A: 2848ms"
+    }
+  ]
+}

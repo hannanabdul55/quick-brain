@@ -81,3 +81,5 @@ main().catch((err) => {
   console.error(JSON.stringify({ error: String(err?.message ?? err) }));
   process.exit(1);
 });
+
+export {};
