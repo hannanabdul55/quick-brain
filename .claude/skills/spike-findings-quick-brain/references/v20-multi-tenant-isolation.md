@@ -6,39 +6,59 @@
 - **A single long-lived `BrainEngine` instance serves every tenant in the Vercel Fluid Compute worker** (no per-tenant pool accumulation, no eviction). This survives concurrent multi-tenant access — 20 interleaved queries from 2 tenants produce 0 cross-tenant leaks.
 - **Every call to `engine.getPage`, `engine.deletePage`, `engine.listPages`, `engine.getTags`, `hybridSearch`, or `importFromContent` MUST pass an explicit `sourceId` derived from the authenticated user.** There is NO fail-safe default in gbrain — bare calls without sourceId silently return / mutate / federate across all sources. Silent leak class.
 - **The `(source_id, slug)` composite key isolates rows correctly.** Same slug under two sourceIds = two independent rows with no cross-contamination — confirmed positively and negatively.
-- **Tenant→sourceId resolution goes through a single chokepoint** (`lib/auth/resolve-tenant.ts` from Phase 6, never trust `params.id`). The wrapper layer below must call it for every gbrain access.
+- **Tenant→sourceId resolution goes through a single chokepoint** (`lib/auth/resolve-tenant.ts` from Phase 6). Production `resolveTenant()` takes **no args** and reads the `qb_session` cookie — never accepts a tenant/source id from caller input (D-11). Session-derived wrappers call it internally; explicit-sourceId wrappers exist only for contexts without a session (Inngest jobs, scripts, provisioning).
 
 ## How to Build It
 
-### The wrapper layer (required before any new gbrain caller lands)
+**Landed in production 2026-06-01** (commits `9ec60f3`, `767858e`, `c6abef5`, `26ca184`). The shape below is the *as-shipped* API, which deviates from spike-011's original blueprint — see the "API shape divergence from spike-011" note at the bottom of this section for the why.
 
-Create `lib/gbrain/tenant-scoped.ts`. Every app code path goes through these wrappers. Bare `engine.*` access is forbidden outside `lib/gbrain/`.
+### The wrapper layer
+
+Lives at `lib/gbrain/tenant-scoped.ts`. Every app code path goes through these wrappers. Bare `engine.*` access is forbidden outside `lib/gbrain/` (enforced by the lint rule below).
+
+**Two parallel APIs:**
+
+| Variant | Signature shape | Used by |
+|---|---|---|
+| Session-derived (primary) | `tenantSafeX(query, opts)` — no tenantId arg | App routes (request handlers with `qb_session` cookie) |
+| Explicit sourceId | `tenantSafeXExplicit(sourceId, query, opts)` — sourceId required | Inngest jobs, provisioning paths, scripts (no session) |
+
+Session-derived wrappers throw if `resolveTenant()` returns `{authenticated: false}` — calling them from an unauthenticated context is a bug, not a soft failure.
 
 ```ts
-// lib/gbrain/tenant-scoped.ts
-import { createGBrainEngine } from "./engine";
+// lib/gbrain/tenant-scoped.ts — actual shape (excerpt)
 import { resolveTenant } from "@/lib/auth/resolve-tenant";
+import { createGBrainEngine } from "@/lib/gbrain/engine";
 import {
-  hybridSearch, expandQuery, importFromContent,
-  type SearchResult, type ImportResult, type HybridSearchOpts, type ImportFromContentOpts,
+  type HybridSearchOpts, type ImportFromContentOpts, type ImportResult,
+  type PageRow, type SearchResult,
+  expandQuery, hybridSearch, importFromContent,
 } from "@/types/gbrain";
 
-/** Derive the sourceId from the request's authenticated tenant. */
-async function sourceIdFor(tenantId: string): Promise<string> {
-  // Phase 6's resolveTenant verifies the session AND returns the canonical
-  // tenantId. This is the single chokepoint — never trust params.id.
-  const tenant = await resolveTenant(tenantId);
-  if (!tenant) throw new Error(`tenant ${tenantId} not found or revoked`);
-  return tenant.gbrain_source_id;   // e.g. "qbo-<userId>" or "default"
+async function resolveSessionSourceId(): Promise<string> {
+  const ctx = await resolveTenant();   // NO args — reads qb_session cookie
+  if (!ctx.authenticated) {
+    throw new Error("tenant-scoped: no authenticated session — use the *Explicit variant from job/script context.");
+  }
+  return ctx.sourceId;
 }
 
+// Session-derived (primary)
 export async function tenantSafeHybridSearch(
-  tenantId: string,
   query: string,
-  opts: Omit<HybridSearchOpts, "sourceId" | "sourceIds"> = {},
+  opts: Pick<HybridSearchOpts, "expansion" | "expandFn" | "limit"> = {},
 ): Promise<SearchResult[]> {
-  const sourceId = await sourceIdFor(tenantId);
-  const engine = await createGBrainEngine();
+  const sourceId = await resolveSessionSourceId();
+  return tenantSafeHybridSearchExplicit(sourceId, query, opts);
+}
+
+// Explicit (jobs / provisioning / scripts)
+export async function tenantSafeHybridSearchExplicit(
+  sourceId: string,
+  query: string,
+  opts: Pick<HybridSearchOpts, "expansion" | "expandFn" | "limit"> = {},
+): Promise<SearchResult[]> {
+  const engine = await createGBrainEngine(sourceId);
   return hybridSearch(engine, query, {
     ...opts,
     sourceId,
@@ -47,61 +67,72 @@ export async function tenantSafeHybridSearch(
   });
 }
 
-export async function tenantSafeGetPage(
-  tenantId: string,
-  slug: string,
-) {
-  const sourceId = await sourceIdFor(tenantId);
-  const engine = await createGBrainEngine();
-  return engine.getPage(slug, { sourceId });
-}
-
-export async function tenantSafeImportFromContent(
-  tenantId: string,
+// Write side — same pattern; *Explicit variant is what Inngest jobs call
+export async function tenantSafeImportFromContentExplicit(
+  sourceId: string,
   slug: string,
   content: string,
   opts: Omit<ImportFromContentOpts, "sourceId"> = {},
 ): Promise<ImportResult> {
-  const sourceId = await sourceIdFor(tenantId);
-  const engine = await createGBrainEngine();
+  const engine = await createGBrainEngine(sourceId);
   return importFromContent(engine, slug, content, { ...opts, sourceId });
 }
-
-// ... tenantSafeDeletePage, tenantSafeListPages, etc.
+// ... tenantSafeRunThink(Explicit), tenantSafeGetPage(Explicit),
+// ... tenantSafeDeletePage(Explicit), tenantSafeListPages(Explicit),
+// ... tenantSafeRegisterSource(Explicit), tenantSafeWipeSource(Explicit)
 ```
+
+**Prereq step — extend `types/gbrain.ts`** so the wrapper avoids `as any` casts. Adds typed `getPage` / `deletePage` / `listPages` / `executeRaw` to the `BrainEngine` interface and exports a typed `importFromContent` via the existing `_load("import-file")` dynamic-import pattern. See commit `9ec60f3` for the shape.
+
+**Type quirk worth knowing:** `HybridSearchOpts` in `@/types/gbrain` has `[key: string]: unknown` for extensibility. `Omit<HybridSearchOpts, "sourceId" | "sourceIds">` then leaks `expandFn`/`expansion` back as `unknown` through the index signature. Use `Pick<HybridSearchOpts, "expansion" | "expandFn" | "limit">` instead — it strips the index signature cleanly. Other opt types (`RunThinkOpts`, `ImportFromContentOpts`, `ListPagesFilters`) have no index signature so `Omit` works fine for them.
 
 ### The ESLint rule (compile-time defense)
 
-Add a custom ESLint rule (or use `no-restricted-syntax`) banning bare `engine.*` access outside `lib/gbrain/`:
+The repo uses **flat config** (`eslint.config.mjs` with `FlatCompat` + `next/core-web-vitals` + `next/typescript`). The rule lives as a new config object appended to the `eslintConfig` array — no plugin needed, the built-in `no-restricted-syntax` rule does the AST matching:
 
 ```js
-// .eslintrc.js — partial
-module.exports = {
-  // ...
-  overrides: [
-    {
-      files: ["app/**/*.ts", "app/**/*.tsx", "lib/!(gbrain)/**/*.ts"],
-      rules: {
-        "no-restricted-syntax": [
-          "error",
-          {
-            selector: "MemberExpression[object.name='engine'][property.name=/^(getPage|deletePage|listPages|getTags|putPage)$/]",
-            message: "Direct engine.* calls are banned outside lib/gbrain/. Use lib/gbrain/tenant-scoped.ts wrappers (tenantSafeGetPage / tenantSafeDeletePage / ...).",
-          },
-          {
-            selector: "CallExpression[callee.name='hybridSearch']",
-            message: "Bare hybridSearch() is banned outside lib/gbrain/. Use tenantSafeHybridSearch(tenantId, query, opts).",
-          },
-          {
-            selector: "CallExpression[callee.name='importFromContent']",
-            message: "Bare importFromContent() is banned outside lib/gbrain/. Use tenantSafeImportFromContent(tenantId, slug, content, opts).",
-          },
-        ],
+// eslint.config.mjs — appended to the eslintConfig array
+{
+  files: ["app/**/*.{ts,tsx}", "lib/**/*.ts"],
+  ignores: ["lib/gbrain/**"],
+  rules: {
+    "no-restricted-syntax": [
+      "error",
+      // Class 1: bare engine.<bannedMethod>()
+      {
+        selector:
+          "CallExpression[callee.type='MemberExpression'][callee.object.name='engine'][callee.property.name=/^(getPage|deletePage|listPages|getTags|putPage|deleteTag|addTag|upsertChunks|deleteChunks|createVersion|getStats|transaction)$/]",
+        message:
+          "Direct `engine.<method>()` is banned outside lib/gbrain/. " +
+          "Use the tenantSafe wrappers in lib/gbrain/tenant-scoped.ts. " +
+          "Reason: gbrain has no fail-safe sourceId default (spike 010).",
       },
-    },
-  ],
-};
+      // Class 2: bare hybridSearch / runThink / importFromContent / expandQuery / configureGateway
+      {
+        selector:
+          "CallExpression[callee.type='Identifier'][callee.name=/^(hybridSearch|runThink|importFromContent|expandQuery|configureGateway)$/]",
+        message:
+          "Direct gbrain function calls are banned outside lib/gbrain/. " +
+          "Use tenantSafeHybridSearch / tenantSafeRunThink / tenantSafeImportFromContent " +
+          "(or the *Explicit variants for jobs).",
+      },
+      // Class 3a + 3b: engine.executeRaw with missing/empty params array (spike-008 hang invariant)
+      { selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='engine'][callee.property.name='executeRaw'][arguments.length<2]", message: "engine.executeRaw must pass a params array (spike 008 hang invariant)." },
+      { selector: "CallExpression[callee.type='MemberExpression'][callee.object.name='engine'][callee.property.name='executeRaw'][arguments.length=2][arguments.1.type='ArrayExpression'][arguments.1.elements.length=0]", message: "engine.executeRaw must pass at least one parameter (spike 008 hang invariant)." },
+    ],
+  },
+},
 ```
+
+Verified post-landing against `.planning/spikes/011-tenant-scoped-wrapper/bad-call-fixture.ts`: **10/10 expected shapes flag, 1/1 control (parameterized executeRaw) does NOT flag** — matches spike-011's own validation. Zero new errors on `app/**` + `lib/!(gbrain)/**` (matches spike-011 audit).
+
+### API shape divergence from spike-011
+
+The spike's original blueprint had `tenantSafeHybridSearch(tenantId, query, opts)` with an internal `resolveTenantSourceId(tenantId)` helper. That signature **was not landable** — production's `lib/auth/resolve-tenant.ts` exports `resolveTenant()` with no args (reads `qb_session` cookie) and D-11 explicitly forbids accepting a tenant id from caller input. Threading a `tenantId` argument through would have re-introduced the "trust `params.id`" antipattern Phase 6 closed.
+
+Resolution that shipped: split into session-derived (`tenantSafeX(...)`) and explicit-sourceId (`tenantSafeXExplicit(sourceId, ...)`) variants. The split makes the boundary auditable — every `*Explicit` call site is a documented "I have a non-session sourceId" claim (Inngest job payload, provisioning path before session is final, admin script). The lint rule's error message points callers at both variants.
+
+If you find a *third* category that needs neither (e.g., webhook with HMAC-verified tenant), add a new dedicated wrapper rather than overloading `*Explicit` — keep the boundary explicit.
 
 ### Audit existing call sites (one-time sweep before Phase 7 lands)
 
@@ -132,17 +163,22 @@ Anything else is a live silent-leak vector.
 
 ### Source-row provisioning (Phase 7 OAuth-connect handler)
 
-Each tenant's `sourceId` MUST exist as a row in `sources` before any `importFromContent` call (FK `pages_source_id_fkey`):
+Each tenant's `sourceId` MUST exist as a row in `sources` before any `importFromContent` call (FK `pages_source_id_fkey`). Call the wrapper, not raw SQL:
 
 ```ts
 // QBO OAuth callback handler — runs before first ingest
+import { tenantSafeRegisterSourceExplicit } from "@/lib/gbrain/tenant-scoped";
+
 const sourceId = `qbo-${userId}`;
-await engine.executeRaw(
-  `INSERT INTO sources (id, name, config) VALUES ($1, $2, $3::jsonb) ON CONFLICT (id) DO NOTHING`,
-  [sourceId, `${userDisplayName} (QBO)`, JSON.stringify({ kind: "qbo", realm_id: qboRealmId, federated: false })],
+await tenantSafeRegisterSourceExplicit(
+  sourceId,
+  `${userDisplayName} (QBO)`,
+  { kind: "qbo", realm_id: qboRealmId },   // federated: false is the wrapper default
 );
 // Now safe to enqueue ingest jobs that write under this sourceId.
 ```
+
+The same wrapper is what `lib/auth/provision.ts:provisionBrain` calls at user signup (commit `26ca184`). The raw `INSERT INTO sources` lives inside the wrapper only — never in app code.
 
 ## What to Avoid
 
@@ -152,7 +188,8 @@ await engine.executeRaw(
 - **DO NOT use `SET LOCAL app.current_tenant`** or similar Postgres-session-scoped vars for isolation. gbrain queries hit the Supavisor pooler in transaction mode — each query gets a fresh transaction; session state doesn't persist between calls.
 - **DO NOT trust `params.id` from request URLs as the tenant identifier.** Always run through `lib/auth/resolve-tenant.ts` (Phase 6 chokepoint). The wrapper layer above enforces this.
 - **DO NOT skip the source-row INSERT before `importFromContent`** — throws `PostgresError: pages_source_id_fkey violation`. Phase 7 OAuth-connect handler must register the source row.
-- **DO NOT call `engine.getPage(slug)` directly in app code** even with a sourceId in scope. The lint rule will reject it; use `tenantSafeGetPage(tenantId, slug)` so resolution is always centralized.
+- **DO NOT call `engine.getPage(slug)` directly in app code** even with a sourceId in scope. The lint rule will reject it; use `tenantSafeGetPage(slug)` (session-derived) or `tenantSafeGetPageExplicit(sourceId, slug)` (jobs).
+- **DO NOT thread a `tenantId` argument through wrapper signatures.** The spike's original `tenantSafeX(tenantId, ...)` shape was rejected during production landing — it would re-introduce the "trust params.id" antipattern Phase 6 closed. Use session-derived OR explicit-sourceId; never invent a third "caller-supplied tenant id" shape.
 
 ## Constraints
 
@@ -205,7 +242,14 @@ Don't reach for option 1 or 2 unless a concrete event forces it (e.g., regulated
 ## Origin
 
 Synthesized from spikes:
-- **010** — `per-tenant-engine-rls` (PARTIAL ⚠): the architectural test that found the BYPASSRLS reality, confirmed the single-shared-engine works under concurrency, and surfaced the silent-leak bug class.
+- **010** — `per-tenant-engine-rls` (PARTIAL ⚠ → CLOSED-BY-011): the architectural test that found the BYPASSRLS reality, confirmed the single-shared-engine works under concurrency, and surfaced the silent-leak bug class.
+- **011** — `tenant-scoped-wrapper` (VALIDATED ✓): built the wrapper layer + lint rule as spike artifacts, ran 6/6 live probes + 10/10 lint shapes pass, audited existing app code.
+
+Production landing 2026-06-01 (commits below). The shipped API shape diverges from spike-011's prescription — see "API shape divergence from spike-011" above:
+- `9ec60f3` — `feat(types/gbrain): typed exports for getPage / deletePage / listPages / executeRaw / importFromContent`
+- `767858e` — `feat(gbrain): add tenant-scoped wrapper layer (spike-011 production landing)`
+- `c6abef5` — `feat(eslint): ban bare gbrain calls outside lib/gbrain/ (spike-011 lint rule)`
+- `26ca184` — `refactor(auth/provision): route through tenantSafeRegisterSourceExplicit`
 
 Plus 2026-05-31 doc-review of gbrain upstream (`docs/architecture/brains-and-sources.md`, `docs/architecture/topologies.md`, `docs/mcp/DEPLOY.md`, `SECURITY.md`, `INSTALL_FOR_AGENTS.md`, `README.md`) — confirmed gbrain documents no multi-tenant SaaS pattern, and its data-owner=brain rule disagrees with the path we picked.
 
