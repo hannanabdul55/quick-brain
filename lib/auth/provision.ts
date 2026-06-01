@@ -19,7 +19,7 @@
  *   request input. provisionBrain is the ONLY writer to gbrain's sources table.
  */
 
-import { createGBrainEngine } from "@/lib/gbrain/engine";
+import { tenantSafeRegisterSourceExplicit } from "@/lib/gbrain/tenant-scoped";
 
 // ---------------------------------------------------------------------------
 // Reserved source IDs (never emit these — gbrain internals use them)
@@ -93,19 +93,7 @@ export async function provisionBrain(
   sourceId: string,
   displayName: string,
 ): Promise<void> {
-  const engine = await createGBrainEngine(sourceId);
-  // engine.executeRaw is a gbrain BrainEngine method (see node_modules/gbrain/src/core/sql-query.ts).
-  // The BrainEngine interface uses [key: string]: unknown for extensibility; cast the
-  // engine to access the method type-safely. Call as `engine.executeRaw(...)` rather than
-  // aliasing — extracting the method into a variable detaches `this`, and the method
-  // body reads `this.sql`, which then throws "undefined is not an object".
-  const typedEngine = engine as unknown as {
-    executeRaw: (sql: string, params: unknown[]) => Promise<unknown>;
-  };
-  await typedEngine.executeRaw(
-    `INSERT INTO sources (id, name, config) VALUES ($1, $2, $3::jsonb) ON CONFLICT (id) DO NOTHING`,
-    [sourceId, displayName, JSON.stringify({ federated: false })],
-  );
+  await tenantSafeRegisterSourceExplicit(sourceId, displayName);
   // Log only the fact that provisioning occurred, never the email (T-06-13)
   console.log("[auth/provision] brain provisioned sourceId=<redacted>");
 }
