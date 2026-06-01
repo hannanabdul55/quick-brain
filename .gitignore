@@ -11,3 +11,4 @@ docs/DEMO-SCRIPT.md
 .DS_Store
 tsconfig.tsbuildinfo
 .vercel
+.claude/scheduled_tasks.lock
