@@ -6,7 +6,7 @@ account: Main Operating
 tags: [bank, statement, 2026-03]
 ---
 
-Compiled truth: Operating-account statement for March 2026. 12 debits totaling $8,916.95 and 5 credits totaling $27,480.00. Vendors paid: [[companies/beanstalk-roasters]], [[companies/square-pos]], [[companies/seven-shifts]], [[companies/landlord-llc]], [[companies/pge-utility]], [[companies/quick-clean]]. Source of revenue: card-batch deposits from [[companies/square-pos]].
+Compiled truth: Operating-account statement for March 2026. 12 debits totaling $8,916.95 and 5 credits totaling $27,480.00. Vendors paid: [[companies/beanstalk-roasters]], [[companies/square-pos]], [[companies/seven-shifts]], [[companies/landlord-llc]], [[companies/pge-utility]]. Source of revenue: card-batch deposits from [[companies/square-pos]].
 
 ---
 
